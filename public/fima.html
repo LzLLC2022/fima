@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FIMA</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 24px 16px;
+      color: #1a202c;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* 헤더 */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      border-radius: 16px;
+      padding: 20px 28px;
+      margin-bottom: 0;
+      color: white;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .header h1 { font-size: 1.4rem; font-weight: 700; }
+    .header p  { font-size: 0.82rem; opacity: 0.75; margin-top: 3px; }
+
+    /* 탭 */
+    .tabs {
+      display: flex;
+      background: #1a3353;
+      border-radius: 0;
+      padding: 0 20px;
+    }
+    .tab-btn {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .tab-btn:hover { color: rgba(255,255,255,0.9); }
+    .tab-btn.active {
+      color: white;
+      border-bottom-color: #63b3ed;
+    }
+
+    /* 탭 콘텐츠 래퍼 */
+    .tab-wrapper {
+      background: white;
+      border-radius: 0 0 16px 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .tab-content { display: none; padding: 24px 28px; }
+    .tab-content.active { display: block; }
+
+    /* 카드 */
+    .card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 14px;
+      border: 1px solid #e2e8f0;
+    }
+    .card-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #718096;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    /* 그리드 */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .span2 { grid-column: span 2; }
+
+    /* 폼 필드 */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 0.78rem; font-weight: 600; color: #4a5568; }
+    label .req { color: #e53e3e; margin-left: 2px; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #2d3748;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #3182ce;
+      box-shadow: 0 0 0 3px rgba(49,130,206,0.12);
+    }
+    input[readonly] { background: #f7fafc; color: #718096; cursor: default; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* 통화 뱃지 */
+    .input-with-badge { position: relative; display: flex; align-items: center; }
+    .input-with-badge input { padding-right: 52px; }
+    .currency-badge {
+      position: absolute; right: 10px;
+      font-size: 0.72rem; font-weight: 700;
+      color: #3182ce; background: #ebf8ff;
+      padding: 2px 6px; border-radius: 5px;
+      pointer-events: none; letter-spacing: 0.5px;
+    }
+
+    /* 환율 안내 */
+    .currency-hint { font-size: 0.75rem; color: #718096; margin-top: 3px; }
+
+    /* KRW 환산 */
+    .krw-display {
+      font-size: 0.78rem; color: #2f855a;
+      background: #f0fff4; border: 1px solid #9ae6b4;
+      border-radius: 6px; padding: 4px 9px; margin-top: 4px;
+      font-weight: 600;
+    }
+
+    /* 총액 박스 */
+    .total-box {
+      background: #fff; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; padding: 10px 14px;
+      display: flex; align-items: baseline;
+      gap: 12px; flex-wrap: wrap; min-height: 40px;
+    }
+    #totalForeign { font-size: 1.05rem; font-weight: 700; color: #2d3748; }
+    .total-krw    { font-size: 0.85rem; color: #2f855a; font-weight: 600; }
+
+    /* Ticker 콤보 */
+    .ticker-wrap { position: relative; }
+    .ticker-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: white; border: 1.5px solid #3182ce;
+      border-radius: 8px; max-height: 200px; overflow-y: auto;
+      z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .ticker-option {
+      padding: 8px 12px; cursor: pointer; font-size: 0.87rem;
+      display: flex; gap: 10px; align-items: center;
+    }
+    .ticker-option:hover { background: #ebf8ff; }
+    .ticker-option .t-code { font-weight: 700; color: #2b6cb0; min-width: 70px; }
+    .ticker-option .t-name { color: #718096; font-size: 0.8rem; }
+
+    /* 버튼 */
+    .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+    .btn {
+      padding: 10px 26px; border-radius: 9px; font-size: 0.9rem;
+      font-weight: 600; border: none; cursor: pointer;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .btn-primary { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: #edf2f7; color: #4a5568; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-search { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 10px 32px; }
+    .btn-search:hover { filter: brightness(1.1); }
+    .btn-reset-filter { background: #edf2f7; color: #4a5568; }
+
+    /* 알림 */
+    .alert {
+      padding: 12px 16px; border-radius: 10px; font-size: 0.88rem;
+      margin-bottom: 14px; display: flex; align-items: center;
+      gap: 10px; animation: fadeIn 0.25s ease;
+    }
+    .alert-success { background: #f0fff4; border: 1px solid #9ae6b4; color: #276749; }
+    .alert-error   { background: #fff5f5; border: 1px solid #feb2b2; color: #c53030; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+
+    /* ---- 거래 조회 테이블 ---- */
+    .query-filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .result-info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px; gap: 10px; flex-wrap: wrap;
+    }
+    .result-info {
+      font-size: 0.82rem; color: #718096;
+    }
+    .result-info strong { color: #2d3748; }
+    .btn-export { padding:7px 14px; background:#2d6a9f; color:white; border:none; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; }
+    .btn-export:hover { filter: brightness(1.12); }
+    .btn-export:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+      white-space: nowrap;
+    }
+    thead tr { background: #1e3a5f; color: white; }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    tbody tr { border-bottom: 1px solid #edf2f7; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f7fafc; }
+    tbody td { padding: 9px 14px; color: #2d3748; }
+    tbody td.num { text-align: right; }
+    tbody td.trade-buy  { color: #c53030; font-weight: 600; }
+    tbody td.trade-sell { color: #2b6cb0; font-weight: 600; }
+
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      color: #a0aec0; font-size: 0.9rem;
+    }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    /* 로딩 */
+    .loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #3182ce;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    /* ---- 현황 탭 ---- */
+    .total-asset-box {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      border-radius: 12px; padding: 22px 24px;
+      margin-bottom: 14px; color: white; text-align: center;
+    }
+    .total-asset-label {
+      font-size: 0.72rem; font-weight: 700; opacity: 0.8;
+      text-transform: uppercase; letter-spacing: 0.8px;
+    }
+    .total-asset-value {
+      font-size: 2rem; font-weight: 700; margin: 8px 0 6px;
+      letter-spacing: -0.5px;
+    }
+    .total-asset-sub {
+      display: flex; gap: 16px; justify-content: center;
+      font-size: 0.76rem; opacity: 0.75; flex-wrap: wrap;
+    }
+    .cash-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .cash-item {
+      background: white; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; padding: 14px 16px;
+    }
+    .cash-item-label { font-size: 0.72rem; font-weight: 700; color: #718096;
+      text-transform: uppercase; letter-spacing: 0.5px; }
+    .cash-item-amount { font-size: 1.05rem; font-weight: 700; color: #2d3748; margin-top: 4px; }
+    .cash-item-krw { font-size: 0.76rem; color: #718096; margin-top: 2px; }
+    .pnl-pos  { color: #c53030; font-weight: 600; }
+    .pnl-neg  { color: #2b6cb0; font-weight: 600; }
+    .pnl-zero { color: #718096; }
+    .section-total {
+      font-size: 0.82rem; color: #718096;
+      margin-bottom: 8px; text-align: right;
+    }
+    .section-total strong { color: #2d3748; }
+    .ov-empty { text-align: center; padding: 24px; color: #a0aec0; font-size: 0.88rem; }
+    .ov-refresh-row {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 12px;
+    }
+    .ov-note { font-size: 0.76rem; color: #a0aec0; }
+    .btn-refresh {
+      background: #edf2f7; border: none; padding: 7px 16px;
+      border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; color: #4a5568; font-family: inherit;
+    }
+    .btn-refresh:hover { background: #e2e8f0; }
+    @media (max-width: 600px) {
+      .total-asset-value { font-size: 1.5rem; }
+      .total-asset-sub { flex-direction: column; gap: 4px; }
+      .cash-grid { grid-template-columns: 1fr; }
+    }
+
+    /* 현황 필터 행 */
+    .ov-filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .ov-filter-badge {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: #2c5282;
+      font-weight: 600;
+    }
+    @media (max-width: 600px) {
+      .ov-filter-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* 환전 방법 선택 박스 (해외 Buy 전용) */
+    .exchange-box {
+      background: #f0f7ff; border: 1px solid #90cdf4;
+      border-radius: 8px; padding: 14px 16px;
+    }
+    .exchange-title {
+      font-size: 0.78rem; font-weight: 700; color: #2c5282; margin-bottom: 10px;
+    }
+    .exchange-radios { display: flex; flex-direction: column; gap: 8px; }
+    .exchange-radio-label {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; font-size: 0.87rem; font-weight: 600; color: #2d3748;
+    }
+    .exchange-radio-label input[type="radio"] { width:auto; cursor:pointer; }
+    .radio-desc { font-size: 0.74rem; font-weight: 400; color: #718096; }
+    .exchange-preview {
+      margin-top: 10px; background: #fff; border: 1px solid #bee3f8;
+      border-radius: 6px; padding: 9px 12px;
+      font-size: 0.78rem; color: #2d3748; line-height: 1.9;
+    }
+
+    /* 매입 정보 박스 (Sell 전용) */
+    .purchase-info-box {
+      background: #fffaf0;
+      border: 1px solid #f6ad55;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .purchase-info-title {
+      font-size: 0.78rem; font-weight: 700;
+      color: #c05621; margin-bottom: 4px;
+    }
+    .purchase-note {
+      font-size: 0.75rem; color: #744210;
+      margin-top: 6px; line-height: 1.5;
+    }
+
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .span2 { grid-column: span 1; }
+      .query-filter-row { grid-template-columns: 1fr 1fr; }
+      .tab-content { padding: 16px; }
+    }
+
+    /* ---- 미리보기 모달 ---- */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.48);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 16px;
+    }
+    .modal-box {
+      background: white; border-radius: 16px;
+      width: 100%; max-width: 600px; max-height: 88vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .modal-header span { font-weight: 700; font-size: 1rem; color: #1e3a5f; }
+    .modal-close {
+      background: none; border: none; font-size: 1.1rem;
+      cursor: pointer; color: #718096;
+      padding: 4px 8px; border-radius: 6px; line-height: 1;
+    }
+    .modal-close:hover { background: #edf2f7; }
+    .modal-body { overflow-y: auto; padding: 20px 24px; flex: 1; }
+    .modal-footer {
+      padding: 14px 24px; border-top: 1px solid #e2e8f0;
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .pv-section { margin-bottom: 20px; }
+    .pv-section-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: #718096;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+    .pv-row { display: flex; flex-direction: column; gap: 3px; }
+    .pv-full { grid-column: span 2; display: flex; flex-direction: column; gap: 3px; }
+    .pv-label { font-size: 0.72rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .pv-value { font-size: 0.88rem; color: #2d3748; font-weight: 500; word-break: break-word; }
+    .pv-result {
+      background: #f8fafc; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; padding: 16px 18px; margin-top: 4px;
+    }
+    .pv-result-title { font-size: 0.8rem; font-weight: 700; color: #1e3a5f; margin-bottom: 10px; }
+    .pv-result-rows { display: flex; flex-direction: column; gap: 6px; }
+    .pv-result-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.84rem; color: #4a5568;
+    }
+    .pv-result-total {
+      display: flex; justify-content: space-between;
+      font-size: 0.95rem; font-weight: 700; color: #1e3a5f;
+      margin-top: 8px; padding-top: 8px;
+      border-top: 1.5px solid #cbd5e0;
+    }
+    .pv-result-total.pnl-pos { color: #c53030; }
+    .pv-result-total.pnl-neg { color: #2b6cb0; }
+    @media (max-width: 480px) {
+      .pv-grid { grid-template-columns: 1fr; }
+      .pv-full { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>📈 FIMA</h1>
+    <p>Financial Management</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">현황</button>
+    <button class="tab-btn" onclick="switchTab('input')">거래 입력</button>
+    <button class="tab-btn" onclick="switchTab('query')">거래 조회</button>
+  </div>
+
+  <div class="tab-wrapper">
+
+    <!-- ===================== 현황 탭 ===================== -->
+    <div id="tab-overview" class="tab-content active">
+
+      <!-- 현황 필터 카드 -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">🔎 조회 조건</div>
+        <div class="ov-filter-row">
+          <div class="field">
+            <label>Account Owner</label>
+            <select id="ovOwner">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Account</label>
+            <select id="ovAccount">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>기준일 (이 날짜까지의 거래 집계)</label>
+            <input type="date" id="ovEndDate" />
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyOvFilter()">조회</button>
+              <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetOvFilter()">초기화</button>
+            </div>
+          </div>
+        </div>
+        <div id="ovFilterBadge" class="ov-filter-badge hidden"></div>
+      </div>
+
+      <div class="ov-refresh-row">
+        <span class="ov-note">※ 현재가는 getStockInfo 기준 &nbsp;·&nbsp; 현금은 입출금(Deposit/Withdraw) 누계</span>
+        <button class="btn-refresh" onclick="loadPortfolioData(true)">🔄 새로고침</button>
+      </div>
+
+      <div id="ovLoadingMsg" class="hidden" style="text-align:center; padding:32px; color:#718096; font-size:0.9rem;">
+        ⏳ 현재가 조회 중... 종목 수에 따라 시간이 걸릴 수 있습니다.
+      </div>
+
+      <!-- 전체 자산 총액 -->
+      <div class="total-asset-box">
+        <div class="total-asset-label">전체 자산 총액 (KRW 기준)</div>
+        <div class="total-asset-value" id="ovTotalKRW">-</div>
+        <div class="total-asset-sub">
+          <span id="ovCashTotal">현금 -</span>
+          <span id="ovStockTotal">주식 -</span>
+          <span id="ovFundTotal">펀드/ETF -</span>
+        </div>
+      </div>
+
+      <!-- 현금(예수금) -->
+      <div class="card">
+        <div class="card-title">💰 현금 / 예수금</div>
+        <div id="ovCashSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+      </div>
+
+      <!-- Stock -->
+      <div class="card">
+        <div class="card-title">📈 Stock 현황</div>
+        <div id="ovStockSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+      </div>
+
+      <!-- Fund / ETF -->
+      <div class="card">
+        <div class="card-title">📊 Fund / ETF 현황</div>
+        <div id="ovFundSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+      </div>
+
+    </div><!-- /tab-overview -->
+
+    <!-- ===================== 거래 입력 탭 ===================== -->
+    <div id="tab-input" class="tab-content">
+
+      <div id="alertBox"></div>
+
+      <form id="tradeForm" onsubmit="handleSubmit(event)">
+
+        <div class="card">
+          <div class="card-title">거래 기본 정보</div>
+          <div class="grid">
+            <div class="field">
+              <label>Date <span class="req">*</span></label>
+              <input type="date" id="date" required />
+            </div>
+            <div class="field">
+              <label>Trade <span class="req">*</span></label>
+              <select id="trade" required onchange="onTradeChange()"><option value="">선택...</option></select>
+            </div>
+            <div class="field">
+              <label>Account Owner <span class="req">*</span></label>
+              <select id="accountOwner" required><option value="">선택...</option></select>
+            </div>
+            <div class="field">
+              <label>Account <span class="req">*</span></label>
+              <select id="account" required><option value="">선택...</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">종목 정보</div>
+          <div class="grid">
+            <div class="field">
+              <label>Region <span class="req">*</span></label>
+              <select id="region" required onchange="onRegionChange()"><option value="">선택...</option></select>
+            </div>
+            <div class="field">
+              <label>Asset Type <span class="req">*</span></label>
+              <select id="assetType" required><option value="">선택...</option></select>
+            </div>
+            <div class="field">
+              <label>Ticker <span class="req">*</span></label>
+              <div class="ticker-wrap">
+                <input type="text" id="ticker" placeholder="코드 입력 또는 선택"
+                       autocomplete="off"
+                       oninput="onTickerInput()"
+                       onblur="onTickerBlur()" required />
+                <div id="tickerDropdown" class="ticker-dropdown hidden"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Name</label>
+              <input type="text" id="name" placeholder="종목명 (자동 입력)" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">거래 내용</div>
+          <div class="grid">
+
+            <div class="field" id="priceField">
+              <label>Price <span class="req">*</span></label>
+              <div class="input-with-badge">
+                <input type="text" inputmode="decimal" id="price" placeholder="0"
+                       oninput="fmtNum(this); updateKrwConversion(); updateTotal(); updateExchangePreview()" />
+                <span class="currency-badge" id="priceCurrency">-</span>
+              </div>
+              <span class="krw-display hidden" id="priceKrw"></span>
+            </div>
+
+            <div class="field" id="quantityField">
+              <label id="quantityLabel">Quantity <span class="req">*</span></label>
+              <input type="text" inputmode="decimal" id="quantity" placeholder="0"
+                     oninput="fmtNum(this); updateTotal(); fetchPurchaseInfoIfReady()" />
+              <span class="currency-hint hidden" id="splitHint"></span>
+            </div>
+
+            <div class="field span2" id="currencyField">
+              <label>Currency (환율) <span class="req">*</span></label>
+              <input type="text" inputmode="decimal" id="currency"
+                     placeholder="기준환율 입력 (예: 1,380)"
+                     oninput="fmtNum(this); updateKrwConversion(); updateTotal(); updateExchangePreview()" />
+              <span class="currency-hint" id="currencyHint"></span>
+            </div>
+
+            <div class="field span2" id="totalField">
+              <label>Total Amount (총액)</label>
+              <div class="total-box">
+                <span id="totalForeign"></span>
+                <span id="totalKrw" class="total-krw"></span>
+              </div>
+            </div>
+
+            <div class="field span2 hidden" id="divField">
+              <label>Dividend (배당금)</label>
+              <div class="input-with-badge">
+                <input type="text" inputmode="decimal" id="dividend" placeholder="0"
+                       oninput="fmtNum(this); updateKrwConversion()" />
+                <span class="currency-badge" id="divCurrency">-</span>
+              </div>
+              <span class="krw-display hidden" id="divKrw"></span>
+            </div>
+
+            <div class="field" id="taxField">
+              <label>Tax</label>
+              <div class="input-with-badge">
+                <input type="text" inputmode="decimal" id="tax" placeholder="0"
+                       oninput="fmtNum(this); updateKrwConversion()" />
+                <span class="currency-badge" id="taxCurrency">-</span>
+              </div>
+              <span class="krw-display hidden" id="taxKrw"></span>
+            </div>
+
+            <div class="field" id="chargeField">
+              <label>Charge</label>
+              <div class="input-with-badge">
+                <input type="text" inputmode="decimal" id="charge" placeholder="0"
+                       oninput="fmtNum(this); updateKrwConversion(); updateExchangePreview()" />
+                <span class="currency-badge" id="chargeCurrency">-</span>
+              </div>
+              <span class="krw-display hidden" id="chargeKrw"></span>
+            </div>
+
+            <!-- 해외 Buy 전용: 환전 방법 선택 -->
+            <div class="field span2 hidden" id="exchangeSection">
+              <div class="exchange-box">
+                <div class="exchange-title">💱 환전 방법 선택</div>
+                <div class="exchange-radios">
+                  <label class="exchange-radio-label">
+                    <input type="radio" name="exchangeType" value="full" onchange="onExchangeTypeChange()" checked />
+                    전체 자동환전 <span class="radio-desc">- 매입 대금 전액을 원화에서 환전</span>
+                  </label>
+                  <label class="exchange-radio-label">
+                    <input type="radio" name="exchangeType" value="partial" onchange="onExchangeTypeChange()" />
+                    일부 자동환전 <span class="radio-desc">- 보유 외화 일부 사용, 나머지만 환전</span>
+                  </label>
+                  <label class="exchange-radio-label">
+                    <input type="radio" name="exchangeType" value="none" onchange="onExchangeTypeChange()" />
+                    환전 없음 <span class="radio-desc">- 보유 외화로 전액 매입 (Buy 1건만 기록)</span>
+                  </label>
+                </div>
+                <div class="field hidden" id="existingFXField" style="margin-top:10px;">
+                  <label>보유 외화 사용 금액 (<span id="existingFXCurrency">USD</span>)</label>
+                  <input type="text" inputmode="decimal" id="existingFX" placeholder="0"
+                         oninput="fmtNum(this); updateExchangePreview()" />
+                </div>
+                <div class="exchange-preview hidden" id="exchangePreview"></div>
+              </div>
+            </div>
+
+            <!-- Sell 전용: 매입 정보 (자동 계산, readonly) -->
+            <div class="field span2 hidden" id="sellPurchaseSection">
+              <div class="purchase-info-box">
+                <div class="purchase-info-title">📊 매입 정보 (자동 계산)</div>
+                <div class="grid" style="margin-top:10px;">
+                  <div class="field">
+                    <label>Purchase (매입금액, KRW)</label>
+                    <input type="text" id="purchaseAmount" readonly placeholder="Ticker·수량 입력 후 자동 계산" />
+                  </div>
+                  <div class="field">
+                    <label>Purchase Currency (매입평균환율)</label>
+                    <input type="text" id="purchaseCurrencyRate" readonly placeholder="자동 계산" />
+                  </div>
+                </div>
+                <div id="purchaseNote" class="purchase-note"></div>
+              </div>
+            </div>
+
+            <div class="field span2">
+              <label>Comment</label>
+              <textarea id="comment" placeholder="추가 메모 (선택사항)"></textarea>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">초기화</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">저장하기</button>
+        </div>
+
+      </form>
+    </div><!-- /tab-input -->
+
+    <!-- ===================== 거래 조회 탭 ===================== -->
+    <div id="tab-query" class="tab-content">
+
+      <div id="queryAlertBox"></div>
+
+      <div class="card">
+        <div class="card-title">조회 조건</div>
+        <div class="query-filter-row">
+          <div class="field">
+            <label>시작일</label>
+            <input type="date" id="qStartDate" />
+          </div>
+          <div class="field">
+            <label>종료일</label>
+            <input type="date" id="qEndDate" />
+          </div>
+          <div class="field">
+            <label>Account Owner</label>
+            <select id="qAccountOwner">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Account</label>
+            <select id="qAccount">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-search" onclick="runQuery()">조회</button>
+              <button class="btn btn-reset-filter" onclick="resetQuery()">초기화</button>
+              <button class="btn-export" id="exportBtn" onclick="exportToCSV()" disabled>CSV 내보내기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="queryResult">
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          조회 조건을 설정하고 조회 버튼을 클릭하세요.
+        </div>
+      </div>
+
+    </div><!-- /tab-query -->
+
+  </div><!-- /tab-wrapper -->
+</div>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+  <div class="spinner"></div>
+</div>
+
+<!-- ===================== 거래 미리보기 모달 ===================== -->
+<div id="previewModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>📋 거래 내용 확인</span>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pv-section">
+        <div class="pv-section-title">거래 기본정보</div>
+        <div id="pvBasic" class="pv-grid"></div>
+      </div>
+      <div class="pv-section">
+        <div class="pv-section-title">종목정보</div>
+        <div id="pvStock" class="pv-grid"></div>
+      </div>
+      <div class="pv-section">
+        <div class="pv-section-title">거래내용</div>
+        <div id="pvTrade" class="pv-grid"></div>
+      </div>
+      <div id="pvResult" class="pv-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePreview()">취소</button>
+      <button class="btn btn-primary" id="confirmSaveBtn" onclick="confirmSave()">✅ 확인 저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---- \uC571 \uC0C1\uD0DC ----
+  let masterData     = {};
+  let tickerList     = [];
+  let regionMap      = {};
+
+  // ---- \uBBF8\uB9AC\uBCF4\uAE30 / \uB9E4\uC785 \uC815\uBCF4 \uCE90\uC2DC ----
+  let _purchaseKRW    = 0;   // Sell \uB9E4\uC785\uAE08\uC561 (KRW \uAE30\uC900)
+  let _purchaseFX     = 0;   // Sell \uB9E4\uC785\uAE08\uC561 (\uD604\uC9C0 \uD1B5\uD654 \uAE30\uC900)
+  let pendingFormData = null; // \uC800\uC7A5 \uB300\uAE30 \uC911\uC778 \uD3FC \uB370\uC774\uD130
+  let pendingFgnBuy   = false; // \uD574\uC678 Buy \uD658\uC804 \uC5EC\uBD80
+  var lastQueryResult = { headers: [], data: [] };
+
+  // ---- \uCD08\uAE30\uD654 ----
+  window.addEventListener('DOMContentLoaded', () => {
+    setTodayDate();
+    loadMasterData();
+    // Enter\uD0A4 \uD3FC \uC81C\uCD9C \uBC29\uC9C0 (\uC800\uC7A5\uD558\uAE30 \uBC84\uD2BC \uD074\uB9AD \uC2DC\uC5D0\uB9CC \uC800\uC7A5)
+    document.getElementById('tradeForm').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    });
+  });
+
+  function setTodayDate() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    document.getElementById('date').value = `${y}-${m}-${d}`;
+  }
+
+  // ---- \uD0ED \uC804\uD658 ----
+  function switchTab(tab) {
+    const btns = document.querySelectorAll('.tab-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    const idx = { overview: 0, input: 1, query: 2 };
+    if (btns[idx[tab]]) btns[idx[tab]].classList.add('active');
+
+    ['overview', 'input', 'query'].forEach(id => {
+      document.getElementById('tab-' + id).classList.toggle('active', id === tab);
+    });
+
+    if (tab === 'overview') loadPortfolioData(false);
+  }
+
+  // ---- \uB9C8\uC2A4\uD130 \uB370\uC774\uD130 \uB85C\uB529 ----
+  function loadMasterData() {
+    showLoading(true);
+    fetch('/api/master').then(r => r.json()).then(data => {
+        if (data.error) { showAlert(data.error, 'error'); showLoading(false); return; }
+        masterData = data;
+        populateDropdowns(data);
+        loadTickerData();
+      }).catch(err => {
+        showAlert('\uB9C8\uC2A4\uD130 \uB370\uC774\uD130 \uB85C\uB529 \uC2E4\uD328: ' + err.message, 'error');
+        showLoading(false);
+      });
+  }
+
+  function loadTickerData() {
+    fetch('/api/ticker-data').then(r => r.json()).then(data => { tickerList = data || []; showLoading(false); }).catch(() => { showLoading(false); });
+  }
+
+  // ---- \uB4DC\uB86D\uB2E4\uC6B4 \uCC44\uC6B0\uAE30 ----
+  function populateDropdowns(data) {
+    fillSelect('accountOwner', data.accountOwners || []);
+    fillSelect('account',      data.accounts      || []);
+    fillSelect('assetType',    data.assetTypes     || []);
+    fillSelect('trade',        data.trades         || []);
+
+    // \uC870\uD68C \uD0ED \uD544\uD130 \uB4DC\uB86D\uB2E4\uC6B4
+    fillSelectWithAll('qAccountOwner', data.accountOwners || []);
+    fillSelectWithAll('qAccount',      data.accounts      || []);
+
+    // \uD604\uD669 \uD0ED \uD544\uD130 \uB4DC\uB86D\uB2E4\uC6B4
+    fillSelectWithAll('ovOwner',   data.accountOwners || []);
+    fillSelectWithAll('ovAccount', data.accounts      || []);
+
+    const regionSel = document.getElementById('region');
+    regionSel.innerHTML = '<option value="">\uC120\uD0DD...</option>';
+    (data.regions || []).forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.name;
+      opt.textContent = r.name + (r.currency ? ' (' + r.currency + ')' : '');
+      opt.dataset.currency = r.currency || '';
+      regionSel.appendChild(opt);
+      regionMap[r.name] = r.currency || '';
+    });
+  }
+
+  function fillSelect(id, items) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">\uC120\uD0DD...</option>';
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = item;
+      sel.appendChild(opt);
+    });
+  }
+
+  function fillSelectWithAll(id, items) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">\uC804\uCCB4</option>';
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = item;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ---- Trade \uBCC0\uACBD \u2192 \uD544\uB4DC \uD45C\uC2DC/\uC228\uAE40 ----
+  function onTradeChange() {
+    // \uC815\uADDC\uD654: \uC18C\uBB38\uC790 \uBCC0\uD658 + \uD558\uC774\uD508/\uACF5\uBC31 \uC81C\uAC70 (\uC608: "Dividend-Stock" \u2192 "dividendstock")
+    const t = document.getElementById('trade').value.toLowerCase().replace(/[-\s]/g, '');
+
+    const isBuy      = t === 'buy';
+    const isSell     = t === 'sell';
+    const isBuySell  = isBuy || isSell;
+    const isDepWith  = t === 'deposit' || t === 'withdraw'
+                    || t.startsWith('dep') || t.startsWith('with');
+    // "Dividend-Stock", "Div-Stock", "DivStock" \uB4F1 Stock \uD3EC\uD568\uD55C \uBC30\uB2F9\uC8FC
+    const isDivStock = t.includes('div') && t.includes('stock');
+    // "Dividend", "DIV", "Div" \uB4F1 \uBC30\uB2F9\uAE08 (DivStock \uC81C\uC678)
+    const isDividend = t.startsWith('div') && !isDivStock;
+    // \uC561\uBA74\uBD84\uD560 / \uC561\uBA74\uBCD1\uD569
+    const isSplit     = t === 'split';
+    const isMerge     = t === 'merge' || t === 'reversesplit';
+    const isSplitMerge = isSplit || isMerge;
+    const isDefault  = t === '';
+
+    // \uD544\uB4DC \uD45C\uC2DC \uC5EC\uBD80
+    // Buy/Sell        : Price, Qty, Total, Tax, Charge  (DIV \uC81C\uC678)
+    // Deposit/With    : Price\uB9CC (Tax, Charge, Qty, Total \uC81C\uC678)
+    // Dividend        : Currency, DIV, Tax  (Price, Qty, Total \uC81C\uC678)
+    // Dividend-Stock  : \uC804\uCCB4 (Price, Qty, Total, DIV, Tax, Charge)
+    // Split / Merge   : Qty + Comment\uB9CC (\uAC00\uACA9 \uC5C6\uC74C, \uC218\uB7C9 \uC870\uC815\uB9CC)
+    const vis = {
+      priceField:    !isDividend && !isSplitMerge,
+      quantityField: isBuySell || isDivStock || isDefault || isSplitMerge,
+      totalField:    (isBuySell || isDivStock || isDefault) && !isSplitMerge,
+      divField:      isDividend || isDivStock,
+      taxField:      !isSplitMerge,
+      chargeField:   !isSplitMerge,
+    };
+
+    Object.entries(vis).forEach(([id, show]) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', !show);
+    });
+
+    // Sell \uC804\uC6A9: \uB9E4\uC785 \uC815\uBCF4 \uC139\uC158
+    const purchaseSec = document.getElementById('sellPurchaseSection');
+    if (purchaseSec) purchaseSec.classList.toggle('hidden', !isSell);
+
+    // Split/Merge: Currency(\uD658\uC728) \uD544\uB4DC \uAC15\uC81C \uC228\uAE40
+    if (isSplitMerge) {
+      document.getElementById('currencyField').classList.add('hidden');
+      document.getElementById('currency').removeAttribute('required');
+      document.getElementById('currency').value = '';
+    }
+
+    // Split/Merge: Quantity \uB77C\uBCA8 \uBC0F \uD78C\uD2B8 \uC5C5\uB370\uC774\uD2B8
+    const splitHint = document.getElementById('splitHint');
+    const qtyLabel  = document.getElementById('quantityLabel');
+    if (isSplit) {
+      qtyLabel.innerHTML  = '\uCD94\uAC00 \uC8FC\uC2DD\uC218 (\uC561\uBA74\uBD84\uD560) <span class="req">*</span>';
+      splitHint.textContent = '\uC608) 1:5 \uBD84\uD560, \uAE30\uC874 100\uC8FC \uBCF4\uC720 \u2192 \uCD94\uAC00\uB41C 400\uC8FC \uC785\uB825';
+      splitHint.classList.remove('hidden');
+    } else if (isMerge) {
+      qtyLabel.innerHTML  = '\uC18C\uBA78 \uC8FC\uC2DD\uC218 (\uC561\uBA74\uBCD1\uD569) <span class="req">*</span>';
+      splitHint.textContent = '\uC608) 5:1 \uBCD1\uD569, \uAE30\uC874 500\uC8FC \uBCF4\uC720 \u2192 \uC18C\uBA78\uB41C 400\uC8FC \uC785\uB825';
+      splitHint.classList.remove('hidden');
+    } else {
+      qtyLabel.innerHTML  = 'Quantity <span class="req">*</span>';
+      splitHint.classList.add('hidden');
+      splitHint.textContent = '';
+    }
+
+    // \uC228\uACA8\uC9C4 \uD544\uB4DC \uAC12 \uCD08\uAE30\uD654
+    if (!vis.priceField)    { document.getElementById('price').value    = ''; }
+    if (!vis.quantityField) { document.getElementById('quantity').value = ''; }
+    if (!vis.divField)      { document.getElementById('dividend').value = ''; }
+    if (!vis.taxField)      { document.getElementById('tax').value      = ''; }
+    if (!vis.chargeField)   { document.getElementById('charge').value   = ''; }
+    if (!isSell) {
+      document.getElementById('purchaseAmount').value       = '';
+      document.getElementById('purchaseCurrencyRate').value = '';
+      document.getElementById('purchaseNote').textContent   = '';
+    }
+
+    updateTotal();
+    updateKrwConversion();
+    if (isSell) fetchPurchaseInfoIfReady();
+    updateExchangeSectionVisibility();
+  }
+
+  // ---- Region \uBCC0\uACBD ----
+  function onRegionChange() {
+    const region   = document.getElementById('region').value;
+    const currency = regionMap[region] || '';
+    const isKorea  = region === 'Korea' || currency === 'KRW';
+
+    const currencyField = document.getElementById('currencyField');
+    const currencyInput = document.getElementById('currency');
+    if (isKorea || !region) {
+      currencyField.classList.add('hidden');
+      currencyInput.removeAttribute('required');
+      currencyInput.value = '';
+    } else {
+      currencyField.classList.remove('hidden');
+      currencyInput.setAttribute('required', '');
+      document.getElementById('currencyHint').textContent =
+        `1 ${currency} = ? KRW  (\uC608: USD \uAE30\uC900 1380 \uC785\uB825)`;
+    }
+
+    const label = currency || '-';
+    ['priceCurrency','taxCurrency','chargeCurrency','divCurrency'].forEach(id => {
+      document.getElementById(id).textContent = label;
+    });
+
+    if (isKorea || !region) {
+      ['priceKrw','taxKrw','chargeKrw'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById(id).textContent = '';
+      });
+    } else { updateKrwConversion(); }
+
+    updateTotal();
+    updateExchangeSectionVisibility();
+  }
+
+  // ---- \uCD1D\uC561 \uACC4\uC0B0 ----
+  function updateTotal() {
+    const price    = parseNum('price');
+    const quantity = parseNum('quantity');
+    const rate     = parseNum('currency');
+    const region   = document.getElementById('region').value;
+    const currency = regionMap[region] || '';
+    const isKorea  = region === 'Korea' || currency === 'KRW';
+
+    const totalForeign = document.getElementById('totalForeign');
+    const totalKrwEl   = document.getElementById('totalKrw');
+
+    if (!price || !quantity) {
+      totalForeign.textContent = '';
+      totalKrwEl.textContent = '';
+      return;
+    }
+    const total = price * quantity;
+    const fmt = (v, unit) => v.toLocaleString('ko-KR', {maximumFractionDigits: 2}) + ' ' + unit;
+
+    if (isKorea || !currency) {
+      totalForeign.textContent = fmt(total, 'KRW');
+      totalKrwEl.textContent = '';
+    } else {
+      totalForeign.textContent = fmt(total, currency);
+      totalKrwEl.textContent = rate > 0
+        ? '\u2248 ' + Math.floor(total * rate).toLocaleString('ko-KR') + ' KRW' : '';
+    }
+  }
+
+  // ---- KRW \uD658\uC0B0 ----
+  function updateKrwConversion() {
+    const rate   = parseNum('currency');
+    const price  = parseNum('price');
+    const tax    = parseNum('tax');
+    const charge = parseNum('charge');
+
+    const region   = document.getElementById('region').value;
+    const currency = regionMap[region] || '';
+    const isKorea  = region === 'Korea' || currency === 'KRW';
+
+    if (isKorea || !region || rate <= 0) {
+      ['priceKrw','taxKrw','chargeKrw'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      return;
+    }
+    const fmt = v => Math.floor(v).toLocaleString('ko-KR') + ' KRW';
+    const setKrw = (id, val) => {
+      const el = document.getElementById(id);
+      if (val > 0) { el.textContent = '\u2248 ' + fmt(val * rate); el.classList.remove('hidden'); }
+      else { el.textContent = ''; el.classList.add('hidden'); }
+    };
+    const dividend = parseNum('dividend');
+    setKrw('priceKrw',  price);
+    setKrw('divKrw',    dividend);
+    setKrw('taxKrw',    tax);
+    setKrw('chargeKrw', charge);
+  }
+
+  // ---- \uC22B\uC790 \uD3EC\uB9F7 ----
+  function fmtNum(input) {
+    let raw = input.value.replace(/,/g, '').replace(/[^\d.]/g, '');
+    const parts = raw.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    input.value = parts.length > 1 ? parts[0] + '.' + parts[1] : parts[0];
+  }
+  function parseNum(id) {
+    return parseFloat(document.getElementById(id).value.replace(/,/g, '')) || 0;
+  }
+
+  // ---- Ticker \uC790\uB3D9\uC644\uC131 ----
+  function onTickerInput() {
+    const val  = document.getElementById('ticker').value.trim().toUpperCase();
+    const drop = document.getElementById('tickerDropdown');
+    document.getElementById('name').value = '';
+
+    if (!val) { drop.classList.add('hidden'); return; }
+
+    const matched = tickerList.filter(t =>
+      t.ticker.toUpperCase().includes(val) ||
+      (t.name && t.name.toLowerCase().includes(val.toLowerCase()))
+    ).slice(0, 12);
+
+    if (!matched.length) { drop.classList.add('hidden'); return; }
+    drop.innerHTML = matched.map(t => `
+      <div class="ticker-option" onmousedown="selectTicker('${esc(t.ticker)}','${esc(t.name)}')">
+        <span class="t-code">${t.ticker}</span>
+        <span class="t-name">${t.name || ''}</span>
+      </div>`).join('');
+    drop.classList.remove('hidden');
+  }
+
+  function onTickerBlur() {
+    setTimeout(() => document.getElementById('tickerDropdown').classList.add('hidden'), 200);
+    const val  = document.getElementById('ticker').value.trim().toUpperCase();
+    const nameInput = document.getElementById('name');
+    if (!val) return;
+    const exact = tickerList.find(t => t.ticker.toUpperCase() === val);
+    if (exact && exact.name) {
+      nameInput.value = exact.name;
+      fetchPurchaseInfoIfReady();
+      return;
+    }
+    nameInput.placeholder = '\uC870\uD68C \uC911...';
+    fetchTickerName(val);
+    fetchPurchaseInfoIfReady();
+  }
+
+  function fetchTickerName(ticker) {
+    const nameInput = document.getElementById('name');
+    fetch('/api/ticker-name', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker})}).then(r => r.json()).then(function(result) {
+        if (result.success && result.name) {
+          nameInput.value = result.name;
+          nameInput.placeholder = '\uC885\uBAA9\uBA85 (\uC790\uB3D9 \uC785\uB825)';
+        } else {
+          nameInput.placeholder = '\uC885\uBAA9\uBA85 \uC9C1\uC811 \uC785\uB825';
+        }
+      }).catch(function() { nameInput.placeholder = '\uC885\uBAA9\uBA85 \uC9C1\uC811 \uC785\uB825'; });
+  }
+
+  function selectTicker(ticker, name) {
+    document.getElementById('ticker').value = ticker;
+    document.getElementById('name').value   = name;
+    document.getElementById('tickerDropdown').classList.add('hidden');
+    fetchPurchaseInfoIfReady();
+  }
+
+  function esc(str) {
+    return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  }
+
+  // ---- \uD574\uC678 Buy \uD658\uC804 \uBC29\uBC95 ----
+  function updateExchangeSectionVisibility() {
+    const t       = document.getElementById('trade').value.toLowerCase().replace(/[-\s]/g,'');
+    const region  = document.getElementById('region').value;
+    const cur     = regionMap[region] || 'KRW';
+    const show    = (t === 'buy') && !!region && cur !== 'KRW' && cur !== '';
+    document.getElementById('exchangeSection').classList.toggle('hidden', !show);
+    if (show) {
+      document.getElementById('existingFXCurrency').textContent = cur;
+      updateExchangePreview();
+    }
+  }
+
+  function onExchangeTypeChange() {
+    var _r1 = document.querySelector('input[name="exchangeType"]:checked');
+    const type = (_r1 ? _r1.value : null) || 'full';
+    document.getElementById('existingFXField').classList.toggle('hidden', type !== 'partial');
+    if (type !== 'partial') document.getElementById('existingFX').value = '';
+    updateExchangePreview();
+  }
+
+  function updateExchangePreview() {
+    const preview = document.getElementById('exchangePreview');
+    if (!preview) return;
+    const sec = document.getElementById('exchangeSection');
+    if (sec.classList.contains('hidden')) { preview.classList.add('hidden'); return; }
+
+    var _r2 = document.querySelector('input[name="exchangeType"]:checked');
+    const type       = (_r2 ? _r2.value : null) || 'full';
+    const price      = parseNum('price');
+    const qty        = parseNum('quantity');
+    const rate       = parseNum('currency');
+    const charge     = parseNum('charge');
+    const existingFX = type === 'partial' ? parseNum('existingFX') : 0;
+    const region     = document.getElementById('region').value;
+    const cur        = regionMap[region] || 'USD';
+    const ticker     = document.getElementById('ticker').value.trim() || 'Ticker';
+
+    const totalFX   = price * qty + charge;
+    const convertFX = type === 'full'    ? totalFX
+                    : type === 'partial' ? Math.max(0, totalFX - existingFX)
+                    : 0;
+    const withdrawKRW = convertFX * rate;
+
+    const fmtK = v => Math.floor(v).toLocaleString('ko-KR');
+    const fmtN = (v, d) => Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d !== undefined ? d : 4});
+
+    let html = '<strong>\uD83D\uDCCB \uC800\uC7A5\uB420 \uAE30\uB85D:</strong><br>';
+    let n = 1;
+    if (convertFX > 0) {
+      html += `${n++}. <b>Withdraw</b> KOREA &nbsp;\u2192&nbsp; <b>${fmtK(withdrawKRW)} KRW</b><br>`;
+      html += `${n++}. <b>Deposit</b> ${region} &nbsp;\u2192&nbsp; <b>${fmtN(convertFX,2)} ${cur}</b><br>`;
+    }
+    html += `${n}. <b>Buy</b> ${ticker} &nbsp;\u2192&nbsp; ${fmtN(price,4)} \u00D7 ${fmtN(qty)}\uC8FC = <b>${fmtN(totalFX,4)} ${cur}</b>`;
+    if (type === 'partial' && existingFX > 0) {
+      html += `<br><span style="color:#718096;font-size:0.73em;">* \uBCF4\uC720\uC678\uD654 ${fmtN(existingFX,2)} ${cur} + \uD658\uC804 ${fmtN(convertFX,2)} ${cur} \uC0AC\uC6A9</span>`;
+    }
+
+    preview.innerHTML = html;
+    preview.classList.remove('hidden');
+  }
+
+  // ---- Sell \uB9E4\uC785 \uC815\uBCF4 \uC790\uB3D9 \uC870\uD68C ----
+  function fetchPurchaseInfoIfReady() {
+    const t = document.getElementById('trade').value.toLowerCase().replace(/[-\s]/g, '');
+    if (t !== 'sell') return;
+
+    const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+    const qty    = parseNum('quantity');
+
+    if (!ticker || !qty) {
+      document.getElementById('purchaseAmount').value       = '';
+      document.getElementById('purchaseCurrencyRate').value = '';
+      document.getElementById('purchaseNote').textContent   = '';
+      return;
+    }
+    fetchPurchaseInfo(ticker, qty);
+  }
+
+  function fetchPurchaseInfo(ticker, sellQuantity) {
+    document.getElementById('purchaseAmount').placeholder       = '\uC870\uD68C \uC911...';
+    document.getElementById('purchaseCurrencyRate').placeholder = '\uC870\uD68C \uC911...';
+
+    fetch('/api/purchase', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ticker, sellQuantity})}).then(r => r.json()).then(function(result) {
+        document.getElementById('purchaseAmount').placeholder       = 'Ticker\u00B7\uC218\uB7C9 \uC785\uB825 \uD6C4 \uC790\uB3D9 \uACC4\uC0B0';
+        document.getElementById('purchaseCurrencyRate').placeholder = '\uC790\uB3D9 \uACC4\uC0B0';
+
+        if (!result.success) {
+          document.getElementById('purchaseNote').textContent =
+            '\u26A0 \uB9E4\uC785 \uC815\uBCF4 \uC870\uD68C \uC2E4\uD328: ' + (result.error || '');
+          return;
+        }
+        if (!result.totalBuyQty) {
+          document.getElementById('purchaseAmount').value       = '';
+          document.getElementById('purchaseCurrencyRate').value = '';
+          document.getElementById('purchaseNote').textContent   = '\uD574\uB2F9 \uC885\uBAA9\uC758 \uB9E4\uC785(Buy) \uC774\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.';
+          return;
+        }
+
+        const fmtK = v => Math.floor(v).toLocaleString('ko-KR');
+        const fmtN = v => Number(v).toLocaleString('ko-KR', { maximumFractionDigits: 4 });
+
+        // \uCE90\uC2DC \uC800\uC7A5 (\uBBF8\uB9AC\uBCF4\uAE30 \uBC0F \uC800\uC7A5 \uC2DC \uC0AC\uC6A9)
+        _purchaseKRW = result.purchase;
+        _purchaseFX  = result.purchaseFX || 0;
+
+        // \uD604\uC9C0 \uD1B5\uD654 \uD45C\uC2DC: \uD574\uC678 \uC885\uBAA9\uC774\uBA74 \uD604\uC9C0 \uD1B5\uD654\uB85C, KRW\uBA74 KRW\uB85C
+        const region   = document.getElementById('region').value;
+        const currency = regionMap[region] || 'KRW';
+        const isKRW    = currency === 'KRW';
+
+        if (isKRW) {
+          document.getElementById('purchaseAmount').value =
+            fmtK(result.purchase) + ' KRW';
+        } else {
+          document.getElementById('purchaseAmount').value =
+            fmtN(result.purchaseFX) + ' ' + currency +
+            '  (\u2248 ' + fmtK(result.purchase) + ' KRW)';
+        }
+
+        if (result.avgRate > 1) {
+          document.getElementById('purchaseCurrencyRate').value =
+            fmtN(result.avgRate);
+        } else {
+          document.getElementById('purchaseCurrencyRate').value = 'KRW';
+        }
+
+        const remaining = Number(result.remainingQty).toLocaleString('ko-KR', {maximumFractionDigits: 4});
+        const avgP      = fmtN(result.avgPrice) + (isKRW ? ' KRW' : ' ' + currency);
+        const sellQ     = Number(sellQuantity).toLocaleString('ko-KR', {maximumFractionDigits: 4});
+        const purStr    = isKRW
+          ? fmtK(result.purchase) + ' KRW'
+          : fmtN(result.purchaseFX) + ' ' + currency + ' (\u2248 ' + fmtK(result.purchase) + ' KRW)';
+
+        document.getElementById('purchaseNote').textContent =
+          `\uBCF4\uC720\uC218\uB7C9: ${remaining}\uC8FC \u00B7 \uD3C9\uADE0\uB2E8\uAC00: ${avgP} \u00B7 \uB9E4\uB3C4\uC218\uB7C9: ${sellQ}\uC8FC \u2192 \uB9E4\uC785\uAE08\uC561: ${purStr}`;
+      }).catch(function(err) {
+        document.getElementById('purchaseAmount').placeholder       = 'Ticker\u00B7\uC218\uB7C9 \uC785\uB825 \uD6C4 \uC790\uB3D9 \uACC4\uC0B0';
+        document.getElementById('purchaseCurrencyRate').placeholder = '\uC790\uB3D9 \uACC4\uC0B0';
+        document.getElementById('purchaseNote').textContent = '\uC870\uD68C \uC624\uB958: ' + err.message;
+      });
+  }
+
+  // ---- \uD3FC \uC81C\uCD9C \u2192 \uBBF8\uB9AC\uBCF4\uAE30 \uD45C\uC2DC ----
+  function handleSubmit(e) {
+    e.preventDefault();
+    clearAlert();
+    document.getElementById('submitBtn').disabled = true;
+
+    const formData = {
+      date:         document.getElementById('date').value,
+      accountOwner: document.getElementById('accountOwner').value,
+      account:      document.getElementById('account').value,
+      region:       document.getElementById('region').value,
+      assetType:    document.getElementById('assetType').value,
+      ticker:       document.getElementById('ticker').value.trim(),
+      name:         document.getElementById('name').value.trim(),
+      price:        parseNum('price'),
+      currency:     parseNum('currency') || '',
+      quantity:     parseNum('quantity'),
+      trade:            document.getElementById('trade').value,
+      dividend:         parseNum('dividend'),
+      tax:              parseNum('tax'),
+      charge:           parseNum('charge'),
+      purchase:         _purchaseKRW || '',          // KRW \uAE30\uC900 \uCE90\uC2DC\uAC12 \uC0AC\uC6A9
+      purchaseCurrency: parseFloat(
+                          document.getElementById('purchaseCurrencyRate').value
+                            .replace(/,/g, '').replace(/[^0-9.]/g, '')
+                        ) || '',
+      comment:          document.getElementById('comment').value.trim(),
+    };
+
+    // \uD574\uC678 Buy + \uD658\uC804 \uC120\uD0DD \uC5EC\uBD80 \uD655\uC778
+    const tVal     = document.getElementById('trade').value.toLowerCase().replace(/[-\s]/g,'');
+    const regVal   = document.getElementById('region').value;
+    const curCode  = regionMap[regVal] || 'KRW';
+    const isFgnBuy = (tVal === 'buy') && !!regVal && curCode !== 'KRW';
+    var _r3 = document.querySelector('input[name="exchangeType"]:checked');
+    const exchType = isFgnBuy
+      ? ((_r3 ? _r3.value : null) || 'none')
+      : 'none';
+
+    const useFgnBuy = isFgnBuy && (exchType === 'full' || exchType === 'partial');
+    if (useFgnBuy) {
+      formData.exchangeType = exchType;
+      formData.existingFX   = exchType === 'partial' ? parseNum('existingFX') : 0;
+      var _kEntry = Object.entries(regionMap).find(function(e) { return e[1] === 'KRW'; });
+      formData.krwRegion    = _kEntry ? _kEntry[0] : 'KOREA';
+    }
+
+    // \uC800\uC7A5 \uB300\uAE30 \uC0C1\uD0DC \uBCF4\uAD00 \uD6C4 \uBBF8\uB9AC\uBCF4\uAE30 \uD45C\uC2DC
+    pendingFormData = formData;
+    pendingFgnBuy   = useFgnBuy;
+    showPreview(formData);
+  }
+
+  // ---- \uBBF8\uB9AC\uBCF4\uAE30 \uBAA8\uB2EC \uD45C\uC2DC ----
+  function showPreview(fd) {
+    const fmtK = v => Math.floor(v).toLocaleString('ko-KR');
+    const fmtN = (v, d) => Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d !== undefined ? d : 4 });
+
+    const region   = fd.region;
+    const currency = regionMap[region] || 'KRW';
+    const isKRW    = currency === 'KRW';
+    const rate     = Number(fd.currency) || 1;
+    // \uD604\uC9C0 \uD1B5\uD654 \u2192 KRW \uD658\uC0B0
+    const toKRW    = v => isKRW ? v : v * rate;
+    // \uAE08\uC561 \uD3EC\uB9F7: \uD604\uC9C0 \uD1B5\uD654 \uD45C\uC2DC + KRW \uD658\uC0B0
+    const fmtAmt   = v => {
+      if (!v) return '0 ' + (isKRW ? 'KRW' : currency);
+      if (isKRW) return fmtK(v) + ' KRW';
+      return fmtN(v, 4) + ' ' + currency + '  (\u2248 ' + fmtK(toKRW(v)) + ' KRW)';
+    };
+
+    const t = (fd.trade || '').toLowerCase().replace(/[-\s]/g, '');
+    const isBuy      = t === 'buy';
+    const isSell     = t === 'sell';
+    const isBuySell  = isBuy || isSell;
+    const isDepWith  = t.startsWith('dep') || t.startsWith('with');
+    const isDivStock = t.includes('div') && t.includes('stock');
+    const isDividend = t.startsWith('div') && !isDivStock;
+    const isSplit    = t === 'split';
+    const isMerge    = t === 'merge' || t === 'reversesplit';
+
+    // \u2500\u2500 \uAC70\uB798 \uAE30\uBCF8\uC815\uBCF4 \u2500\u2500
+    document.getElementById('pvBasic').innerHTML =
+      pvRow('Date',          fd.date) +
+      pvRow('Trade',         fd.trade) +
+      pvRow('Account Owner', fd.accountOwner) +
+      pvRow('Account',       fd.account);
+
+    // \u2500\u2500 \uC885\uBAA9\uC815\uBCF4 \u2500\u2500
+    document.getElementById('pvStock').innerHTML =
+      pvRow('Region',     fd.region) +
+      pvRow('Asset Type', fd.assetType) +
+      pvRow('Ticker',     fd.ticker || '-') +
+      pvRow('Name',       fd.name   || '-');
+
+    // \u2500\u2500 \uAC70\uB798\uB0B4\uC6A9 \u2500\u2500
+    let trHtml = '';
+    if (!isSplit && !isMerge && !isDividend) {
+      if (fd.price) trHtml += pvRow('Price', fmtAmt(fd.price));
+    }
+    if (fd.quantity && !isDividend) {
+      trHtml += pvRow('Quantity', fmtN(fd.quantity) + ' \uC8FC');
+    }
+    if (!isKRW && fd.currency && !isSplit && !isMerge) {
+      trHtml += pvRow('\uD658\uC728', fmtN(rate, 2) + ' KRW/' + currency);
+    }
+    // Total Amount
+    if ((isBuySell || isDivStock) && fd.price && fd.quantity) {
+      const total = fd.price * fd.quantity;
+      if (isKRW) {
+        trHtml += pvRow('Total Amount', fmtK(total) + ' KRW');
+      } else {
+        trHtml += pvRow('Total Amount', fmtN(total, 4) + ' ' + currency + '  (\u2248 ' + fmtK(toKRW(total)) + ' KRW)');
+      }
+    }
+    // Deposit / Withdraw \uAE08\uC561
+    if (isDepWith && fd.price) {
+      trHtml += pvRow('\uAE08\uC561', fmtAmt(fd.price));
+    }
+    // Dividend
+    if ((isDividend || isDivStock) && fd.dividend) {
+      trHtml += pvRow('Dividend', fmtAmt(fd.dividend));
+    }
+    if (fd.tax)    trHtml += pvRow('Tax',    fmtAmt(fd.tax));
+    if (fd.charge) trHtml += pvRow('Charge', fmtAmt(fd.charge));
+    // Sell \uC804\uC6A9: \uB9E4\uC785\uAE08\uC561
+    if (isSell && _purchaseKRW > 0) {
+      if (isKRW) {
+        trHtml += pvRow('\uB9E4\uC785\uAE08\uC561 (Purchase)', fmtK(_purchaseKRW) + ' KRW');
+      } else {
+        trHtml += pvRow('\uB9E4\uC785\uAE08\uC561 (Purchase)',
+          fmtN(_purchaseFX, 4) + ' ' + currency + '  (\u2248 ' + fmtK(_purchaseKRW) + ' KRW)');
+      }
+    }
+    if (fd.comment) trHtml += pvRowFull('Comment', fd.comment);
+    document.getElementById('pvTrade').innerHTML = trHtml;
+
+    // \u2500\u2500 \uACB0\uACFC \uC694\uC57D \u2500\u2500
+    let resHtml = '';
+    if (isBuy) {
+      const totalKRW  = toKRW(fd.price * fd.quantity);
+      const taxKRW    = toKRW(fd.tax    || 0);
+      const chargeKRW = toKRW(fd.charge || 0);
+      const grand     = totalKRW + taxKRW + chargeKRW;
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uCD1D \uB9E4\uC785\uAE08\uC561</div><div class="pv-result-rows">
+        <div class="pv-result-row"><span>Total Amount</span><span>${fmtK(totalKRW)} KRW</span></div>
+        ${fd.tax    ? `<div class="pv-result-row"><span>+ Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        ${fd.charge ? `<div class="pv-result-row"><span>+ Charge</span><span>${fmtK(chargeKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total"><span>= \uCD1D\uAE08\uC561</span><span>${fmtK(grand)} KRW</span></div>
+      </div>`;
+    } else if (isSell) {
+      const totalKRW  = toKRW(fd.price * fd.quantity);
+      const taxKRW    = toKRW(fd.tax    || 0);
+      const chargeKRW = toKRW(fd.charge || 0);
+      const pnl       = totalKRW - taxKRW - chargeKRW - _purchaseKRW;
+      const pnlCls    = pnl >= 0 ? 'pnl-pos' : 'pnl-neg';
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uB9E4\uB3C4 \uC190\uC775</div><div class="pv-result-rows">
+        <div class="pv-result-row"><span>Total Amount</span><span>${fmtK(totalKRW)} KRW</span></div>
+        ${fd.tax    ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        ${fd.charge ? `<div class="pv-result-row"><span>- Charge</span><span>${fmtK(chargeKRW)} KRW</span></div>` : ''}
+        ${_purchaseKRW ? `<div class="pv-result-row"><span>- \uB9E4\uC785\uAE08\uC561</span><span>${fmtK(_purchaseKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total ${pnlCls}"><span>= \uD22C\uC790\uC190\uC775</span><span>${pnl >= 0 ? '+' : ''}${fmtK(Math.abs(pnl))} KRW</span></div>
+      </div>`;
+    } else if (t.startsWith('dep')) {
+      const amtKRW    = toKRW(fd.price || 0);
+      const taxKRW    = toKRW(fd.tax    || 0);
+      const chargeKRW = toKRW(fd.charge || 0);
+      const net       = amtKRW - taxKRW - chargeKRW;
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uC785\uAE08\uC561</div><div class="pv-result-rows">
+        <div class="pv-result-row"><span>\uC785\uAE08\uC561</span><span>${fmtK(amtKRW)} KRW</span></div>
+        ${fd.tax    ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        ${fd.charge ? `<div class="pv-result-row"><span>- Charge</span><span>${fmtK(chargeKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total"><span>= \uC21C\uC785\uAE08\uC561</span><span>${fmtK(net)} KRW</span></div>
+      </div>`;
+    } else if (t.startsWith('with')) {
+      const amtKRW    = toKRW(fd.price || 0);
+      const taxKRW    = toKRW(fd.tax    || 0);
+      const chargeKRW = toKRW(fd.charge || 0);
+      const total     = amtKRW + taxKRW - chargeKRW;
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uCD1D\uCD9C\uAE08\uC561</div><div class="pv-result-rows">
+        <div class="pv-result-row"><span>\uCD9C\uAE08\uC561</span><span>${fmtK(amtKRW)} KRW</span></div>
+        ${fd.tax    ? `<div class="pv-result-row"><span>+ Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        ${fd.charge ? `<div class="pv-result-row"><span>- Charge</span><span>${fmtK(chargeKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total"><span>= \uCD1D\uCD9C\uAE08\uC561</span><span>${fmtK(total)} KRW</span></div>
+      </div>`;
+    } else if (isDividend) {
+      const divKRW = toKRW(fd.dividend || fd.price || 0);
+      const taxKRW = toKRW(fd.tax || 0);
+      const net    = divKRW - taxKRW;
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uBC30\uB2F9\uAE08</div><div class="pv-result-rows">
+        <div class="pv-result-row"><span>\uBC30\uB2F9\uAE08</span><span>${fmtK(divKRW)} KRW</span></div>
+        ${fd.tax ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total"><span>= \uC21C\uBC30\uB2F9\uAE08</span><span>${fmtK(net)} KRW</span></div>
+      </div>`;
+    } else if (isDivStock) {
+      const divKRW = toKRW(fd.dividend || 0);
+      const taxKRW = toKRW(fd.tax || 0);
+      const net    = divKRW - taxKRW;
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uBC30\uB2F9\uAE08 (\uC8FC\uC2DD \uC7AC\uCDE8\uB4DD)</div><div class="pv-result-rows">
+        <div class="pv-result-row"><span>\uBC30\uB2F9\uAE08</span><span>${fmtK(divKRW)} KRW</span></div>
+        ${fd.tax ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total"><span>= \uC21C\uBC30\uB2F9\uAE08</span><span>${fmtK(net)} KRW</span></div>
+        <div class="pv-result-row" style="margin-top:4px;color:#718096;font-size:0.8em;"><span>\uC7AC\uCDE8\uB4DD \uC8FC\uC2DD\uC218</span><span>+${fmtN(fd.quantity)} \uC8FC</span></div>
+      </div>`;
+    } else if (isSplit) {
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC561\uBA74\uBD84\uD560</div><div class="pv-result-rows">
+        <div class="pv-result-total"><span>\uCD94\uAC00 \uC8FC\uC2DD\uC218</span><span>+${fmtN(fd.quantity)} \uC8FC</span></div>
+      </div>`;
+    } else if (isMerge) {
+      resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC561\uBA74\uBCD1\uD569</div><div class="pv-result-rows">
+        <div class="pv-result-total"><span>\uC18C\uBA78 \uC8FC\uC2DD\uC218</span><span>-${fmtN(fd.quantity)} \uC8FC</span></div>
+      </div>`;
+    }
+
+    document.getElementById('pvResult').innerHTML = resHtml;
+    document.getElementById('confirmSaveBtn').disabled = false;
+    document.getElementById('previewModal').classList.remove('hidden');
+  }
+
+  function pvRow(label, val) {
+    return `<div class="pv-row"><span class="pv-label">${label}</span><span class="pv-value">${val !== undefined && val !== null && val !== '' ? val : '-'}</span></div>`;
+  }
+  function pvRowFull(label, val) {
+    return `<div class="pv-full"><span class="pv-label">${label}</span><span class="pv-value">${val || '-'}</span></div>`;
+  }
+
+  function closePreview() {
+    document.getElementById('previewModal').classList.add('hidden');
+    document.getElementById('submitBtn').disabled = false;
+    pendingFormData = null;
+    pendingFgnBuy   = false;
+  }
+
+  function confirmSave() {
+    if (!pendingFormData) return;
+    document.getElementById('confirmSaveBtn').disabled = true;
+    document.getElementById('previewModal').classList.add('hidden');
+    showLoading(true);
+
+    const formData  = pendingFormData;
+    const useFgnBuy = pendingFgnBuy;
+
+    const onSaveSuccess = result => {
+      showLoading(false);
+      document.getElementById('submitBtn').disabled      = false;
+      document.getElementById('confirmSaveBtn').disabled = false;
+      pendingFormData = null;
+      pendingFgnBuy   = false;
+      if (result.success) {
+        const cnt = result.recordsCreated > 1 ? ` (${result.recordsCreated}\uAC74 \uC790\uB3D9 \uC0DD\uC131)` : '';
+        showAlert('\u2705 \uAC70\uB798\uAC00 \uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!' + cnt, 'success');
+        resetFormKeepBasic();
+        if (formData.ticker && !tickerList.some(t => t.ticker === formData.ticker)) {
+          tickerList.push({ ticker: formData.ticker, name: formData.name });
+        }
+      } else {
+        showAlert('\uC800\uC7A5 \uC2E4\uD328: ' + (result.error || '\uC54C \uC218 \uC5C6\uB294 \uC624\uB958'), 'error');
+      }
+    };
+    const onSaveFail = err => {
+      showLoading(false);
+      document.getElementById('submitBtn').disabled      = false;
+      document.getElementById('confirmSaveBtn').disabled = false;
+      pendingFormData = null;
+      pendingFgnBuy   = false;
+      showAlert('\uC624\uB958: ' + err.message, 'error');
+    };
+
+    if (useFgnBuy) {
+      fetch('/api/foreign-buy', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formData)}).then(r => r.json()).then(onSaveSuccess).catch(onSaveFail);
+    } else {
+      fetch('/api/transactions', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formData)}).then(r => r.json()).then(onSaveSuccess).catch(onSaveFail);
+    }
+  }
+
+  // ---- \uD3FC \uCD08\uAE30\uD654 ----
+  function resetForm() {
+    document.getElementById('tradeForm').reset();
+    setTodayDate();
+    document.getElementById('currencyField').classList.add('hidden');
+    document.getElementById('sellPurchaseSection').classList.add('hidden');
+    ['priceCurrency','taxCurrency','chargeCurrency'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+    });
+    ['priceKrw','divKrw','taxKrw','chargeKrw'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+      document.getElementById(id).textContent = '';
+    });
+    document.getElementById('totalForeign').textContent = '';
+    document.getElementById('totalKrw').textContent = '';
+    document.getElementById('purchaseAmount').value       = '';
+    document.getElementById('purchaseCurrencyRate').value = '';
+    document.getElementById('purchaseNote').textContent   = '';
+    _purchaseKRW = 0;
+    _purchaseFX  = 0;
+    // \uD658\uC804 \uC139\uC158 \uCD08\uAE30\uD654
+    document.getElementById('exchangeSection').classList.add('hidden');
+    document.getElementById('exchangePreview').classList.add('hidden');
+    document.getElementById('exchangePreview').textContent = '';
+    document.getElementById('existingFXField').classList.add('hidden');
+    document.getElementById('existingFX').value = '';
+    const radioFull = document.querySelector('input[name="exchangeType"][value="full"]');
+    if (radioFull) radioFull.checked = true;
+    onTradeChange();
+    clearAlert();
+  }
+
+  function resetFormKeepBasic() {
+    ['ticker','name','price','currency','quantity','dividend','tax','charge','comment',
+     'purchaseAmount','purchaseCurrencyRate']
+      .forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('purchaseNote').textContent = '';
+    _purchaseKRW = 0;
+    _purchaseFX  = 0;
+    ['priceKrw','divKrw','taxKrw','chargeKrw'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+      document.getElementById(id).textContent = '';
+    });
+    document.getElementById('totalForeign').textContent = '';
+    document.getElementById('totalKrw').textContent = '';
+    // \uD658\uC804 \uC139\uC158 \uCD08\uAE30\uD654
+    document.getElementById('exchangePreview').classList.add('hidden');
+    document.getElementById('exchangePreview').textContent = '';
+    document.getElementById('existingFXField').classList.add('hidden');
+    document.getElementById('existingFX').value = '';
+    const radioFull = document.querySelector('input[name="exchangeType"][value="full"]');
+    if (radioFull) radioFull.checked = true;
+    setTodayDate();
+  }
+
+  // ====================================================
+  // ---- \uAC70\uB798 \uC870\uD68C ----
+  // ====================================================
+  function runQuery() {
+    const filters = {
+      startDate:    document.getElementById('qStartDate').value,
+      endDate:      document.getElementById('qEndDate').value,
+      accountOwner: document.getElementById('qAccountOwner').value,
+      account:      document.getElementById('qAccount').value,
+    };
+
+    showLoading(true);
+    fetch('/api/query', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(filters)}).then(r => r.json()).then(function(result) {
+        showLoading(false);
+        if (!result.success) {
+          document.getElementById('queryResult').innerHTML =
+            `<div class="alert alert-error">\uC870\uD68C \uC624\uB958: ${result.error}</div>`;
+          return;
+        }
+        renderTable(result.headers, result.data);
+      }).catch(function(err) {
+        showLoading(false);
+        document.getElementById('queryResult').innerHTML =
+          `<div class="alert alert-error">\uC870\uD68C \uC2E4\uD328: ${err.message}</div>`;
+      });
+  }
+
+  function renderTable(headers, rows) {
+    const container = document.getElementById('queryResult');
+
+    if (!rows || rows.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">\uD83D\uDCED</div>
+          \uC870\uD68C\uB41C \uAC70\uB798 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.
+        </div>`;
+      return;
+    }
+
+    // \uCEEC\uB7FC \uC778\uB371\uC2A4
+    const tradeCol      = headers.indexOf('Trade');
+    const priceCol      = headers.indexOf('Price');
+    const qtyCol        = headers.indexOf('Quantity');
+    const regionCol     = headers.indexOf('Region');
+    const exRateCol     = headers.indexOf('Currency');
+    const divCol        = headers.indexOf('Dividend');
+    const taxCol        = headers.indexOf('Tax');
+    const chargeCol     = headers.indexOf('Charge');
+    const purchaseCol   = headers.indexOf('Purchase');
+    const purCurCol     = headers.indexOf('Purchase Currency');
+
+    // \uD1B5\uD654 \uB9C8\uD06C \uBD99\uC77C \uCEEC\uB7FC (\uBCF8 \uD1B5\uD654\uB85C \uD45C\uC2DC)
+    const currMarkCols = new Set([priceCol, divCol, taxCol, chargeCol, purchaseCol].filter(i => i !== -1));
+    // \uC22B\uC790 \uD615\uC2DD \uCEEC\uB7FC
+    const numColNames  = new Set(['Price','Currency','Quantity','Dividend','Tax','Charge','Purchase','Purchase Currency']);
+
+    // \uD5E4\uB354 \uC0BD\uC785: Quantity \uB2E4\uC74C Total Amount / Total Amount (KRW)
+    //                   Dividend / Tax / Charge / Purchase Currency \uB2E4\uC74C KRW \uCEEC\uB7FC
+    const insertAfter = qtyCol !== -1 ? qtyCol : headers.length - 1;
+    const dispHeaders = [];
+    headers.forEach(function(h, i) {
+      dispHeaders.push(h);
+      if (i === insertAfter) { dispHeaders.push('Total Amount'); dispHeaders.push('Total Amount (KRW)'); }
+      if (h === 'Dividend')          dispHeaders.push('Dividend (KRW)');
+      if (h === 'Tax')               dispHeaders.push('Tax (KRW)');
+      if (h === 'Charge')            dispHeaders.push('Charge (KRW)');
+      if (h === 'Purchase Currency') dispHeaders.push('Purchase (KRW)');
+    });
+
+    const thead = `<thead><tr>${dispHeaders.map(function(h) { return '<th>' + h + '</th>'; }).join('')}</tr></thead>`;
+    const tbody = `<tbody>${rows.map(function(row) {
+      const region      = regionCol  !== -1 ? String(row[regionCol]).trim() : '';
+      const currCode    = regionMap[region] || 'KRW';
+      const isKRW       = currCode === 'KRW';
+      const exRate      = exRateCol !== -1 ? Number(row[exRateCol]) || 1 : 1;
+      const purCurRate  = purCurCol !== -1 ? Number(row[purCurCol]) || 1 : 1;
+
+      const price    = priceCol    !== -1 ? Number(row[priceCol])    || 0 : 0;
+      const qty      = qtyCol      !== -1 ? Number(row[qtyCol])      || 0 : 0;
+      const divRaw   = divCol      !== -1 ? Number(row[divCol])      || 0 : 0;
+      const taxRaw   = taxCol      !== -1 ? Number(row[taxCol])      || 0 : 0;
+      const chgRaw   = chargeCol   !== -1 ? Number(row[chargeCol])   || 0 : 0;
+      const purRaw   = purchaseCol !== -1 ? Number(row[purchaseCol]) || 0 : 0;
+
+      // Buy/Sell: Price x Qty / Deposit/Withdraw \uB4F1 Qty=0: Price \uADF8\uB300\uB85C
+      const total    = price > 0 ? (qty > 0 ? price * qty : price) : 0;
+      const totalKRW = isKRW ? total : total * exRate;
+      const divKRW   = isKRW ? divRaw   : divRaw   * exRate;
+      const taxKRW   = isKRW ? taxRaw   : taxRaw   * exRate;
+      const chgKRW   = isKRW ? chgRaw   : chgRaw   * exRate;
+      const purKRW   = isKRW ? purRaw   : purRaw   * purCurRate;
+
+      const fmt  = function(v, dec) { return Number(v).toLocaleString('ko-KR', {maximumFractionDigits: dec !== undefined ? dec : 4}); };
+      const fmtK = function(v) { return Math.floor(v).toLocaleString('ko-KR'); };
+      const kCell = function(v) {
+        return v > 0 ? fmtK(v) + ' <span style="font-size:0.75em;color:#718096;">KRW</span>' : '';
+      };
+
+      const totalCell    = '<td class="num" style="font-weight:600;">' +
+        (total > 0 ? fmt(total) + ' <span style="font-size:0.75em;color:#718096;">' + currCode + '</span>' : '') + '</td>';
+      const totalKRWCell = '<td class="num" style="font-weight:600;color:#2f855a;">' + kCell(totalKRW) + '</td>';
+
+      const cells = [];
+      row.forEach(function(cell, i) {
+        const h = headers[i];
+        let cls = '';
+        let val = cell === null || cell === undefined ? '' : cell;
+
+        if (numColNames.has(h) && val !== '') {
+          cls = 'num';
+          const n = Number(val);
+          if (currMarkCols.has(i)) {
+            val = fmt(n) + ' <span style="font-size:0.75em;color:#718096;">' + currCode + '</span>';
+          } else {
+            val = fmt(n);
+          }
+        }
+        if (i === tradeCol) {
+          const t = String(val).toLowerCase();
+          cls = t === 'buy'  || t === '\uB9E4\uC218' ? 'trade-buy'
+              : t === 'sell' || t === '\uB9E4\uB3C4' ? 'trade-sell' : '';
+        }
+        cells.push('<td class="' + cls + '">' + val + '</td>');
+
+        // \uACC4\uC0B0 \uCEEC\uB7FC \uC0BD\uC785
+        if (i === insertAfter) { cells.push(totalCell); cells.push(totalKRWCell); }
+        if (h === 'Dividend')          cells.push('<td class="num" style="color:#2f855a;">' + kCell(divKRW) + '</td>');
+        if (h === 'Tax')               cells.push('<td class="num">' + kCell(taxKRW) + '</td>');
+        if (h === 'Charge')            cells.push('<td class="num">' + kCell(chgKRW) + '</td>');
+        if (h === 'Purchase Currency') cells.push('<td class="num" style="color:#2f855a;">' + kCell(purKRW) + '</td>');
+      });
+
+      return '<tr>' + cells.join('') + '</tr>';
+    }).join('')}</tbody>`;
+
+    container.innerHTML = `
+      <div class="result-info-row">
+        <div class="result-info">\uCD1D <strong>${rows.length}\uAC74</strong>\uC758 \uAC70\uB798 \uB0B4\uC5ED &nbsp;\u00B7&nbsp; Total Amount = Price \u00D7 Quantity</div>
+      </div>
+      <div class="table-wrap">
+        <table>${thead}${tbody}</table>
+      </div>`;
+    lastQueryResult = { headers: headers, data: rows };
+    var eb = document.getElementById('exportBtn'); if (eb) eb.disabled = false;
+  }
+
+  function resetQuery() {
+    ['qStartDate','qEndDate'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('qAccountOwner').value = '';
+    document.getElementById('qAccount').value = '';
+    document.getElementById('queryResult').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">\uD83D\uDD0D</div>
+        \uC870\uD68C \uC870\uAC74\uC744 \uC124\uC815\uD558\uACE0 \uC870\uD68C \uBC84\uD2BC\uC744 \uD074\uB9AD\uD558\uC138\uC694.
+      </div>`;
+    lastQueryResult = { headers: [], data: [] };
+    var eb = document.getElementById('exportBtn'); if (eb) eb.disabled = true;
+  }
+
+  // ====================================================
+  // ---- \uD604\uD669 \uD0ED ----
+  // ====================================================
+  let portfolioLoaded = false;
+  let currentOvFilters = {};
+
+  function applyOvFilter() {
+    const owner   = document.getElementById('ovOwner').value;
+    const account = document.getElementById('ovAccount').value;
+    const endDate = document.getElementById('ovEndDate').value;
+
+    currentOvFilters = {};
+    if (owner)   currentOvFilters.accountOwner = owner;
+    if (account) currentOvFilters.account      = account;
+    if (endDate) currentOvFilters.endDate       = endDate;
+
+    // \uD544\uD130 \uBC43\uC9C0 \uC5C5\uB370\uC774\uD2B8
+    const badge = document.getElementById('ovFilterBadge');
+    const parts = [];
+    if (owner)   parts.push('\uD83D\uDC64 ' + owner);
+    if (account) parts.push('\uD83C\uDFE6 ' + account);
+    if (endDate) parts.push('\uD83D\uDCC5 ' + endDate + ' \uAE30\uC900');
+    if (parts.length) {
+      badge.textContent = '\uC801\uC6A9 \uC911: ' + parts.join('  \u00B7  ');
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+
+    portfolioLoaded = false;
+    loadPortfolioData(true);
+  }
+
+  function resetOvFilter() {
+    document.getElementById('ovOwner').value   = '';
+    document.getElementById('ovAccount').value = '';
+    document.getElementById('ovEndDate').value = '';
+    currentOvFilters = {};
+    document.getElementById('ovFilterBadge').classList.add('hidden');
+    portfolioLoaded = false;
+    loadPortfolioData(true);
+  }
+
+  function loadPortfolioData(force) {
+    if (portfolioLoaded && !force) return;
+
+    document.getElementById('ovLoadingMsg').classList.remove('hidden');
+    document.getElementById('ovTotalKRW').textContent = '\uC870\uD68C \uC911...';
+    ['ovCashSection','ovStockSection','ovFundSection'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div class="ov-empty">\u23F3 \uB85C\uB529 \uC911...</div>';
+    });
+
+    fetch('/api/portfolio', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(currentOvFilters)}).then(r => r.json()).then(function(data) {
+        document.getElementById('ovLoadingMsg').classList.add('hidden');
+        if (!data.success) {
+          document.getElementById('ovTotalKRW').textContent = '-';
+          ['ovCashSection','ovStockSection','ovFundSection'].forEach(id => {
+            document.getElementById(id).innerHTML =
+              `<div class="alert alert-error">\uC870\uD68C \uC624\uB958: ${data.error || '\uC54C \uC218 \uC5C6\uB294 \uC624\uB958'}</div>`;
+          });
+          return;
+        }
+        portfolioLoaded = true;
+        renderPortfolio(data);
+      }).catch(function(err) {
+        document.getElementById('ovLoadingMsg').classList.add('hidden');
+        document.getElementById('ovTotalKRW').textContent = '-';
+        document.getElementById('ovCashSection').innerHTML =
+          `<div class="alert alert-error">\uC624\uB958: ${err.message}</div>`;
+      });
+  }
+
+  function renderPortfolio(data) {
+    const fmtK   = v => Math.floor(v).toLocaleString('ko-KR');
+    const fmtN   = (v, d) => Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d !== undefined ? d : 4 });
+    const fmtPct = v => (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%';
+    const pnlCls = v => v > 0 ? 'pnl-pos' : v < 0 ? 'pnl-neg' : 'pnl-zero';
+
+    // \uC804\uCCB4 \uC790\uC0B0 \uCD1D\uC561
+    document.getElementById('ovTotalKRW').textContent   = fmtK(data.totalKRW) + ' KRW';
+    document.getElementById('ovCashTotal').textContent  = '\uD604\uAE08 ' + fmtK(data.totalCashKRW)  + ' KRW';
+    document.getElementById('ovStockTotal').textContent = '\uC8FC\uC2DD ' + fmtK(data.totalStockKRW) + ' KRW';
+    document.getElementById('ovFundTotal').textContent  = '\uD380\uB4DC ' + fmtK(data.totalFundKRW)  + ' KRW';
+
+    // \uD604\uAE08 \uC139\uC158
+    const cashSec = document.getElementById('ovCashSection');
+    if (!data.cash || data.cash.length === 0) {
+      cashSec.innerHTML = '<div class="ov-empty">Deposit/Withdraw \uB0B4\uC5ED \uC5C6\uC74C</div>';
+    } else {
+      cashSec.innerHTML = '<div class="cash-grid">' +
+        data.cash.map(c => {
+          const isKRW = c.currency === 'KRW';
+          return `<div class="cash-item">
+            <div class="cash-item-label">${c.region} (${c.currency})</div>
+            <div class="cash-item-amount" style="${c.amount < 0 ? 'color:#c53030;' : ''}">${c.amount >= 0 ? '' : '\u25BC '}${fmtN(Math.abs(c.amount), 2)} ${c.currency}</div>
+            ${!isKRW ? `<div class="cash-item-krw" style="${c.amountKRW < 0 ? 'color:#c53030;' : ''}">\u2248 ${fmtK(Math.abs(c.amountKRW))} KRW <span style="font-size:0.7em;color:#a0aec0;">(@${fmtN(c.rate,2)})</span></div>` : ''}
+          </div>`;
+        }).join('') + '</div>';
+    }
+
+    renderPositionTable('ovStockSection', data.stocks, true);
+    renderPositionTable('ovFundSection',  data.funds,  false);
+  }
+
+  function renderPositionTable(sectionId, items, showDividend) {
+    const sec = document.getElementById(sectionId);
+    if (!items || items.length === 0) {
+      sec.innerHTML = '<div class="ov-empty">\uBCF4\uC720 \uC885\uBAA9 \uC5C6\uC74C</div>';
+      return;
+    }
+
+    const fmtK   = v => Math.floor(v).toLocaleString('ko-KR');
+    const fmtN   = (v, d) => Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d !== undefined ? d : 4 });
+    const fmtPct = v => (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%';
+    const pnlCls = v => v > 0 ? 'pnl-pos' : v < 0 ? 'pnl-neg' : 'pnl-zero';
+
+    // \uD569\uC0B0 (KRW \uD658\uC0B0 \uAE30\uC900 \u2013 \uC694\uC57D \uD589 \uC804\uC6A9)
+    const totalPurchase = items.reduce((s,i) => s + i.purchaseAmt, 0);
+    const totalMarket   = items.reduce((s,i) => s + i.marketValue, 0);
+    const totalPnl      = totalMarket - totalPurchase;
+    const totalPnlPct   = totalPurchase > 0 ? totalPnl / totalPurchase * 100 : 0;
+    const totalDiv      = items.reduce((s,i) => s + (i.divKRW || 0), 0);
+
+    // \uAE08\uC561 \uD3EC\uB9F7: USD \uC885\uBAA9\uC740 \uC18C\uC218\uC810 2\uC790\uB9AC, KRW \uC885\uBAA9\uC740 \uC815\uC218
+    const fmtAmt = (v, isK) => isK ? fmtK(v) : fmtN(v, 2);
+    const fmtPnlAmt = (v, isK) => (v >= 0 ? '+' : '') + fmtAmt(Math.abs(v), isK) + (v < 0 ? '-' : '');
+
+    const cols = ['Ticker','Name','\uC218\uB7C9','\uB9E4\uC785\uB2E8\uAC00','\uB9E4\uC785\uAE08\uC561','\uD604\uC7AC\uAC00','\uD3C9\uAC00\uAE08\uC561','\uC190\uC775\uAE08\uC561','\uC190\uC775\uC728'];
+    if (showDividend) cols.push('\uB204\uC801\uBC30\uB2F9\uAE08');
+
+    const thead = `<thead><tr>${cols.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+    const tbody = '<tbody>' + items.map(item => {
+      const pc   = pnlCls(item.pnlFX);
+      const isK  = item.currency === 'KRW';
+      const cur  = item.currency;
+
+      const avgStr = item.avgPrice > 0
+        ? fmtAmt(item.avgPrice, isK) + ' ' + cur : 'N/A';
+      const curStr = item.currentPrice > 0
+        ? fmtAmt(item.currentPrice, isK) + ' ' + cur : 'N/A';
+
+      // \uB9E4\uC785\uAE08\uC561\u00B7\uD3C9\uAC00\uAE08\uC561\u00B7\uC190\uC775: \uB9E4\uC785\uD654\uD3D0 \uAE30\uC900 (USD \uC885\uBAA9 \u2192 USD, KRW \uC885\uBAA9 \u2192 KRW)
+      const purStr = fmtAmt(item.purchaseAmtFX, isK) + ' ' + cur;
+      const mktStr = item.currentPrice > 0
+        ? fmtAmt(item.marketValueFX, isK) + ' ' + cur : 'N/A';
+      const pnlStr = item.currentPrice > 0
+        ? (item.pnlFX >= 0 ? '+' : '') + fmtAmt(item.pnlFX, isK) + ' ' + cur : 'N/A';
+      const pctStr = item.currentPrice > 0 ? fmtPct(item.pnlPct) : 'N/A';
+
+      // \uB204\uC801\uBC30\uB2F9\uAE08: \uB9E4\uC785\uD654\uD3D0 \uAE30\uC900
+      const divVal = isK ? (item.divKRW || 0) : (item.divFX || 0);
+      const divStr = divVal > 0 ? fmtAmt(divVal, isK) + ' ' + cur : '-';
+
+      let row = `<tr>
+        <td style="font-weight:700;color:#2b6cb0;">${item.ticker}</td>
+        <td>${item.name || ''}</td>
+        <td class="num">${fmtN(item.quantity, 0)}</td>
+        <td class="num">${avgStr}</td>
+        <td class="num">${purStr}</td>
+        <td class="num">${curStr}</td>
+        <td class="num" style="font-weight:600;">${mktStr}</td>
+        <td class="num ${pc}">${pnlStr}</td>
+        <td class="num ${pc}">${pctStr}</td>`;
+      if (showDividend) {
+        row += `<td class="num" style="color:#2f855a;">${divStr}</td>`;
+      }
+      row += '</tr>';
+      return row;
+    }).join('') + '</tbody>';
+
+    // \uC694\uC57D \uD589: KRW \uD658\uC0B0 \uD569\uACC4
+    const pc = pnlCls(totalPnl);
+    const summary = `<div class="section-total">
+      \uB9E4\uC785\uAE08\uC561 \uD569\uACC4: <strong>${fmtK(totalPurchase)} KRW</strong> &nbsp;\u00B7&nbsp;
+      \uD3C9\uAC00\uAE08\uC561 \uD569\uACC4: <strong>${fmtK(totalMarket)} KRW</strong> &nbsp;\u00B7&nbsp;
+      \uC190\uC775: <strong class="${pc}">${totalPnl >= 0 ? '+' : ''}${fmtK(totalPnl)} KRW (${fmtPct(totalPnlPct)})</strong>
+      ${showDividend ? `&nbsp;\u00B7&nbsp; \uB204\uC801\uBC30\uB2F9\uAE08: <strong style="color:#2f855a;">${fmtK(totalDiv)} KRW</strong>` : ''}
+    </div>`;
+
+    sec.innerHTML = summary + `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
+  }
+
+  // ====================================================
+  // ---- CSV \uB0B4\uBCF4\uB0B4\uAE30 ----
+  // ====================================================
+  function exportToCSV() {
+    var hs   = lastQueryResult.headers;
+    var rows = lastQueryResult.data;
+    if (!hs.length || !rows.length) {
+      alert('\uB0B4\uBCF4\uB0BC \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uC870\uD68C\uD574\uC8FC\uC138\uC694.');
+      return;
+    }
+    var priceCol    = hs.indexOf('Price');
+    var qtyCol      = hs.indexOf('Quantity');
+    var regionCol   = hs.indexOf('Region');
+    var exRateCol   = hs.indexOf('Currency');
+    var divCol      = hs.indexOf('Dividend');
+    var taxCol      = hs.indexOf('Tax');
+    var chargeCol   = hs.indexOf('Charge');
+    var purchaseCol = hs.indexOf('Purchase');
+    var purCurCol   = hs.indexOf('Purchase Currency');
+    var insertAfter = qtyCol !== -1 ? qtyCol : hs.length - 1;
+
+    // \uD5E4\uB354 \uBE4C\uB4DC (\uAE30\uC874 \uD5E4\uB354 + KRW \uCEEC\uB7FC)
+    var expHs = [];
+    hs.forEach(function(h, i) {
+      expHs.push(h);
+      if (i === insertAfter) { expHs.push('Total Amount'); expHs.push('Total Amount (KRW)'); }
+      if (h === 'Dividend')          expHs.push('Dividend (KRW)');
+      if (h === 'Tax')               expHs.push('Tax (KRW)');
+      if (h === 'Charge')            expHs.push('Charge (KRW)');
+      if (h === 'Purchase Currency') expHs.push('Purchase (KRW)');
+    });
+
+    var allRows = [expHs];
+    rows.forEach(function(row) {
+      var region     = regionCol  !== -1 ? String(row[regionCol]).trim() : '';
+      var currCode   = regionMap[region] || 'KRW';
+      var isKRW      = currCode === 'KRW';
+      var exRate     = exRateCol  !== -1 ? (Number(row[exRateCol])  || 1) : 1;
+      var purCurRate = purCurCol  !== -1 ? (Number(row[purCurCol])  || 1) : 1;
+      var price      = priceCol   !== -1 ? (Number(row[priceCol])   || 0) : 0;
+      var qty        = qtyCol     !== -1 ? (Number(row[qtyCol])     || 0) : 0;
+      var divRaw     = divCol     !== -1 ? (Number(row[divCol])     || 0) : 0;
+      var taxRaw     = taxCol     !== -1 ? (Number(row[taxCol])     || 0) : 0;
+      var chgRaw     = chargeCol  !== -1 ? (Number(row[chargeCol])  || 0) : 0;
+      var purRaw     = purchaseCol !== -1 ? (Number(row[purchaseCol]) || 0) : 0;
+      var total      = price > 0 ? (qty > 0 ? price * qty : price) : 0;
+      var totalKRW   = isKRW ? total  : total  * exRate;
+      var divKRW     = isKRW ? divRaw : divRaw * exRate;
+      var taxKRW     = isKRW ? taxRaw : taxRaw * exRate;
+      var chgKRW     = isKRW ? chgRaw : chgRaw * exRate;
+      var purKRW     = isKRW ? purRaw : purRaw * purCurRate;
+      var fl         = function(v) { return v > 0 ? Math.floor(v) : ''; };
+
+      var expRow = [];
+      row.forEach(function(cell, i) {
+        var h = hs[i];
+        expRow.push(cell);
+        if (i === insertAfter) { expRow.push(total > 0 ? total : ''); expRow.push(fl(totalKRW)); }
+        if (h === 'Dividend')          expRow.push(fl(divKRW));
+        if (h === 'Tax')               expRow.push(fl(taxKRW));
+        if (h === 'Charge')            expRow.push(fl(chgKRW));
+        if (h === 'Purchase Currency') expRow.push(fl(purKRW));
+      });
+      allRows.push(expRow);
+    });
+
+    var csv = allRows.map(function(row) {
+      return row.map(function(cell) {
+        var v = (cell === null || cell === undefined) ? '' : String(cell);
+        if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+          v = '"' + v.replace(/"/g, '""') + '"';
+        }
+        return v;
+      }).join(',');
+    }).join('\n');
+
+    var today = new Date();
+    var ymd = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+    var filename = 'FIMA_\uAC70\uB798\uB0B4\uC5ED_' + ymd + '.csv';
+
+    var bom  = '\uFEFF';
+    var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 200);
+  }
+
+  // ---- UI \uC720\uD2F8 ----
+  function showAlert(msg, type) {
+    const icon = type === 'success' ? '\u2705' : '\u274C';
+    document.getElementById('alertBox').innerHTML =
+      `<div class="alert alert-${type}"><span>${icon}</span><span>${msg}</span></div>`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function clearAlert() { document.getElementById('alertBox').innerHTML = ''; }
+  function showLoading(show) {
+    document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+  }
+</script>
+</body>
+</html>
