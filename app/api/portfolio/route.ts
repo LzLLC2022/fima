@@ -174,10 +174,10 @@ export async function POST(req: NextRequest) {
 
     // ── 환율 조회 (기준일 지정 시 역사적 환율, 없으면 현재 환율) ──
     const histRateMap: Record<string, number> = { KRW: 1 };
-    const uniqueCurrencies = [...new Set([
+    const uniqueCurrencies = Array.from(new Set([
       ...tickers.map(k => currencyMap[posMap[k].region] || 'KRW'),
       ...Object.keys(cashFX).map(r => currencyMap[r] || 'KRW'),
-    ])].filter(c => c !== 'KRW');
+    ])).filter(c => c !== 'KRW');
 
     if (uniqueCurrencies.length > 0) {
       const rateResults = await Promise.allSettled(
