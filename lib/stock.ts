@@ -136,3 +136,127 @@ export async function getStockInfo(code: string, item?: string): Promise<any> {
     return getYahooStockInfo(code, item);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 역사적 시세 / 환율 조회
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * 특정 날짜의 종가 조회 (날짜 없으면 현재가 반환)
+ * @param ticker - 종목코드(한국) 또는 야후 티커(해외)
+ * @param date   - 'YYYY-MM-DD' (없으면 현재가)
+ */
+export async function getStockPrice(ticker: string, date?: string): Promise<number> {
+  if (!ticker) return 0;
+  ticker = ticker.toString().trim().toUpperCase();
+
+  if (!date) {
+    const v = await getStockInfo(ticker, 'price').catch(() => 0);
+    return Number(v) || 0;
+  }
+
+  if (isKoreanCode(ticker)) {
+    return getNaverHistoricalPrice(ticker.split('.')[0], date);
+  } else {
+    return getYahooHistoricalClose(ticker, date);
+  }
+}
+
+/** 네이버: 특정 날짜 이전 가장 최근 거래일의 종가 */
+async function getNaverHistoricalPrice(code: string, date: string): Promise<number> {
+  const endTs = date.replace(/-/g, '');                       // YYYYMMDD
+  const d = new Date(date);
+  d.setDate(d.getDate() - 7);
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const startTs = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+
+  const url =
+    `https://api.finance.naver.com/siseJson.naver` +
+    `?symbol=${code}&requestType=1&startTime=${startTs}&endTime=${endTs}&timeframe=day`;
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'Referer': 'https://finance.naver.com',
+    },
+  });
+  if (!res.ok) throw new Error(`Naver siseJson ${code}: HTTP ${res.status}`);
+
+  const text = (await res.text()).trim().replace(/^\uFEFF/, '');
+  let rows: any[][];
+  try {
+    rows = JSON.parse(text);
+  } catch {
+    rows = JSON.parse(text.replace(/'/g, '"'));
+  }
+
+  const dataRows = rows.slice(1).filter((r: any[]) => Array.isArray(r) && r.length >= 5);
+  if (!dataRows.length) throw new Error(`Naver siseJson ${code} ${date}: 데이터 없음`);
+
+  // 마지막 행 = 조회 기간 내 가장 최신 거래일 (endTime 이전)
+  const close = Number(dataRows[dataRows.length - 1][4]);
+  if (!close) throw new Error(`Naver 종가 파싱 실패: ${code} ${date}`);
+  return close;
+}
+
+/** 야후 파이낸스: 특정 날짜 이전 가장 최근 거래일의 종가 */
+async function getYahooHistoricalClose(ticker: string, date: string): Promise<number> {
+  const period2 = Math.floor(new Date(date + 'T23:59:59Z').getTime() / 1000);
+  const period1 = period2 - 10 * 86400;   // 10일 전 (주말·공휴일 여유)
+
+  const url =
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}` +
+    `?interval=1d&period1=${period1}&period2=${period2}`;
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      'Accept': 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error(`Yahoo chart ${ticker}: HTTP ${res.status}`);
+
+  const json = await res.json();
+  const result = json?.chart?.result?.[0];
+  const closes: (number | null)[] = result?.indicators?.quote?.[0]?.close || [];
+
+  // 뒤에서부터 유효한 종가 탐색
+  for (let i = closes.length - 1; i >= 0; i--) {
+    if (closes[i] != null && closes[i]! > 0) {
+      return Math.round(closes[i]! * 100000) / 100000;
+    }
+  }
+  throw new Error(`Yahoo 종가 파싱 실패: ${ticker} ${date}`);
+}
+
+/**
+ * 특정 날짜의 환율 조회 (KRW/외화 1단위, 날짜 없으면 현재 환율)
+ * @param currency - 통화코드 ('USD', 'EUR', 'JPY' 등)
+ * @param date     - 'YYYY-MM-DD' (없으면 현재)
+ * @returns KRW per 1 unit of currency
+ */
+export async function getExchangeRate(currency: string, date?: string): Promise<number> {
+  const upper = currency.toUpperCase();
+  if (upper === 'KRW') return 1;
+
+  // 통화 → 야후 파이낸스 티커 (KRW/외화)
+  const tickerMap: Record<string, string> = {
+    USD: 'KRW=X',     EUR: 'EURKRW=X',
+    JPY: 'JPYKRW=X',  GBP: 'GBPKRW=X',
+    HKD: 'HKDKRW=X', CNY: 'CNYKRW=X',
+    AUD: 'AUDKRW=X',  CAD: 'CADKRW=X',
+    CHF: 'CHFKRW=X',  SGD: 'SGDKRW=X',
+    MXN: 'MXNKRW=X',  TWD: 'TWDKRW=X',
+    THB: 'THBKRW=X',  INR: 'INRKRW=X',
+  };
+
+  const yTicker = tickerMap[upper];
+  if (!yTicker) return 1;
+
+  if (!date) {
+    const v = await getYahooStockInfo(yTicker, 'price').catch(() => 0);
+    return Number(v) || 1;
+  }
+
+  return getYahooHistoricalClose(yTicker, date).catch(() => 1);
+}
