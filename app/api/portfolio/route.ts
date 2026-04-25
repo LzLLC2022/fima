@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/sheets';
-import { getStockInfo } from '@/lib/stock';
+import { getStockPrice, getExchangeRate } from '@/lib/stock';
 
 const EMPTY = { success: true, cash: [], stocks: [], funds: [],
                 totalKRW: 0, totalCashKRW: 0, totalStockKRW: 0, totalFundKRW: 0 };
@@ -155,16 +155,47 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // ── 현재가 병렬 조회 ──
-    const tickers     = Object.keys(posMap);
+    // ── 기준일 문자열 (YYYY-MM-DD) ──
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const endDateStr = endDate
+      ? `${endDate.getFullYear()}-${pad2(endDate.getMonth() + 1)}-${pad2(endDate.getDate())}`
+      : undefined;
+
+    // ── 현재가 / 역사적 종가 병렬 조회 ──
+    const tickers      = Object.keys(posMap);
     const priceResults = await Promise.allSettled(
-      tickers.map(tk => getStockInfo(tk, 'price').catch(() => 0))
+      tickers.map(tk => getStockPrice(tk, endDateStr).catch(() => 0))
     );
     const priceMap: Record<string, number> = {};
     tickers.forEach((tk, i) => {
       const r = priceResults[i];
       priceMap[tk] = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
     });
+
+    // ── 환율 조회 (기준일 지정 시 역사적 환율, 없으면 현재 환율) ──
+    const histRateMap: Record<string, number> = { KRW: 1 };
+    const uniqueCurrencies = [...new Set([
+      ...tickers.map(k => currencyMap[posMap[k].region] || 'KRW'),
+      ...Object.keys(cashFX).map(r => currencyMap[r] || 'KRW'),
+    ])].filter(c => c !== 'KRW');
+
+    if (uniqueCurrencies.length > 0) {
+      const rateResults = await Promise.allSettled(
+        uniqueCurrencies.map(c => getExchangeRate(c, endDateStr))
+      );
+      uniqueCurrencies.forEach((c, i) => {
+        const r = rateResults[i];
+        const rate = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
+        if (rate > 0) histRateMap[c] = rate;
+      });
+    }
+
+    // 지역 → 환율 결정: 역사적(야후) → 원장 최근값 → 1 순 우선순위
+    const resolveRate = (region: string, fallback = 1): number => {
+      const currency = currencyMap[region] || 'KRW';
+      if (currency === 'KRW') return 1;
+      return histRateMap[currency] || fallback || 1;
+    };
 
     // ── 포지션 계산 ──
     const stocks: any[] = [], funds: any[] = [];
@@ -179,7 +210,7 @@ export async function POST(req: NextRequest) {
       const avgRate     = p.buyCostFX  > 0 ? p.buyCostKRW / p.buyCostFX : (p.lastRate || 1);
       const currency    = currencyMap[p.region] || 'KRW';
       const isKRW       = currency === 'KRW';
-      const effRate2    = isKRW ? 1 : (p.lastRate > 0 ? p.lastRate : (latestRate[p.region] || 1));
+      const effRate2    = isKRW ? 1 : resolveRate(p.region, p.lastRate > 0 ? p.lastRate : (latestRate[p.region] || 1));
 
       const purchaseAmtKRW = isKRW ? avgPriceFX * netQty : avgPriceFX * netQty * avgRate;
       const curPriceFX     = priceMap[p.ticker] || 0;
@@ -203,8 +234,8 @@ export async function POST(req: NextRequest) {
       };
 
       const at = p.assetType.toLowerCase();
-      if (at === 'stock')                    stocks.push(item);
-      else if (at === 'fund' || at === 'etf') funds.push(item);
+      if (at === 'stock' || at === 'etf') stocks.push(item);   // ETF → Stock(ETF) 섹션
+      else if (at === 'fund')             funds.push(item);    // Fund만 Fund 섹션
     });
 
     stocks.sort((a, b) => a.ticker.localeCompare(b.ticker));
@@ -215,9 +246,9 @@ export async function POST(req: NextRequest) {
       .map(region => {
         const amount   = cashFX[region];
         const currency = currencyMap[region] || 'KRW';
-        const rate     = latestRate[region]  || 1;
         const isKRW    = currency === 'KRW';
-        return { region, currency, amount, rate: isKRW ? 1 : rate,
+        const rate     = isKRW ? 1 : resolveRate(region, latestRate[region] || 1);
+        return { region, currency, amount, rate,
                  amountKRW: isKRW ? amount : amount * rate };
       })
       .filter(c => Math.abs(c.amount) > 0.001);
