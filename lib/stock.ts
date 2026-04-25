@@ -162,17 +162,24 @@ export async function getStockPrice(ticker: string, date?: string): Promise<numb
   }
 }
 
-/** 네이버: 특정 날짜 이전 가장 최근 거래일의 종가 */
+/**
+ * 네이버: 특정 날짜 이전 가장 최근 거래일의 종가
+ * GAS _getNaverStockHistory 패턴 참조:
+ *   startTime = toNaverDate(startDate)
+ *   endTime   = toNaverDate(endDate)
+ */
 async function getNaverHistoricalPrice(code: string, date: string): Promise<number> {
-  const endTs = date.replace(/-/g, '');                       // YYYYMMDD
-  const d = new Date(date);
-  d.setDate(d.getDate() - 7);
   const pad2 = (n: number) => String(n).padStart(2, '0');
-  const startTs = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+  const toNaverDate = (d: Date) =>
+    `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}`;
 
-  const url =
-    `https://api.finance.naver.com/siseJson.naver` +
-    `?symbol=${code}&requestType=1&startTime=${startTs}&endTime=${endTs}&timeframe=day`;
+  const endDt   = new Date(date + 'T00:00:00Z');
+  const startDt = new Date(endDt.getTime() - 14 * 86400 * 1000);  // 14일 전
+
+  const url = `https://api.finance.naver.com/siseJson.naver`
+    + `?symbol=${code}&requestType=1`
+    + `&startTime=${toNaverDate(startDt)}&endTime=${toNaverDate(endDt)}`
+    + `&timeframe=day`;
 
   const res = await fetch(url, {
     headers: {
@@ -184,61 +191,69 @@ async function getNaverHistoricalPrice(code: string, date: string): Promise<numb
 
   const text = (await res.text()).trim().replace(/^\uFEFF/, '');
   let rows: any[][];
-  try {
-    rows = JSON.parse(text);
-  } catch {
-    rows = JSON.parse(text.replace(/'/g, '"'));
-  }
+  try { rows = JSON.parse(text); }
+  catch (_e) { rows = JSON.parse(text.replace(/'/g, '"')); }
 
-  const dataRows = rows.slice(1).filter((r: any[]) => Array.isArray(r) && r.length >= 5);
+  // 헤더 행 제거 + 유효 데이터 필터 (GAS 패턴)
+  const dataRows = rows.filter(
+    (r: any[]) => Array.isArray(r) && r.length >= 5 && !isNaN(Number(r[4])) && Number(r[4]) > 0
+  );
   if (!dataRows.length) throw new Error(`Naver siseJson ${code} ${date}: 데이터 없음`);
 
-  // 마지막 행 = 조회 기간 내 가장 최신 거래일 (endTime 이전)
-  const close = Number(dataRows[dataRows.length - 1][4]);
-  if (!close) throw new Error(`Naver 종가 파싱 실패: ${code} ${date}`);
-  return close;
+  // 마지막 행 = 조회 기간 내 가장 최신 거래일 종가
+  return Number(dataRows[dataRows.length - 1][4]);
 }
 
-/** 야후 파이낸스: 특정 날짜 이전 가장 최근 거래일의 종가 (query2 우선, query1 폴백) */
+/**
+ * 야후 파이낸스: 특정 날짜 이전 가장 최근 거래일의 종가
+ * GAS _getYahooStockHistory 패턴 참조:
+ *   period1 = new Date(startDate)            (UTC 자정)
+ *   period2 = new Date(endDate) + 1day       (UTC 자정 + 1일)
+ */
 async function getYahooHistoricalClose(ticker: string, date: string): Promise<number> {
-  const period2 = Math.floor(new Date(date + 'T23:59:59Z').getTime() / 1000);
-  const period1 = period2 - 14 * 86400;   // 14일 전 (여유 확보)
+  // GAS 방식: UTC 자정 기준 period1/period2 계산
+  const baseMsec = new Date(date + 'T00:00:00Z').getTime();
+  const period1  = Math.floor((baseMsec - 14 * 86400 * 1000) / 1000);  // 14일 전
+  const period2  = Math.floor((baseMsec + 1  * 86400 * 1000) / 1000);  // +1 day (GAS 패턴)
 
-  const browserHeaders = {
+  const hdrs: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
+    'Accept': 'application/json',
     'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
     'Referer': 'https://finance.yahoo.com/',
-    'Origin': 'https://finance.yahoo.com',
   };
 
-  const tryFetch = async (host: string): Promise<Response> => {
-    const url = `https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${period1}&period2=${period2}`;
-    const res = await fetch(url, { headers: browserHeaders });
-    if (!res.ok) throw new Error(`Yahoo ${host} ${ticker}: HTTP ${res.status}`);
-    return res;
+  const fetchChart = async (host: string): Promise<any> => {
+    const url = `https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}`
+      + `?interval=1d&period1=${period1}&period2=${period2}`;
+    const r = await fetch(url, { headers: hdrs });
+    if (!r.ok) throw new Error(`Yahoo(${host}) ${ticker}: HTTP ${r.status}`);
+    return r.json();
   };
 
-  // query2 → query1 순서로 시도
-  let res: Response;
+  // query2 → query1 순서로 시도 (GAS는 query1 단독 사용)
+  let json: any;
   try {
-    res = await tryFetch('query2.finance.yahoo.com');
-  } catch {
-    res = await tryFetch('query1.finance.yahoo.com');
-  }
-
-  const json = await res.json();
-  const result = json?.chart?.result?.[0];
-  const closes: (number | null)[] = result?.indicators?.quote?.[0]?.close || [];
-
-  // 뒤에서부터 유효한 종가 탐색
-  for (let i = closes.length - 1; i >= 0; i--) {
-    if (closes[i] != null && closes[i]! > 0) {
-      return Math.round(closes[i]! * 100000) / 100000;
+    json = await fetchChart('query2.finance.yahoo.com');
+  } catch (_e1) {
+    try {
+      json = await fetchChart('query1.finance.yahoo.com');
+    } catch (_e2) {
+      throw new Error(`Yahoo 조회 실패: ${ticker} ${date}`);
     }
   }
-  throw new Error(`Yahoo 종가 파싱 실패: ${ticker} ${date}`);
+
+  const closes: (number | null)[] =
+    json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close ?? [];
+
+  // 뒤에서부터 유효한 종가 탐색 (GAS _resolveHistoryItem 패턴)
+  for (let i = closes.length - 1; i >= 0; i--) {
+    const v = closes[i];
+    if (v != null && v > 0) {
+      return Math.round(v * 100000) / 100000;
+    }
+  }
+  throw new Error(`Yahoo 종가 없음: ${ticker} ${date}`);
 }
 
 /**
