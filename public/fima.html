@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FIMA</title>
+  <title>FiMa-Inv</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -30,7 +30,31 @@
     .header h1 { font-size: 1.4rem; font-weight: 700; }
     .header p  { font-size: 0.82rem; opacity: 0.75; margin-top: 3px; }
 
-    /* 탭 */
+    /* 그룹 탭 (1단계) */
+    .group-tabs {
+      display: flex;
+      background: #0f2236;
+      padding: 0 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .group-tab-btn {
+      padding: 9px 22px;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.45);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.15s;
+      font-family: inherit;
+      text-transform: uppercase;
+    }
+    .group-tab-btn:hover { color: rgba(255,255,255,0.8); }
+    .group-tab-btn.active { color: #90cdf4; border-bottom-color: #90cdf4; }
+
+    /* 서브 탭 (2단계) */
     .tabs {
       display: flex;
       background: #1a3353;
@@ -190,7 +214,7 @@
     /* ---- 거래 조회 테이블 ---- */
     .query-filter-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr 1fr auto;
       gap: 10px;
       align-items: flex-end;
     }
@@ -312,10 +336,34 @@
       .cash-grid { grid-template-columns: 1fr; }
     }
 
+    /* 네비게이션 Account Owner 선택 */
+    .nav-owner-wrap {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      padding: 5px 0;
+    }
+    .nav-owner-select {
+      background: rgba(255,255,255,0.10);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      color: white;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+      min-width: 130px;
+      transition: border-color 0.15s;
+    }
+    .nav-owner-select option { color: #1a202c; background: white; }
+    .nav-owner-select:focus { border-color: rgba(255,255,255,0.6); }
+
     /* 현황 필터 행 */
     .ov-filter-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr auto;
       gap: 10px;
       align-items: flex-end;
     }
@@ -447,14 +495,31 @@
 
 <div class="container">
   <div class="header">
-    <h1>📈 FIMA</h1>
+    <h1>📈 FiMa-Inv</h1>
     <p>Financial Management</p>
   </div>
 
+  <div class="group-tabs">
+    <!-- 1단계: 그룹 탭 -->
+    <button class="group-tab-btn active" id="group-view-btn" onclick="switchGroup('view')">&#128202; 조회</button>
+    <button class="group-tab-btn" id="group-manage-btn" onclick="switchGroup('manage')">&#9998; 입력관리</button>
+    <!-- 전역 Account Owner 선택 (우측) -->
+    <div class="nav-owner-wrap">
+      <select id="globalOwner" class="nav-owner-select" onchange="onGlobalOwnerChange()">
+        <option value="">전체</option>
+      </select>
+    </div>
+  </div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('overview')">현황</button>
-    <button class="tab-btn" onclick="switchTab('input')">거래 입력</button>
-    <button class="tab-btn" onclick="switchTab('query')">거래 조회</button>
+    <!-- 2단계: 서브탭 (조회 그룹) -->
+    <div id="subtabs-view" style="display:flex;">
+      <button class="tab-btn active" id="subtab-overview" onclick="switchTab('overview')">현황</button>
+      <button class="tab-btn" id="subtab-query" onclick="switchTab('query')">거래 조회</button>
+    </div>
+    <!-- 2단계: 서브탭 (입력관리 그룹) -->
+    <div id="subtabs-manage" style="display:none;">
+      <button class="tab-btn active" id="subtab-input" onclick="switchTab('input')">거래 입력</button>
+    </div>
   </div>
 
   <div class="tab-wrapper">
@@ -466,12 +531,6 @@
       <div class="card" style="margin-bottom:14px;">
         <div class="card-title">🔎 조회 조건</div>
         <div class="ov-filter-row">
-          <div class="field">
-            <label>Account Owner</label>
-            <select id="ovOwner">
-              <option value="">전체</option>
-            </select>
-          </div>
           <div class="field">
             <label>Account</label>
             <select id="ovAccount">
@@ -508,8 +567,8 @@
         <div class="total-asset-value" id="ovTotalKRW">-</div>
         <div class="total-asset-sub">
           <span id="ovCashTotal">현금 -</span>
-          <span id="ovStockTotal">주식 -</span>
-          <span id="ovFundTotal">펀드/ETF -</span>
+          <span id="ovStockTotal">주식·ETF -</span>
+          <span id="ovFundTotal">펀드 -</span>
         </div>
       </div>
 
@@ -521,13 +580,13 @@
 
       <!-- Stock -->
       <div class="card">
-        <div class="card-title">📈 Stock 현황</div>
+        <div class="card-title">📈 Stock(ETF) 현황</div>
         <div id="ovStockSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
       </div>
 
       <!-- Fund / ETF -->
       <div class="card">
-        <div class="card-title">📊 Fund / ETF 현황</div>
+        <div class="card-title">📊 Fund 현황</div>
         <div id="ovFundSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
       </div>
 
@@ -551,11 +610,8 @@
               <label>Trade <span class="req">*</span></label>
               <select id="trade" required onchange="onTradeChange()"><option value="">선택...</option></select>
             </div>
-            <div class="field">
-              <label>Account Owner <span class="req">*</span></label>
-              <select id="accountOwner" required><option value="">선택...</option></select>
-            </div>
-            <div class="field">
+            <input type="hidden" id="accountOwner" />
+            <div class="field span2">
               <label>Account <span class="req">*</span></label>
               <select id="account" required><option value="">선택...</option></select>
             </div>
@@ -735,12 +791,6 @@
             <input type="date" id="qEndDate" />
           </div>
           <div class="field">
-            <label>Account Owner</label>
-            <select id="qAccountOwner">
-              <option value="">전체</option>
-            </select>
-          </div>
-          <div class="field">
             <label>Account</label>
             <select id="qAccount">
               <option value="">전체</option>
@@ -835,17 +885,34 @@
     document.getElementById('date').value = `${y}-${m}-${d}`;
   }
 
-  // ---- \uD0ED \uC804\uD658 ----
-  function switchTab(tab) {
-    const btns = document.querySelectorAll('.tab-btn');
-    btns.forEach(b => b.classList.remove('active'));
-    const idx = { overview: 0, input: 1, query: 2 };
-    if (btns[idx[tab]]) btns[idx[tab]].classList.add('active');
+  // ---- \uC804\uC5ED Account Owner \uBCC0\uACBD ----
+  function onGlobalOwnerChange() {
+    var owner = document.getElementById('globalOwner').value;
+    // hidden accountOwner \uB3D9\uAE30\uD654 (\uAC70\uB798 \uC785\uB825 \uD3FC \uC81C\uCD9C\uC6A9)
+    document.getElementById('accountOwner').value = owner;
+    // \uD604\uD669 \uD0ED \uC790\uB3D9 \uC5C5\uB370\uC774\uD2B8
+    portfolioLoaded = false;
+    var overviewActive = document.getElementById('tab-overview').classList.contains('active');
+    if (overviewActive) applyOvFilter();
+  }
 
-    ['overview', 'input', 'query'].forEach(id => {
+  // ---- \uADF8\uB8F9 \uD0ED \uC804\uD658 (1\uB2E8\uACC4) ----
+  function switchGroup(group) {
+    document.getElementById('group-view-btn').classList.toggle('active',   group === 'view');
+    document.getElementById('group-manage-btn').classList.toggle('active', group === 'manage');
+    document.getElementById('subtabs-view').style.display   = group === 'view'   ? 'flex' : 'none';
+    document.getElementById('subtabs-manage').style.display = group === 'manage' ? 'flex' : 'none';
+    if (group === 'view')   switchTab('overview');
+    if (group === 'manage') switchTab('input');
+  }
+
+  // ---- \uC11C\uBE0C\uD0ED \uC804\uD658 (2\uB2E8\uACC4) ----
+  function switchTab(tab) {
+    ['overview', 'input', 'query'].forEach(function(id) {
+      var btn = document.getElementById('subtab-' + id);
+      if (btn) btn.classList.toggle('active', id === tab);
       document.getElementById('tab-' + id).classList.toggle('active', id === tab);
     });
-
     if (tab === 'overview') loadPortfolioData(false);
   }
 
@@ -869,18 +936,26 @@
 
   // ---- \uB4DC\uB86D\uB2E4\uC6B4 \uCC44\uC6B0\uAE30 ----
   function populateDropdowns(data) {
-    fillSelect('accountOwner', data.accountOwners || []);
-    fillSelect('account',      data.accounts      || []);
-    fillSelect('assetType',    data.assetTypes     || []);
-    fillSelect('trade',        data.trades         || []);
+    fillSelect('account',   data.accounts  || []);
+    fillSelect('assetType', data.assetTypes || []);
+    fillSelect('trade',     data.trades     || []);
 
-    // \uC870\uD68C \uD0ED \uD544\uD130 \uB4DC\uB86D\uB2E4\uC6B4
-    fillSelectWithAll('qAccountOwner', data.accountOwners || []);
-    fillSelectWithAll('qAccount',      data.accounts      || []);
+    // \uAC70\uB798 \uC870\uD68C \uD0ED Account
+    fillSelectWithAll('qAccount', data.accounts || []);
 
-    // \uD604\uD669 \uD0ED \uD544\uD130 \uB4DC\uB86D\uB2E4\uC6B4
-    fillSelectWithAll('ovOwner',   data.accountOwners || []);
-    fillSelectWithAll('ovAccount', data.accounts      || []);
+    // \uD604\uD669 \uD0ED Account
+    fillSelectWithAll('ovAccount', data.accounts || []);
+
+    // \uB124\uBE44\uAC8C\uC774\uC158 \uC804\uC5ED Account Owner
+    var globalSel = document.getElementById('globalOwner');
+    globalSel.innerHTML = '<option value="">\uC804\uCCB4</option>';
+    (data.accountOwners || []).forEach(function(owner) {
+      var opt = document.createElement('option');
+      opt.value = opt.textContent = owner;
+      globalSel.appendChild(opt);
+    });
+    // hidden accountOwner \uCD08\uAE30\uAC12 \uB3D9\uAE30\uD654
+    document.getElementById('accountOwner').value = globalSel.value;
 
     const regionSel = document.getElementById('region');
     regionSel.innerHTML = '<option value="">\uC120\uD0DD...</option>';
@@ -1647,7 +1722,7 @@
     const filters = {
       startDate:    document.getElementById('qStartDate').value,
       endDate:      document.getElementById('qEndDate').value,
-      accountOwner: document.getElementById('qAccountOwner').value,
+      accountOwner: document.getElementById('globalOwner').value,   // \uC804\uC5ED Owner \uC0AC\uC6A9
       account:      document.getElementById('qAccount').value,
     };
 
@@ -1788,7 +1863,6 @@
 
   function resetQuery() {
     ['qStartDate','qEndDate'].forEach(id => { document.getElementById(id).value = ''; });
-    document.getElementById('qAccountOwner').value = '';
     document.getElementById('qAccount').value = '';
     document.getElementById('queryResult').innerHTML = `
       <div class="empty-state">
@@ -1806,7 +1880,7 @@
   let currentOvFilters = {};
 
   function applyOvFilter() {
-    const owner   = document.getElementById('ovOwner').value;
+    const owner   = document.getElementById('globalOwner').value;   // \uC804\uC5ED Owner
     const account = document.getElementById('ovAccount').value;
     const endDate = document.getElementById('ovEndDate').value;
 
@@ -1833,10 +1907,11 @@
   }
 
   function resetOvFilter() {
-    document.getElementById('ovOwner').value   = '';
     document.getElementById('ovAccount').value = '';
     document.getElementById('ovEndDate').value = '';
     currentOvFilters = {};
+    var owner = document.getElementById('globalOwner').value;
+    if (owner) currentOvFilters.accountOwner = owner;
     document.getElementById('ovFilterBadge').classList.add('hidden');
     portfolioLoaded = false;
     loadPortfolioData(true);
@@ -1880,7 +1955,7 @@
     // \uC804\uCCB4 \uC790\uC0B0 \uCD1D\uC561
     document.getElementById('ovTotalKRW').textContent   = fmtK(data.totalKRW) + ' KRW';
     document.getElementById('ovCashTotal').textContent  = '\uD604\uAE08 ' + fmtK(data.totalCashKRW)  + ' KRW';
-    document.getElementById('ovStockTotal').textContent = '\uC8FC\uC2DD ' + fmtK(data.totalStockKRW) + ' KRW';
+    document.getElementById('ovStockTotal').textContent = '\uC8FC\uC2DD\u00B7ETF ' + fmtK(data.totalStockKRW) + ' KRW';
     document.getElementById('ovFundTotal').textContent  = '\uD380\uB4DC ' + fmtK(data.totalFundKRW)  + ' KRW';
 
     // \uD604\uAE08 \uC139\uC158
@@ -2061,7 +2136,7 @@
     var ymd = today.getFullYear() + '-' +
       String(today.getMonth() + 1).padStart(2, '0') + '-' +
       String(today.getDate()).padStart(2, '0');
-    var filename = 'FIMA_\uAC70\uB798\uB0B4\uC5ED_' + ymd + '.csv';
+    var filename = 'FiMa-Inv_\uAC70\uB798\uB0B4\uC5ED_' + ymd + '.csv';
 
     var bom  = '\uFEFF';
     var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
