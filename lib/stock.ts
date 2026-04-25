@@ -199,22 +199,34 @@ async function getNaverHistoricalPrice(code: string, date: string): Promise<numb
   return close;
 }
 
-/** 야후 파이낸스: 특정 날짜 이전 가장 최근 거래일의 종가 */
+/** 야후 파이낸스: 특정 날짜 이전 가장 최근 거래일의 종가 (query2 우선, query1 폴백) */
 async function getYahooHistoricalClose(ticker: string, date: string): Promise<number> {
   const period2 = Math.floor(new Date(date + 'T23:59:59Z').getTime() / 1000);
-  const period1 = period2 - 10 * 86400;   // 10일 전 (주말·공휴일 여유)
+  const period1 = period2 - 14 * 86400;   // 14일 전 (여유 확보)
 
-  const url =
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}` +
-    `?interval=1d&period1=${period1}&period2=${period2}`;
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': 'https://finance.yahoo.com/',
+    'Origin': 'https://finance.yahoo.com',
+  };
 
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      'Accept': 'application/json',
-    },
-  });
-  if (!res.ok) throw new Error(`Yahoo chart ${ticker}: HTTP ${res.status}`);
+  const tryFetch = async (host: string): Promise<Response> => {
+    const url = `https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${period1}&period2=${period2}`;
+    const res = await fetch(url, { headers: browserHeaders });
+    if (!res.ok) throw new Error(`Yahoo ${host} ${ticker}: HTTP ${res.status}`);
+    return res;
+  };
+
+  // query2 → query1 순서로 시도
+  let res: Response;
+  try {
+    res = await tryFetch('query2.finance.yahoo.com');
+  } catch {
+    res = await tryFetch('query1.finance.yahoo.com');
+  }
 
   const json = await res.json();
   const result = json?.chart?.result?.[0];
