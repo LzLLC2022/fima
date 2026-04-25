@@ -1953,6 +1953,8 @@
 
   function applyOvFilter() {
     const owner   = document.getElementById('globalOwner').value;   // \uC804\uC5ED Owner
+    if (!owner) return;  // \uC804\uCCB4 \uC120\uD0DD \uC2DC \uBB34\uC2DC (\uC774\uC911 \uCCB4\uD06C)
+
     const account = document.getElementById('ovAccount').value;
     const endDate = document.getElementById('ovEndDate').value;
 
