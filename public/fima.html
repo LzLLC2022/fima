@@ -945,7 +945,21 @@
     var locked = (owner === '');  // \uC804\uCCB4(\uBE44\uC120\uD0DD) \uC2DC \uC7A0\uAE08
     setOwnerLocked(locked);
 
-    if (!locked) {
+    if (locked) {
+      // \uC804\uCCB4 \uC120\uD0DD \uC2DC: \uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uD654\uBA74 \uCD08\uAE30\uD654
+      portfolioLoaded = false;
+      document.getElementById('ovTotalKRW').textContent = '-';
+      document.getElementById('ovCashTotal').textContent  = '\uD604\uAE08 -';
+      document.getElementById('ovStockTotal').textContent = '\uC8FC\uC2DD\u00B7ETF -';
+      document.getElementById('ovFundTotal').textContent  = '\uD380\uB4DC -';
+      ['ovCashSection','ovStockSection','ovFundSection'].forEach(function(id) {
+        document.getElementById(id).innerHTML =
+          '<div class="ov-empty">Account Owner\uB97C \uC120\uD0DD\uD558\uBA74 \uC870\uD68C\uAC00 \uC2DC\uC791\uB429\uB2C8\uB2E4</div>';
+      });
+      document.getElementById('ovFilterBadge').classList.add('hidden');
+      var noteEl = document.querySelector('.ov-note');
+      if (noteEl) noteEl.textContent = '\u203B \uC0C1\uB2E8 \uC6B0\uCE21\uC5D0\uC11C Account Owner\uB97C \uC120\uD0DD\uD558\uC138\uC694';
+    } else {
       // \uD2B9\uC815 owner \uC120\uD0DD \uC2DC \uD604\uD669 \uD0ED \uC790\uB3D9 \uAC31\uC2E0
       portfolioLoaded = false;
       var overviewActive = document.getElementById('tab-overview').classList.contains('active');
