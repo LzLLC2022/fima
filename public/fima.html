@@ -1980,6 +1980,10 @@
     if (document.getElementById('globalOwner').value === '') return;  // owner \uBBF8\uC120\uD0DD \uC2DC \uCC28\uB2E8
 
     document.getElementById('ovLoadingMsg').classList.remove('hidden');
+    document.getElementById('ovLoadingMsg').textContent =
+      currentOvFilters.endDate
+        ? '\u23F3 \uAE30\uC900\uC77C(' + currentOvFilters.endDate + ') \uC885\uAC00 \uC870\uD68C \uC911... \uC885\uBAA9 \uC218\uC5D0 \uB530\uB77C \uC2DC\uAC04\uC774 \uAC78\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.'
+        : '\u23F3 \uD604\uC7AC\uAC00 \uC870\uD68C \uC911... \uC885\uBAA9 \uC218\uC5D0 \uB530\uB77C \uC2DC\uAC04\uC774 \uAC78\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.';
     document.getElementById('ovTotalKRW').textContent = '\uC870\uD68C \uC911...';
     ['ovCashSection','ovStockSection','ovFundSection'].forEach(id => {
       document.getElementById(id).innerHTML = '<div class="ov-empty">\u23F3 \uB85C\uB529 \uC911...</div>';
@@ -2010,6 +2014,16 @@
     const fmtN   = (v, d) => Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d !== undefined ? d : 4 });
     const fmtPct = v => (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%';
     const pnlCls = v => v > 0 ? 'pnl-pos' : v < 0 ? 'pnl-neg' : 'pnl-zero';
+
+    // ov-note \uC5C5\uB370\uC774\uD2B8: \uAE30\uC900\uC77C \uC720\uBB34\uC5D0 \uB530\uB77C \uD45C\uC2DC \uBCC0\uACBD
+    var noteEl = document.querySelector('.ov-note');
+    if (noteEl) {
+      if (currentOvFilters.endDate) {
+        noteEl.textContent = '\u203B \uAE30\uC900\uC77C \uC885\uAC00 (' + currentOvFilters.endDate + ') \uAE30\uC900\u00A0\u00B7\u00A0\uD734\uC7A5\uC774\uBA74 \uC9C1\uC804 \uAC70\uB798\uC77C \uC885\uAC00';
+      } else {
+        noteEl.textContent = '\u203B \uD604\uC7AC\uAC00 \uAE30\uC900\u00A0\u00B7\u00A0\uD604\uAE08\uC740 \uC785\uCD9C\uAE08(Deposit/Withdraw) \uB204\uACC4';
+      }
+    }
 
     // \uC804\uCCB4 \uC790\uC0B0 \uCD1D\uC561
     document.getElementById('ovTotalKRW').textContent   = fmtK(data.totalKRW) + ' KRW';
@@ -2060,7 +2074,8 @@
     const fmtAmt = (v, isK) => isK ? fmtK(v) : fmtN(v, 2);
     const fmtPnlAmt = (v, isK) => (v >= 0 ? '+' : '') + fmtAmt(Math.abs(v), isK) + (v < 0 ? '-' : '');
 
-    const cols = ['Ticker','Name','\uC218\uB7C9','\uB9E4\uC785\uB2E8\uAC00','\uB9E4\uC785\uAE08\uC561','\uD604\uC7AC\uAC00','\uD3C9\uAC00\uAE08\uC561','\uC190\uC775\uAE08\uC561','\uC190\uC775\uC728'];
+    var priceColLabel = currentOvFilters.endDate ? '\uAE30\uC900\uC885\uAC00' : '\uD604\uC7AC\uAC00';
+    const cols = ['Ticker','Name','\uC218\uB7C9','\uB9E4\uC785\uB2E8\uAC00','\uB9E4\uC785\uAE08\uC561',priceColLabel,'\uD3C9\uAC00\uAE08\uC561','\uC190\uC775\uAE08\uC561','\uC190\uC775\uC728'];
     if (showDividend) cols.push('\uB204\uC801\uBC30\uB2F9\uAE08');
 
     const thead = `<thead><tr>${cols.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
