@@ -489,6 +489,19 @@
       .pv-grid { grid-template-columns: 1fr; }
       .pv-full { grid-column: span 1; }
     }
+
+    /* Account Owner 미선택 안내 */
+    .owner-notice {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: #fffbeb; border: 1.5px solid #f6ad55;
+      border-radius: 12px; padding: 20px 24px;
+      margin-bottom: 14px; color: #744210;
+      font-size: 0.9rem; font-weight: 600; text-align: center;
+    }
+    .owner-notice .notice-icon { font-size: 1.3rem; }
+    /* 잠금 상태: 입력 요소 시각적 비활성화 */
+    select:disabled, input:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn:disabled, .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed !important; transform: none !important; }
   </style>
 </head>
 <body>
@@ -544,7 +557,7 @@
           <div class="field">
             <label>&nbsp;</label>
             <div style="display:flex;gap:6px;">
-              <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyOvFilter()">조회</button>
+              <button class="btn btn-search" id="ovSearchBtn" style="padding:9px 22px;font-size:0.87rem;" onclick="applyOvFilter()">조회</button>
               <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetOvFilter()">초기화</button>
             </div>
           </div>
@@ -552,9 +565,15 @@
         <div id="ovFilterBadge" class="ov-filter-badge hidden"></div>
       </div>
 
+      <!-- Account Owner 미선택 안내 (전체 선택 시 표시) -->
+      <div id="ownerNoticeOv" class="owner-notice">
+        <span class="notice-icon">👤</span>
+        상단 우측에서 <strong>Account Owner</strong>를 선택하면 조회할 수 있습니다.
+      </div>
+
       <div class="ov-refresh-row">
         <span class="ov-note">※ 현재가는 getStockInfo 기준 &nbsp;·&nbsp; 현금은 입출금(Deposit/Withdraw) 누계</span>
-        <button class="btn-refresh" onclick="loadPortfolioData(true)">🔄 새로고침</button>
+        <button class="btn-refresh" id="btnRefresh" onclick="loadPortfolioData(true)">🔄 새로고침</button>
       </div>
 
       <div id="ovLoadingMsg" class="hidden" style="text-align:center; padding:32px; color:#718096; font-size:0.9rem;">
@@ -594,6 +613,11 @@
 
     <!-- ===================== 거래 입력 탭 ===================== -->
     <div id="tab-input" class="tab-content">
+
+      <div id="ownerNoticeInput" class="owner-notice">
+        <span class="notice-icon">👤</span>
+        상단 우측에서 <strong>Account Owner</strong>를 선택하면 거래를 입력할 수 있습니다.
+      </div>
 
       <div id="alertBox"></div>
 
@@ -777,6 +801,11 @@
     <!-- ===================== 거래 조회 탭 ===================== -->
     <div id="tab-query" class="tab-content">
 
+      <div id="ownerNoticeQuery" class="owner-notice">
+        <span class="notice-icon">👤</span>
+        상단 우측에서 <strong>Account Owner</strong>를 선택하면 조회할 수 있습니다.
+      </div>
+
       <div id="queryAlertBox"></div>
 
       <div class="card">
@@ -799,7 +828,7 @@
           <div class="field">
             <label>&nbsp;</label>
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              <button class="btn btn-search" onclick="runQuery()">조회</button>
+              <button class="btn btn-search" id="qSearchBtn" onclick="runQuery()">조회</button>
               <button class="btn btn-reset-filter" onclick="resetQuery()">초기화</button>
               <button class="btn-export" id="exportBtn" onclick="exportToCSV()" disabled>CSV 내보내기</button>
             </div>
@@ -885,15 +914,43 @@
     document.getElementById('date').value = `${y}-${m}-${d}`;
   }
 
+  // ---- Account Owner \uC7A0\uAE08/\uD574\uC81C ----
+  function setOwnerLocked(locked) {
+    // \uC548\uB0B4 \uBA54\uC2DC\uC9C0 \uD45C\uC2DC/\uC228\uAE40
+    ['ownerNoticeOv','ownerNoticeInput','ownerNoticeQuery'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', !locked);
+    });
+    // \uD604\uD669 \uD0ED \uCEE8\uD2B8\uB864
+    ['ovAccount','ovEndDate'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.disabled = locked;
+    });
+    var ovBtn = document.getElementById('ovSearchBtn');   if (ovBtn) ovBtn.disabled = locked;
+    var rfBtn = document.getElementById('btnRefresh');    if (rfBtn) rfBtn.disabled = locked;
+    // \uAC70\uB798\uC870\uD68C \uD0ED \uCEE8\uD2B8\uB864
+    ['qAccount','qStartDate','qEndDate'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.disabled = locked;
+    });
+    var qBtn = document.getElementById('qSearchBtn'); if (qBtn) qBtn.disabled = locked;
+    // \uAC70\uB798\uC785\uB825 \uD3FC \uC81C\uCD9C \uBC84\uD2BC
+    var subBtn = document.getElementById('submitBtn'); if (subBtn) subBtn.disabled = locked;
+  }
+
   // ---- \uC804\uC5ED Account Owner \uBCC0\uACBD ----
   function onGlobalOwnerChange() {
     var owner = document.getElementById('globalOwner').value;
     // hidden accountOwner \uB3D9\uAE30\uD654 (\uAC70\uB798 \uC785\uB825 \uD3FC \uC81C\uCD9C\uC6A9)
     document.getElementById('accountOwner').value = owner;
-    // \uD604\uD669 \uD0ED \uC790\uB3D9 \uC5C5\uB370\uC774\uD2B8
-    portfolioLoaded = false;
-    var overviewActive = document.getElementById('tab-overview').classList.contains('active');
-    if (overviewActive) applyOvFilter();
+
+    var locked = (owner === '');  // \uC804\uCCB4(\uBE44\uC120\uD0DD) \uC2DC \uC7A0\uAE08
+    setOwnerLocked(locked);
+
+    if (!locked) {
+      // \uD2B9\uC815 owner \uC120\uD0DD \uC2DC \uD604\uD669 \uD0ED \uC790\uB3D9 \uAC31\uC2E0
+      portfolioLoaded = false;
+      var overviewActive = document.getElementById('tab-overview').classList.contains('active');
+      if (overviewActive) applyOvFilter();
+    }
   }
 
   // ---- \uADF8\uB8F9 \uD0ED \uC804\uD658 (1\uB2E8\uACC4) ----
@@ -913,7 +970,7 @@
       if (btn) btn.classList.toggle('active', id === tab);
       document.getElementById('tab-' + id).classList.toggle('active', id === tab);
     });
-    if (tab === 'overview') loadPortfolioData(false);
+    if (tab === 'overview' && document.getElementById('globalOwner').value !== '') loadPortfolioData(false);
   }
 
   // ---- \uB9C8\uC2A4\uD130 \uB370\uC774\uD130 \uB85C\uB529 ----
@@ -923,6 +980,7 @@
         if (data.error) { showAlert(data.error, 'error'); showLoading(false); return; }
         masterData = data;
         populateDropdowns(data);
+        setOwnerLocked(true);  // \uCD08\uAE30: \uC804\uCCB4 \uC120\uD0DD \uC0C1\uD0DC \u2192 \uC7A0\uAE08
         loadTickerData();
       }).catch(err => {
         showAlert('\uB9C8\uC2A4\uD130 \uB370\uC774\uD130 \uB85C\uB529 \uC2E4\uD328: ' + err.message, 'error');
@@ -1919,6 +1977,7 @@
 
   function loadPortfolioData(force) {
     if (portfolioLoaded && !force) return;
+    if (document.getElementById('globalOwner').value === '') return;  // owner \uBBF8\uC120\uD0DD \uC2DC \uCC28\uB2E8
 
     document.getElementById('ovLoadingMsg').classList.remove('hidden');
     document.getElementById('ovTotalKRW').textContent = '\uC870\uD68C \uC911...';
