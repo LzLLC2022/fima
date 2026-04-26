@@ -694,8 +694,9 @@
   <div class="tabs">
     <!-- 2단계: 서브탭 (조회 그룹) -->
     <div id="subtabs-view" style="display:flex;">
-      <button class="tab-btn active" id="subtab-overview" onclick="switchTab('overview')">현황</button>
-      <button class="tab-btn" id="subtab-query" onclick="switchTab('query')">거래 조회</button>
+      <button class="tab-btn active" id="subtab-overview"   onclick="switchTab('overview')">현황</button>
+      <button class="tab-btn"        id="subtab-query"      onclick="switchTab('query')">거래 조회</button>
+      <button class="tab-btn"        id="subtab-portfolio"  onclick="switchTab('portfolio')">포트폴리오</button>
     </div>
     <!-- 2단계: 서브탭 (입력관리 그룹) -->
     <div id="subtabs-manage" style="display:none;">
@@ -953,6 +954,56 @@
 
       </form>
     </div><!-- /tab-input -->
+
+    <!-- ===================== 포트폴리오 탭 ===================== -->
+    <div id="tab-portfolio" class="tab-content">
+      <div id="pfLoading" style="text-align:center;padding:40px;color:#718096;display:none;">⏳ 데이터 조회 중... (역사적 시세 포함, 수십 초 소요될 수 있습니다)</div>
+      <div id="pfError" style="color:#e53e3e;padding:16px;display:none;"></div>
+      <div id="pfContent" style="display:none;">
+
+        <!-- 요약 카드 -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">순 투자액</div>
+            <div id="pfNetInv" style="font-size:1.3rem;font-weight:700;color:#2d3748;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">평가액</div>
+            <div id="pfMarket" style="font-size:1.3rem;font-weight:700;color:#2d3748;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">평가 손익</div>
+            <div id="pfPnl" style="font-size:1.3rem;font-weight:700;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">수익률</div>
+            <div id="pfPnlPct" style="font-size:1.3rem;font-weight:700;">-</div>
+          </div>
+        </div>
+
+        <!-- 월별 수익률 차트 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-weight:700;color:#2d3748;margin-bottom:12px;">📈 월별 누적 수익률 비교</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 포트폴리오: 순투자액 대비 평가손익률 / 지수: 동기간 누적 등락률</div>
+          <div id="pfChart"></div>
+          <div id="pfChartNote" style="font-size:0.75rem;color:#a0aec0;margin-top:8px;"></div>
+        </div>
+
+        <!-- 종목별 수익률 테이블 -->
+        <div class="card">
+          <div style="font-weight:700;color:#2d3748;margin-bottom:12px;">📋 보유 종목별 수익률</div>
+          <div class="table-wrap">
+            <table id="pfStockTable">
+              <thead><tr>
+                <th>Ticker</th><th>Name</th><th>현재가</th>
+                <th>평가금액 (KRW)</th><th>연간 수익률 (YTD)</th><th>월간 수익률 (MTD)</th>
+              </tr></thead>
+              <tbody id="pfStockBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ===================== 거래 조회 탭 ===================== -->
     <div id="tab-query" class="tab-content">
@@ -1237,12 +1288,14 @@
 
   // ---- 서브탭 전환 (2단계) ----
   function switchTab(tab) {
-    ['overview', 'input', 'query'].forEach(function(id) {
+    ['overview', 'input', 'query', 'portfolio'].forEach(function(id) {
       var btn = document.getElementById('subtab-' + id);
       if (btn) btn.classList.toggle('active', id === tab);
-      document.getElementById('tab-' + id).classList.toggle('active', id === tab);
+      var content = document.getElementById('tab-' + id);
+      if (content) content.classList.toggle('active', id === tab);
     });
-    if (tab === 'overview') loadPortfolioData(false);
+    if (tab === 'overview')   loadPortfolioData(false);
+    if (tab === 'portfolio')  loadPortfolioAnalysis();
   }
 
   // ---- 마스터 데이터 로딩 ----
@@ -2616,6 +2669,225 @@
   function clearAlert() { document.getElementById('alertBox').innerHTML = ''; }
   function showLoading(show) {
     document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+  }
+
+  // ── 포트폴리오 분석 탭 ─────────────────────────────────────────────
+  var pfAnalysisLoaded = false;
+
+  function loadPortfolioAnalysis(force) {
+    if (pfAnalysisLoaded && !force) return;
+    pfAnalysisLoaded = false;
+
+    var loading = document.getElementById('pfLoading');
+    var errEl   = document.getElementById('pfError');
+    var content = document.getElementById('pfContent');
+    loading.style.display = 'block';
+    errEl.style.display   = 'none';
+    content.style.display = 'none';
+
+    fetch('/api/portfolio-analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner: currentOwner, accountOwner: currentAccountOwner }),
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      loading.style.display = 'none';
+      if (!data.success) {
+        errEl.textContent   = '오류: ' + (data.error || '알 수 없는 오류');
+        errEl.style.display = 'block';
+        return;
+      }
+      if (!data.summary) {
+        errEl.textContent   = '데이터가 없습니다.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      // ── 요약 카드 ────────────────────────────────────────
+      var fmtK   = function(v) { return Math.floor(v).toLocaleString('ko-KR'); };
+      var fmtPct = function(v) { return (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%'; };
+      var pnlCol = function(v) { return v > 0 ? '#2f855a' : v < 0 ? '#c53030' : '#2d3748'; };
+
+      var s = data.summary;
+      document.getElementById('pfNetInv').textContent  = fmtK(s.netInvestmentKRW) + ' KRW';
+      document.getElementById('pfMarket').textContent  = fmtK(s.marketValueKRW) + ' KRW';
+
+      var pnlEl = document.getElementById('pfPnl');
+      pnlEl.textContent = (s.pnlKRW >= 0 ? '+' : '') + fmtK(s.pnlKRW) + ' KRW';
+      pnlEl.style.color = pnlCol(s.pnlKRW);
+
+      var pctEl = document.getElementById('pfPnlPct');
+      pctEl.textContent = fmtPct(s.pnlPct);
+      pctEl.style.color = pnlCol(s.pnlPct);
+
+      // ── 차트 ─────────────────────────────────────────────
+      renderPfChart(data.monthly, data.indices);
+
+      // ── 종목 테이블 ───────────────────────────────────────
+      var tbody = document.getElementById('pfStockBody');
+      if (!data.stocks || data.stocks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+      } else {
+        tbody.innerHTML = data.stocks.map(function(st) {
+          var annStr = st.annualReturnPct !== null
+            ? '<span style="color:' + pnlCol(st.annualReturnPct) + '">' + fmtPct(st.annualReturnPct) + '</span>'
+            : '<span style="color:#a0aec0">-</span>';
+          var monStr = st.monthlyReturnPct !== null
+            ? '<span style="color:' + pnlCol(st.monthlyReturnPct) + '">' + fmtPct(st.monthlyReturnPct) + '</span>'
+            : '<span style="color:#a0aec0">-</span>';
+          var cpStr  = st.currentPrice > 0
+            ? Number(st.currentPrice).toLocaleString('ko-KR', { maximumFractionDigits: 4 }) + '\u00a0' + (st.currency || '')
+            : '-';
+          return '<tr>'
+            + '<td style="font-weight:600;">' + st.ticker + '</td>'
+            + '<td>' + (st.name || '-') + '</td>'
+            + '<td style="text-align:right;">' + cpStr + '</td>'
+            + '<td style="text-align:right;">' + fmtK(st.marketValueKRW) + '</td>'
+            + '<td style="text-align:right;">' + annStr + '</td>'
+            + '<td style="text-align:right;">' + monStr + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      content.style.display = 'block';
+      pfAnalysisLoaded = true;
+    }).catch(function(err) {
+      document.getElementById('pfLoading').style.display = 'none';
+      var e2 = document.getElementById('pfError');
+      e2.textContent   = '네트워크 오류: ' + err.message;
+      e2.style.display = 'block';
+    });
+  }
+
+  function renderPfChart(monthly, indices) {
+    var el = document.getElementById('pfChart');
+    if (!monthly || monthly.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:40px;">데이터 없음</div>';
+      return;
+    }
+
+    // 시리즈 정의
+    var series = [
+      { key: 'portfolio', label: '포트폴리오', color: '#3182ce',
+        data: monthly.map(function(m) { return { month: m.month, v: m.returnPct }; }) },
+      { key: 'KOSPI',  label: 'KOSPI',   color: '#e53e3e',
+        data: ((indices || {}).KOSPI  || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
+      { key: 'SP500',  label: 'S&P500',  color: '#38a169',
+        data: ((indices || {}).SP500  || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
+      { key: 'NASDAQ', label: 'NASDAQ',  color: '#805ad5',
+        data: ((indices || {}).NASDAQ || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
+    ].filter(function(s) { return s.data.length > 0; });
+
+    var months = monthly.map(function(m) { return m.month; });
+
+    // 값 범위
+    var allVals = [];
+    series.forEach(function(s) { s.data.forEach(function(d) { allVals.push(d.v); }); });
+    allVals.push(0);
+    var minV = Math.min.apply(null, allVals);
+    var maxV = Math.max.apply(null, allVals);
+    var pad  = Math.max(1.5, (maxV - minV) * 0.12);
+    minV -= pad; maxV += pad;
+
+    // SVG 레이아웃
+    var W = 820, H = 300;
+    var ml = 62, mr = 24, mt = 18, mb = 54;
+    var cw = W - ml - mr, ch = H - mt - mb;
+
+    function xPos(i) {
+      return months.length <= 1 ? ml + cw / 2 : ml + i / (months.length - 1) * cw;
+    }
+    function yPos(v) { return mt + ch - (v - minV) / (maxV - minV) * ch; }
+
+    // y축 눈금
+    var range  = maxV - minV || 1;
+    var rawStp = range / 5;
+    var mag    = Math.pow(10, Math.floor(Math.log10(rawStp)));
+    var nice   = [1, 2, 2.5, 5, 10].find(function(n) { return n * mag >= rawStp; }) || 10;
+    var step   = nice * mag;
+    var ticks  = [];
+    for (var tv = Math.floor(minV / step) * step; tv <= maxV + step * 0.01; tv = Math.round((tv + step) * 1e6) / 1e6) {
+      ticks.push(tv);
+      if (ticks.length > 12) break;
+    }
+
+    // 라인 패스
+    function makePath(sdata) {
+      var parts = [];
+      months.forEach(function(mm, i) {
+        var found = null;
+        for (var k = 0; k < sdata.length; k++) { if (sdata[k].month === mm) { found = sdata[k]; break; } }
+        if (!found) return;
+        parts.push((parts.length === 0 ? 'M' : 'L') + ' ' + xPos(i).toFixed(1) + ' ' + yPos(found.v).toFixed(1));
+      });
+      return parts.join(' ');
+    }
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;overflow:visible;">';
+
+    // 그리드
+    svg += '<g stroke="#edf2f7" stroke-width="1">';
+    ticks.forEach(function(tv) {
+      var ty = yPos(tv);
+      if (ty < mt - 2 || ty > mt + ch + 2) return;
+      svg += '<line x1="' + ml + '" y1="' + ty.toFixed(1) + '" x2="' + (ml + cw) + '" y2="' + ty.toFixed(1) + '"/>';
+    });
+    svg += '</g>';
+
+    // 0선
+    var y0 = yPos(0);
+    svg += '<line x1="' + ml + '" y1="' + y0.toFixed(1) + '" x2="' + (ml + cw) + '" y2="' + y0.toFixed(1) + '" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>';
+
+    // 차트 테두리
+    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+
+    // 라인 + 점
+    series.forEach(function(s) {
+      var path = makePath(s.data);
+      if (!path) return;
+      svg += '<path d="' + path + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+      months.forEach(function(mm, i) {
+        var found = null;
+        for (var k = 0; k < s.data.length; k++) { if (s.data[k].month === mm) { found = s.data[k]; break; } }
+        if (!found) return;
+        svg += '<circle cx="' + xPos(i).toFixed(1) + '" cy="' + yPos(found.v).toFixed(1) + '" r="3.5" fill="' + s.color + '" stroke="white" stroke-width="1.5"/>';
+      });
+    });
+
+    // y축 레이블
+    svg += '<g font-size="11" fill="#718096" text-anchor="end" font-family="inherit">';
+    ticks.forEach(function(tv) {
+      var ty = yPos(tv);
+      if (ty < mt - 5 || ty > mt + ch + 5) return;
+      var label = (tv >= 0 ? '+' : '') + tv.toFixed(tv % 1 === 0 ? 0 : 1) + '%';
+      svg += '<text x="' + (ml - 6) + '" y="' + (ty + 4).toFixed(1) + '">' + label + '</text>';
+    });
+    svg += '</g>';
+
+    // x축 레이블
+    svg += '<g font-size="11" fill="#718096" text-anchor="middle" font-family="inherit">';
+    months.forEach(function(mm, i) {
+      if (months.length > 7 && i % 2 !== 0) return;
+      svg += '<text x="' + xPos(i).toFixed(1) + '" y="' + (mt + ch + 16) + '">' + mm.slice(2) + '</text>';
+    });
+    svg += '</g>';
+
+    // 범례
+    var legY = mt + ch + 38;
+    svg += '<g font-size="11.5" fill="#4a5568" font-family="inherit">';
+    var legX = ml;
+    series.forEach(function(s) {
+      if (legX + 110 > W - mr + 10) return;
+      svg += '<rect x="' + legX + '" y="' + (legY - 8) + '" width="20" height="4" rx="2" fill="' + s.color + '"/>';
+      svg += '<text x="' + (legX + 26) + '" y="' + (legY + 1) + '">' + s.label + '</text>';
+      legX += 110;
+    });
+    svg += '</g>';
+
+    svg += '</svg>';
+    el.innerHTML = svg;
+
+    var noteEl = document.getElementById('pfChartNote');
+    if (noteEl) noteEl.textContent = '포트폴리오: (평가액 - 순투자액) / 순투자액  |  지수: 분석 시작 시점 대비 누적 등락률';
   }
 </script>
 </body>
