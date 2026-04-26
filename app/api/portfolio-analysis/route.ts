@@ -204,6 +204,10 @@ export async function POST(req: NextRequest) {
           runningState.cashFX[region] += price * qty - tax - charge;
         } else if (t.startsWith('div') && !t.includes('stock')) {
           runningState.cashFX[region] += (divAmt || price) - tax - charge;
+        } else if (t.includes('stock')) {
+          // Dividend-Stock: 현금 배당(divAmt) + 주식 취득 비용(-price*qty) 순효과
+          // portfolio/route.ts 와 동일 로직 (divAmt=0 이면 cash 차감)
+          runningState.cashFX[region] += (divAmt || 0) - price * qty - charge - tax;
         }
 
         if (!ticker || asset.toLowerCase() === 'cash') continue;
