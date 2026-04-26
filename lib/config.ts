@@ -42,7 +42,7 @@ export const OWNER_CONFIG: Record<string, OwnerConfig> = {
     pin:     '',                                   // PIN 없음
   },
   'Lz': {
-    sheetId: process.env.GOOGLE_SHEET_ID_LZ ?? process.env.GOOGLE_SHEET_ID ?? '',
+    sheetId: process.env.GOOGLE_SHEET_ID_LZ ?? '',
     pin:     process.env.PIN_LZ ?? '',
   },
   'Forest': {
