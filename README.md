@@ -15,9 +15,105 @@ Next.js + Vercel로 배포하며, 주식·ETF·펀드·현금 자산을 실시�
 
 ---
 
+## Account Owner 추가 방법
+
+> 여러 명이 각자의 Google Spreadsheet를 사용할 때 (가족, 부부, 팀 등)
+
+FiMa-Inv는 **하나의 앱에서 여러 사용자**가 각자의 스프레드시트를 독립적으로 사용할 수 있습니다.  
+각 사용자는 로그인 시 자신의 데이터만 조회·입력합니다.
+
+### Step 1 — `lib/config.ts` 수정
+
+```typescript
+export const OWNER_CONFIG: Record<string, OwnerConfig> = {
+  'Lz': {
+    sheetId: process.env.GOOGLE_SHEET_ID_LZ ?? '',
+    pin:     process.env.PIN_LZ ?? '',        // 빈 문자열이면 PIN 없음
+  },
+
+  // ▼ 새 사용자 추가 (아래를 복사해서 추가)
+  'Spouse': {
+    sheetId: process.env.GOOGLE_SHEET_ID_SPOUSE ?? '',
+    pin:     process.env.PIN_SPOUSE ?? '1234', // PIN 설정 시 4자리 권장
+  },
+  'Child': {
+    sheetId: process.env.GOOGLE_SHEET_ID_CHILD ?? '',
+    pin:     '',   // PIN 없음 (빈 문자열)
+  },
+};
+```
+
+> ⚠️ 키 이름(`'Spouse'`, `'Child'` 등)이 로그인 화면에 표시되는 이름입니다.
+
+### Step 2 — Vercel 환경변수 추가
+
+[Vercel 대시보드](https://vercel.com) → 프로젝트 → **Settings → Environment Variables**
+
+새 사용자마다 아래 두 항목을 추가합니다 (`이름` 부분을 대문자로 통일):
+
+| 변수명 | 값 | 설명 |
+|---|---|---|
+| `GOOGLE_SHEET_ID_이름` | `1BxiMV...` | 해당 사용자의 스프레드시트 ID |
+| `PIN_이름` | `1234` | PIN (빈 값이면 생략 가능) |
+
+**예시 (Spouse 추가):**
+```
+GOOGLE_SHEET_ID_SPOUSE  =  1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
+PIN_SPOUSE              =  1234
+```
+
+**스프레드시트 ID 찾기:**
+```
+https://docs.google.com/spreadsheets/d/[여기가 ID]/edit
+```
+
+### Step 3 — 스프레드시트 공유
+
+새 사용자의 스프레드시트를 기존 서비스 계정에 공유합니다.  
+(`GOOGLE_CLIENT_EMAIL` 값, 즉 서비스 계정 이메일을 **편집자**로 추가)
+
+> 서비스 계정(`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`)은 모든 사용자가 공유합니다.  
+> **새 사용자마다 서비스 계정을 새로 만들 필요 없습니다.**
+
+### Step 4 — 배포
+
+```
+GitHub에 push → Vercel 자동 재배포
+```
+
+또는 Vercel 대시보드 → **Deployments → 최신 배포 → Redeploy**
+
+---
+
+### 로그인 동작 방식
+
+```
+앱 접속
+  ↓
+로그인 화면 (Account Owner 선택 + PIN 입력)
+  ↓
+/api/auth 에서 config.ts 기준으로 검증
+  ↓
+성공 → sessionStorage에 저장 → 해당 사용자 스프레드시트만 접근
+  ↓
+로그아웃 → sessionStorage 초기화 → 로그인 화면으로
+```
+
+### PIN 정책
+
+| 상황 | 동작 |
+|---|---|
+| `pin: ''` (빈 문자열) | PIN 입력 불필요, 선택만으로 입장 |
+| `pin: '1234'` | PIN 일치해야만 입장 |
+| PIN 틀렸을 때 | 오류 메시지 표시, 재시도 가능 |
+
+> ⚠️ PIN은 앱 내부 접근 제어용입니다. 중요한 보안 인증이 필요하다면 추가 인증 레이어를 구성하세요.
+
+---
+
 ## 새 Google Spreadsheet로 교체하는 방법
 
-> 다른 스프레드시트를 사용하거나 다른 사람과 공유할 때
+> 처음 설정하거나 스프레드시트 파일을 새로 만들 때
 
 ### 1단계 — 스프레드시트 준비
 
@@ -81,25 +177,32 @@ Next.js + Vercel로 배포하며, 주식·ETF·펀드·현금 자산을 실시�
 
 ---
 
-### 3단계 — Vercel 환경변수 업데이트
+### 3단계 — Vercel 환경변수 설정
 
 [Vercel 대시보드](https://vercel.com) → 프로젝트 → **Settings → Environment Variables**
 
+#### 공통 (모든 사용자가 공유)
+
 | 변수명 | 값 | 어디서 찾나 |
 |---|---|---|
-| `GOOGLE_SHEET_ID` | 스프레드시트 ID | URL의 `/d/` 다음 부분 |
 | `GOOGLE_CLIENT_EMAIL` | 서비스 계정 이메일 | JSON 파일의 `client_email` |
 | `GOOGLE_PRIVATE_KEY` | 비공개 키 | JSON 파일의 `private_key` |
 
-**스프레드시트 ID 찾기:**
-```
-https://docs.google.com/spreadsheets/d/[여기가 ID]/edit
-```
+#### 사용자별 (각 Account Owner마다 추가)
+
+| 변수명 | 예시 값 | 설명 |
+|---|---|---|
+| `GOOGLE_SHEET_ID_LZ` | `1BxiMV...abc` | Lz의 스프레드시트 ID |
+| `PIN_LZ` | `1234` | Lz의 PIN (빈 값이면 생략) |
+| `GOOGLE_SHEET_ID_SPOUSE` | `1CyiNW...xyz` | Spouse의 스프레드시트 ID |
+| `PIN_SPOUSE` | `5678` | Spouse의 PIN |
+
+> 변수명의 `_LZ`, `_SPOUSE` 부분은 `lib/config.ts`의 키 이름과 대응합니다.
 
 **`GOOGLE_PRIVATE_KEY` 입력 방법:**
 - JSON 파일의 `"private_key"` 값 전체를 복사하여 붙여넣기
 - `-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n` 형태
-- Vercel에 입력 시 따옴표 없이 값만 입력
+- Vercel 입력 시 따옴표 없이 값만 입력
 
 환경변수 저장 후 → **Deployments → 최신 배포 우클릭 → Redeploy**
 
@@ -184,28 +287,39 @@ npm run dev
 fima-next/
 ├── app/
 │   └── api/
+│       ├── auth/               # ★ 로그인 검증 (GET: owner목록, POST: PIN확인)
 │       ├── portfolio/          # 현황 API (평가금액·손익 계산)
 │       ├── query/              # 거래 조회 API
 │       ├── transactions/       # 거래 입력 API
 │       ├── update-transaction/ # 거래 수정 API
 │       ├── delete-transaction/ # 거래 삭제 API
 │       ├── master/             # Master 시트 조회
-│       └── ticker-data/        # 종목 현재가 조회
+│       ├── ticker-data/        # 종목코드 목록 조회
+│       ├── purchase/           # 매입원가 자동 계산 (Sell 시)
+│       └── foreign-buy/        # 해외 Buy + 환전 처리
 ├── lib/
-│   ├── config.ts               # ★ 시트 설정 (시트명·컬럼 설명)
+│   ├── config.ts               # ★★ Owner 설정 (OWNER_CONFIG, 시트명)
 │   ├── sheets.ts               # Google Sheets API 연동
 │   └── stock.ts                # 주식·환율 실시간/역사적 조회
 └── public/
-    └── fima.html               # 프론트엔드 (Single Page)
+    └── fima.html               # 프론트엔드 (Single Page App)
 ```
+
+> **새 사용자 추가 시 수정 파일: `lib/config.ts` 하나 + Vercel 환경변수**
 
 ---
 
 ## 문제 해결
 
+### 로그인이 안 될 때
+1. `lib/config.ts`의 `OWNER_CONFIG`에 해당 이름이 있는지 확인 (대소문자 정확히 일치)
+2. Vercel 환경변수 `GOOGLE_SHEET_ID_이름`이 설정되어 있는지 확인
+3. PIN을 설정했다면 정확한 PIN인지 확인 (빈 문자열이면 PIN 불필요)
+4. 코드 수정 후 Vercel 재배포가 완료됐는지 확인
+
 ### 데이터가 로드되지 않을 때
-1. Vercel 환경변수 3개가 모두 설정되어 있는지 확인
-2. 스프레드시트에 서비스 계정 이메일이 **편집자**로 공유되어 있는지 확인
+1. 해당 스프레드시트에 서비스 계정 이메일(`GOOGLE_CLIENT_EMAIL`)이 **편집자**로 공유되어 있는지 확인
+2. Vercel 환경변수 `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`가 설정되어 있는지 확인
 3. Vercel → Deployments → 최신 배포 → Functions 탭에서 오류 로그 확인
 
 ### 환율/시세가 N/A로 표시될 때
