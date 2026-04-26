@@ -37,6 +37,10 @@ export interface OwnerConfig {
 }
 
 export const OWNER_CONFIG: Record<string, OwnerConfig> = {
+  'Sample': {
+    sheetId: process.env.GOOGLE_SHEET_ID ?? '',  // 샘플/게스트용 — GOOGLE_SHEET_ID 환경변수
+    pin:     '',                                   // PIN 없음
+  },
   'Lz': {
     sheetId: process.env.GOOGLE_SHEET_ID_LZ ?? process.env.GOOGLE_SHEET_ID ?? '',
     pin:     process.env.PIN_LZ ?? '',
