@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const currIdx   = col('currency');  const qtyIdx    = col('quantity');
     const divIdx    = col('dividend');  const taxIdx    = col('tax');
     const chgIdx    = col('charge');    const dateIdx   = col('date');
-    const acctIdx   = col('account');
+    const acctIdx   = col('account');   const aoIdx     = col('account owner');
 
     // ── Master → region-currency 매핑 ──
     const currencyMap: Record<string, string> = {};
@@ -68,6 +68,9 @@ export async function POST(req: NextRequest) {
           rowDate = new Date(String(raw ?? ''));
         }
         if (!isNaN(rowDate.getTime()) && rowDate > endDate) return false;
+      }
+      if (filters.accountOwner && aoIdx >= 0) {
+        if (String(row[aoIdx] ?? '').trim() !== filters.accountOwner) return false;
       }
       if (filters.account && acctIdx >= 0) {
         if (String(row[acctIdx] ?? '').trim() !== filters.account) return false;
