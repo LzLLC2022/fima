@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
-export async function GET() {
+export async function POST(req: NextRequest) {
   try {
-    const data = await getSheetValues(LEDGER_SHEET_NAME);
+    const { owner } = await req.json();
+    const spreadsheetId = getOwnerSheetId(owner);
+
+    const data = await getSheetValues(spreadsheetId, LEDGER_SHEET_NAME);
     if (data.length < 2) return NextResponse.json([]);
 
     const headers  = data[0].map((h: any) => String(h ?? '').trim().toLowerCase());
