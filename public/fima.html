@@ -2343,10 +2343,10 @@
 
     const fmtAmt = (v, isK) => isK ? fmtK(v) : fmtN(v, 2);
 
-    var priceColLabel = currentOvFilters.endDate ? '\uAE30\uC900\uC885\uAC00' : '\uD604\uC7AC\uAC00';
-    // 5\uCEEC\uB7FC: Ticker/Name | \uC218\uB7C9 | \uB9E4\uC785\uB2E8\uAC00/\uAE08\uC561 | \uD604\uC7AC\uAC00/\uD3C9\uAC00\uAE08\uC561 | \uC190\uC775\uAE08\uC561/\uC728
-    const cols = ['Ticker / Name', '\uC218\uB7C9', '\uB9E4\uC785\uB2E8\uAC00 / \uAE08\uC561', priceColLabel + ' / \uD3C9\uAC00\uAE08\uC561', '\uC190\uC775\uAE08\uC561 / \uC728'];
-    if (showDividend) cols.push('\uB204\uC801\uBC30\uB2F9\uAE08');
+    var priceColLabel = currentOvFilters.endDate ? '기준종가' : '현재가';
+    // 한 줄 레이아웃: Ticker | Name | 수량 | 매입단가 | 매입금액 | 현재가 | 평가금액 | 손익 | 수익률
+    const cols = ['Ticker', 'Name', '수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률'];
+    if (showDividend) cols.push('누적배당금');
 
     const thead = `<thead><tr>${cols.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
     const tbody = '<tbody>' + items.map(item => {
@@ -2365,7 +2365,7 @@
       const divVal = isK ? (item.divKRW || 0) : (item.divFX || 0);
       const divStr = divVal > 0 ? fmtAmt(divVal, isK) + ' ' + cur : '-';
 
-      // \uC218\uC775\uB960 \uAC8C\uC774\uC9C0 \uBC14
+      // 수익률 게이지 바
       var gaugeHtml = '';
       if (item.currentPrice > 0) {
         var maxG    = 50;
@@ -2380,23 +2380,15 @@
       }
 
       let row = `<tr>
-        <td style="white-space:normal;min-width:80px;">
-          <div style="font-weight:700;color:#2b6cb0;">${item.ticker}</div>
-          <div style="font-size:0.75em;color:#718096;margin-top:2px;">${item.name || ''}</div>
-        </td>
+        <td style="font-weight:700;color:#2b6cb0;white-space:nowrap;">${item.ticker}</td>
+        <td style="font-size:0.82em;color:#718096;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="${item.name || ''}">${item.name || ''}</td>
         <td class="num">${fmtN(item.quantity, 0)}</td>
-        <td class="num" style="white-space:normal;">
-          <div>${avgStr}</div>
-          <div style="font-size:0.82em;color:#4a5568;margin-top:2px;">${purStr}</div>
-        </td>
-        <td class="num" style="white-space:normal;">
-          <div>${curStr}</div>
-          <div style="font-size:0.82em;font-weight:600;color:#2d3748;margin-top:2px;">${mktStr}</div>
-        </td>
-        <td class="num ${pc} gauge-cell" style="white-space:normal;">
-          <div>${pnlStr}</div>
-          <div style="margin-top:2px;">${pctStr}${gaugeHtml}</div>
-        </td>`;
+        <td class="num">${avgStr}</td>
+        <td class="num" style="color:#4a5568;">${purStr}</td>
+        <td class="num">${curStr}</td>
+        <td class="num" style="font-weight:600;color:#2d3748;">${mktStr}</td>
+        <td class="num ${pc}">${pnlStr}</td>
+        <td class="num ${pc} gauge-cell">${pctStr}${gaugeHtml}</td>`;
       if (showDividend) {
         row += `<td class="num" style="color:#2f855a;">${divStr}</td>`;
       }
