@@ -366,7 +366,11 @@ export async function POST(req: NextRequest) {
       });
       Object.entries(state.positions).forEach(([t, p]) => {
         if (p.qty < 0.0001) return;
-        const price = priceMap[t]?.[mm] || 0;
+        let price = priceMap[t]?.[mm] || 0;
+        // 채권 ISIN: 역사적 가격 미지원 → 매입 평균단가로 대체 (평가손익 0% 표시)
+        if (price === 0 && isKoreanBondISIN(t)) {
+          price = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+        }
         if (price > 0) val += price * p.qty * resolveRate(p.region);
       });
 
