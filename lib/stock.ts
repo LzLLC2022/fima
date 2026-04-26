@@ -18,75 +18,15 @@ function isKoreanBondISIN(code: string): boolean {
   return /^KR[A-Z0-9]{10}$/i.test(code.trim());
 }
 
-// ── 네이버 채권 정보 조회 (가격 + 이름) ───────────────────────────────
+// ── 채권 ISIN 정보 조회 (가격 + 이름) ────────────────────────────────────
+// 국민주택채권 등 장외채권은 Naver/KRX API 미지원 → price: 0, name: 시트 Name 우선
+// 시트 Ledger의 Name 컬럼에 직접 채권명을 입력하면 그 값이 포트폴리오에 표시됨
 export async function getNaverBondInfo(isin: string): Promise<{ price: number; name: string }> {
-  const upper = isin.toUpperCase();
-  const fallback = { price: 0, name: upper };
-
-  // 시도 1: 네이버 polling API (채권)
-  try {
-    const url = `https://polling.finance.naver.com/api/realtime/domestic/bond/${upper}`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'Referer':    'https://finance.naver.com',
-        'Accept':     'application/json',
-      },
-    });
-    if (res.ok) {
-      const json = await res.json();
-      const d = json.datas?.[0];
-      if (d) {
-        const raw   = d.closePriceRaw ?? d.currentPriceRaw ?? d.nxtDdClosingPriceRaw ?? '';
-        const price = Number(String(raw).replace(/,/g, ''));
-        const name  = String(d.bondName ?? d.stockName ?? d.name ?? '').trim() || upper;
-        if (price > 0) return { price, name };
-      }
-    }
-  } catch (_) { /* fallthrough */ }
-
-  // 시도 2: 네이버 모바일 채권 API
-  try {
-    const url = `https://m.stock.naver.com/api/bond/${upper}/basic`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
-        'Referer':    'https://m.stock.naver.com',
-        'Accept':     'application/json',
-      },
-    });
-    if (res.ok) {
-      const json  = await res.json();
-      const price = Number(json.closePrice ?? json.currentPrice ?? json.nxtDdClosingPrice ?? 0);
-      const name  = String(json.bondName ?? json.itemName ?? json.name ?? '').trim() || upper;
-      if (price > 0) return { price, name };
-    }
-  } catch (_) { /* fallthrough */ }
-
-  // 시도 3: 네이버 증권 채권 sise API
-  try {
-    const url = `https://finance.naver.com/api/sise/bondItemTotal.nhn?reutersCode=${upper}`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Referer':    'https://finance.naver.com/bond/',
-        'Accept':     'application/json',
-      },
-    });
-    if (res.ok) {
-      const json  = await res.json();
-      const price = Number(json.closePrice ?? json.nxtDdClosingPrice ?? 0);
-      const name  = String(json.bondName ?? json.itemName ?? '').trim() || upper;
-      if (price > 0) return { price, name };
-    }
-  } catch (_) { /* fallthrough */ }
-
-  return fallback;
+  return { price: 0, name: isin.toUpperCase() };
 }
 
 async function getNaverBondPrice(isin: string): Promise<number> {
-  const { price } = await getNaverBondInfo(isin);
-  return price;
+  return 0;
 }
 
 async function getNaverStockInfo(code: string, item?: string): Promise<any> {
