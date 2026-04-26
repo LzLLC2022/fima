@@ -139,14 +139,12 @@ export async function POST(req: NextRequest) {
       latestRate: Record<string, number>;
     }
 
-    function cloneState(s: State): State {
-      return {
-        cashFX: { ...s.cashFX },
-        netDepositKRW: s.netDepositKRW,
-        positions: Object.fromEntries(Object.entries(s.positions).map(([k, v]) => [k, { ...v }])),
-        latestRate: { ...s.latestRate },
-      };
-    }
+    const cloneState = (s: State): State => ({
+      cashFX: { ...s.cashFX },
+      netDepositKRW: s.netDepositKRW,
+      positions: Object.fromEntries(Object.entries(s.positions).map(([k, v]) => [k, { ...v }])),
+      latestRate: { ...s.latestRate },
+    });
 
     const runningState: State = { cashFX: {}, netDepositKRW: 0, positions: {}, latestRate: {} };
     const monthlyStates: Record<string, State> = {};
@@ -241,7 +239,7 @@ export async function POST(req: NextRequest) {
       ]),
       // 환율 (현재)
       (async () => {
-        const regions = [...new Set(heldTickers.map(t => currentState.positions[t].region))];
+        const regions = Array.from(new Set(heldTickers.map(t => currentState.positions[t].region)));
         const rates: Record<string, number> = { KRW: 1 };
         await Promise.allSettled(regions.map(async region => {
           const currency = currencyMap[region] || 'KRW';
