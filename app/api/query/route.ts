@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
   try {
     const filters = await req.json();
+    const spreadsheetId = getOwnerSheetId(filters.owner);
 
-    const data = await getSheetValues(LEDGER_SHEET_NAME);
+    const data = await getSheetValues(spreadsheetId, LEDGER_SHEET_NAME);
     if (data.length < 2) return NextResponse.json({ success: true, headers: [], data: [], rowIndices: [] });
 
     const headers    = data[0].map((h: any) => String(h ?? '').trim());
     const rows       = data.slice(1);
     const dateIdx    = headers.indexOf('Date');
-    const ownerIdx   = headers.indexOf('Account Owner');
     const accountIdx = headers.indexOf('Account');
     const tickerIdx  = headers.indexOf('Ticker');
 
@@ -37,9 +38,8 @@ export async function POST(req: NextRequest) {
             if (rowDate > end) return false;
           }
         }
-        if (filters.accountOwner && String(row[ownerIdx]   ?? '').trim() !== filters.accountOwner) return false;
-        if (filters.account      && String(row[accountIdx] ?? '').trim() !== filters.account)      return false;
-        if (filters.ticker       && String(row[tickerIdx]  ?? '').trim().toUpperCase() !== String(filters.ticker).trim().toUpperCase()) return false;
+        if (filters.account && String(row[accountIdx] ?? '').trim() !== filters.account) return false;
+        if (filters.ticker  && String(row[tickerIdx]  ?? '').trim().toUpperCase() !== String(filters.ticker).trim().toUpperCase()) return false;
         return true;
       });
 
