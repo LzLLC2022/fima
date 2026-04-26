@@ -289,7 +289,16 @@ export async function POST(req: NextRequest) {
         const d = tickerHistory.find(h => h.ticker === t)?.data || [];
         return d.length > 0 ? d[d.length - 1].close : 0;
       })();
-      currentPrice[t] = fromApi > 0 ? fromApi : fromHistory;
+      const raw = fromApi > 0 ? fromApi : fromHistory;
+      // 가격 조회 불가(0)인 경우: Bond ISIN이면 매입 평균단가로 대체
+      if (raw > 0) {
+        currentPrice[t] = raw;
+      } else if (isKoreanBondISIN(t)) {
+        const p = currentState.positions[t];
+        currentPrice[t] = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+      } else {
+        currentPrice[t] = 0;
+      }
     });
 
     // ── 요약 ──────────────────────────────────────────────────────
