@@ -280,6 +280,27 @@
 
     .hidden { display: none !important; }
 
+    /* ---- 수익률 게이지 바 ---- */
+    .gauge-cell { min-width: 100px; }
+    .gauge-wrap {
+      margin-top: 4px; height: 5px; border-radius: 3px;
+      background: #e2e8f0; position: relative; overflow: hidden;
+    }
+    .gauge-center {
+      position: absolute; left: 50%; top: 0;
+      width: 1px; height: 100%; background: #a0aec0; z-index: 1;
+    }
+    .gauge-fill-pos {
+      position: absolute; left: 50%; top: 0;
+      height: 100%; background: #48bb78; border-radius: 0 3px 3px 0;
+      transition: width 0.4s ease;
+    }
+    .gauge-fill-neg {
+      position: absolute; right: 50%; top: 0;
+      height: 100%; background: #fc8181; border-radius: 3px 0 0 3px;
+      transition: width 0.4s ease;
+    }
+
     /* ---- 현황 탭 ---- */
     .total-asset-box {
       background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
@@ -2117,6 +2138,24 @@
       const divVal = isK ? (item.divKRW || 0) : (item.divFX || 0);
       const divStr = divVal > 0 ? fmtAmt(divVal, isK) + ' ' + cur : '-';
 
+      // \uC218\uC775\uB960 \uAC8C\uC774\uC9C0 \uBC14: \uC911\uC559 0 \uAE30\uC900, \uC88C\uCE21=\uC190\uC2E4(\uBE68\uAC04), \uC6B0\uCE21=\uC774\uC775(\uCD08\uB85D), \uCD5C\uB300 \uB300\uCE6D \uBC94\uC704 \u00B150%
+      var gaugeHtml = '';
+      if (item.currentPrice > 0) {
+        var maxG    = 50;  // \u00B150%\uC5D0\uC11C \uD480\uBC14
+        var fillPct = Math.min(Math.abs(item.pnlPct), maxG) / maxG * 50;
+        if (item.pnlPct >= 0) {
+          gaugeHtml = '<div class="gauge-wrap">'
+            + '<div class="gauge-center"></div>'
+            + '<div class="gauge-fill-pos" style="width:' + fillPct + '%"></div>'
+            + '</div>';
+        } else {
+          gaugeHtml = '<div class="gauge-wrap">'
+            + '<div class="gauge-center"></div>'
+            + '<div class="gauge-fill-neg" style="width:' + fillPct + '%"></div>'
+            + '</div>';
+        }
+      }
+
       let row = `<tr>
         <td style="font-weight:700;color:#2b6cb0;">${item.ticker}</td>
         <td>${item.name || ''}</td>
@@ -2126,7 +2165,7 @@
         <td class="num">${curStr}</td>
         <td class="num" style="font-weight:600;">${mktStr}</td>
         <td class="num ${pc}">${pnlStr}</td>
-        <td class="num ${pc}">${pctStr}</td>`;
+        <td class="num ${pc} gauge-cell">${pctStr}${gaugeHtml}</td>`;
       if (showDividend) {
         row += `<td class="num" style="color:#2f855a;">${divStr}</td>`;
       }
