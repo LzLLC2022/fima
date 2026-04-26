@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appendRow, LEDGER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
   try {
     const f = await req.json();
+    const spreadsheetId = getOwnerSheetId(f.owner);
 
     // 날짜 파싱
     const dateParts = String(f.date || '').split('-');
@@ -14,9 +16,9 @@ export async function POST(req: NextRequest) {
     const toNum = (v: any) =>
       (v !== '' && v !== null && v !== undefined) ? (parseFloat(v) || 0) : '';
 
-    await appendRow(LEDGER_SHEET_NAME, [
+    await appendRow(spreadsheetId, LEDGER_SHEET_NAME, [
       dateValue,
-      f.accountOwner || '',
+      f.owner        || '',
       f.account      || '',
       f.region       || '',
       f.assetType    || '',
