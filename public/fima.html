@@ -301,6 +301,61 @@
       transition: width 0.4s ease;
     }
 
+    /* ---- 수정/삭제 버튼 ---- */
+    .btn-edit {
+      padding: 3px 9px; font-size: 0.72rem; border-radius: 5px; border: none;
+      background: #ebf8ff; color: #2b6cb0; cursor: pointer; font-weight: 600;
+      margin-right: 4px; transition: background 0.15s;
+    }
+    .btn-edit:hover { background: #bee3f8; }
+    .btn-del {
+      padding: 3px 9px; font-size: 0.72rem; border-radius: 5px; border: none;
+      background: #fff5f5; color: #c53030; cursor: pointer; font-weight: 600;
+      transition: background 0.15s;
+    }
+    .btn-del:hover { background: #fed7d7; }
+
+    /* ---- 수정 모달 ---- */
+    .edit-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .edit-modal {
+      background: white; border-radius: 16px; padding: 28px 32px;
+      width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    }
+    .edit-modal h3 {
+      font-size: 1.05rem; font-weight: 700; color: #1e3a5f;
+      margin-bottom: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;
+    }
+    .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .edit-field { display: flex; flex-direction: column; gap: 4px; }
+    .edit-field.full { grid-column: 1 / -1; }
+    .edit-field label { font-size: 0.75rem; font-weight: 600; color: #4a5568; }
+    .edit-field input, .edit-field select {
+      border: 1px solid #cbd5e0; border-radius: 7px; padding: 7px 10px;
+      font-size: 0.85rem; font-family: inherit; color: #2d3748;
+    }
+    .edit-field input:focus, .edit-field select:focus {
+      outline: none; border-color: #63b3ed; box-shadow: 0 0 0 2px rgba(99,179,237,0.2);
+    }
+    .edit-modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+      border-top: 1px solid #e2e8f0; padding-top: 16px;
+    }
+    .btn-cancel-edit {
+      padding: 8px 20px; border-radius: 8px; border: 1px solid #cbd5e0;
+      background: white; color: #4a5568; cursor: pointer; font-size: 0.875rem; font-weight: 600;
+    }
+    .btn-save-edit {
+      padding: 8px 20px; border-radius: 8px; border: none;
+      background: #2b6cb0; color: white; cursor: pointer; font-size: 0.875rem; font-weight: 600;
+    }
+    .btn-save-edit:hover { background: #2c5282; }
+    .btn-save-edit:disabled { background: #90cdf4; cursor: not-allowed; }
+
     /* ---- 현황 탭 ---- */
     .total-asset-box {
       background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
@@ -873,6 +928,48 @@
   <div class="spinner"></div>
 </div>
 
+<!-- ===================== 거래 수정 모달 ===================== -->
+<div id="editModal" class="edit-modal-backdrop hidden">
+  <div class="edit-modal">
+    <h3>✏️ 거래 수정</h3>
+    <div class="edit-grid">
+      <div class="edit-field"><label>Date</label><input type="date" id="ef_date"></div>
+      <div class="edit-field"><label>Trade</label>
+        <select id="ef_trade">
+          <option value="Buy">Buy</option>
+          <option value="Sell">Sell</option>
+          <option value="Deposit">Deposit</option>
+          <option value="Withdraw">Withdraw</option>
+          <option value="Dividend">Dividend</option>
+          <option value="Dividend-Stock">Dividend-Stock</option>
+          <option value="Split">Split</option>
+          <option value="Merge">Merge</option>
+          <option value="Reverse-Split">Reverse-Split</option>
+        </select>
+      </div>
+      <div class="edit-field"><label>Account Owner</label><input type="text" id="ef_accountOwner"></div>
+      <div class="edit-field"><label>Account</label><input type="text" id="ef_account"></div>
+      <div class="edit-field"><label>Region</label><input type="text" id="ef_region"></div>
+      <div class="edit-field"><label>Asset Type</label><input type="text" id="ef_assetType"></div>
+      <div class="edit-field"><label>Ticker</label><input type="text" id="ef_ticker"></div>
+      <div class="edit-field"><label>Name</label><input type="text" id="ef_name"></div>
+      <div class="edit-field"><label>Price</label><input type="number" step="any" id="ef_price"></div>
+      <div class="edit-field"><label>Currency (환율)</label><input type="number" step="any" id="ef_currency"></div>
+      <div class="edit-field"><label>Quantity</label><input type="number" step="any" id="ef_quantity"></div>
+      <div class="edit-field"><label>Dividend</label><input type="number" step="any" id="ef_dividend"></div>
+      <div class="edit-field"><label>Tax</label><input type="number" step="any" id="ef_tax"></div>
+      <div class="edit-field"><label>Charge</label><input type="number" step="any" id="ef_charge"></div>
+      <div class="edit-field"><label>Purchase</label><input type="number" step="any" id="ef_purchase"></div>
+      <div class="edit-field"><label>Purchase Currency</label><input type="number" step="any" id="ef_purchaseCurrency"></div>
+      <div class="edit-field full"><label>Comment</label><input type="text" id="ef_comment"></div>
+    </div>
+    <div class="edit-modal-footer">
+      <button class="btn-cancel-edit" onclick="closeEditModal()">취소</button>
+      <button class="btn-save-edit" id="editSaveBtn" onclick="submitEditForm()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== 거래 미리보기 모달 ===================== -->
 <div id="previewModal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -913,7 +1010,8 @@
   let _purchaseFX     = 0;   // Sell \uB9E4\uC785\uAE08\uC561 (\uD604\uC9C0 \uD1B5\uD654 \uAE30\uC900)
   let pendingFormData = null; // \uC800\uC7A5 \uB300\uAE30 \uC911\uC778 \uD3FC \uB370\uC774\uD130
   let pendingFgnBuy   = false; // \uD574\uC678 Buy \uD658\uC804 \uC5EC\uBD80
-  var lastQueryResult = { headers: [], data: [] };
+  var lastQueryResult = { headers: [], data: [], rowIndices: [] };
+  var editingSheetRow = null;  // 수정 중인 시트 행 번호
 
   // ---- \uCD08\uAE30\uD654 ----
   window.addEventListener('DOMContentLoaded', () => {
@@ -1827,7 +1925,7 @@
             `<div class="alert alert-error">\uC870\uD68C \uC624\uB958: ${result.error}</div>`;
           return;
         }
-        renderTable(result.headers, result.data);
+        renderTable(result.headers, result.data, result.rowIndices);
       }).catch(function(err) {
         showLoading(false);
         document.getElementById('queryResult').innerHTML =
@@ -1835,7 +1933,7 @@
       });
   }
 
-  function renderTable(headers, rows) {
+  function renderTable(headers, rows, rowIndices) {
     const container = document.getElementById('queryResult');
 
     if (!rows || rows.length === 0) {
@@ -1871,8 +1969,9 @@
       if (i === insertAfter) { dispHeaders.push('\uD569\uACC4(KRW)'); }
     });
 
-    const thead = `<thead><tr>${dispHeaders.map(function(h) { return '<th>' + h + '</th>'; }).join('')}</tr></thead>`;
-    const tbody = `<tbody>${rows.map(function(row) {
+    const thead = `<thead><tr>${dispHeaders.map(function(h) { return '<th>' + h + '</th>'; }).join('')}<th>\uC791\uC5C5</th></tr></thead>`;
+    const tbody = `<tbody>${rows.map(function(row, rowIdx) {
+      const sheetRow = (rowIndices && rowIndices[rowIdx]) ? rowIndices[rowIdx] : 0;
       const region      = regionCol  !== -1 ? String(row[regionCol]).trim() : '';
       const currCode    = regionMap[region] || 'KRW';
       const isKRW       = currCode === 'KRW';
@@ -1919,7 +2018,12 @@
         if (i === insertAfter) { cells.push(totalKRWCell); }
       });
 
-      return '<tr>' + cells.join('') + '</tr>';
+      // 수정/삭제 버튼 셀
+      var actionCell = '<td style="white-space:nowrap;">'
+        + (sheetRow > 0 ? '<button class="btn-edit" onclick="openEditModal(' + sheetRow + ', ' + rowIdx + ')">\u270F\uFE0F \uC218\uC815</button>'
+          + '<button class="btn-del" onclick="deleteTransaction(' + sheetRow + ')">\uD83D\uDDD1 \uC0AD\uC81C</button>' : '')
+        + '</td>';
+      return '<tr>' + cells.join('') + actionCell + '</tr>';
     }).join('')}</tbody>`;
 
     container.innerHTML = `
@@ -1929,7 +2033,7 @@
       <div class="table-wrap">
         <table>${thead}${tbody}</table>
       </div>`;
-    lastQueryResult = { headers: headers, data: rows };
+    lastQueryResult = { headers: headers, data: rows, rowIndices: rowIndices || [] };
     var eb = document.getElementById('exportBtn'); if (eb) eb.disabled = false;
   }
 
@@ -2157,6 +2261,98 @@
     </div>`;
 
     sec.innerHTML = summary + `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
+  }
+
+  // ====================================================
+  // ---- 거래 수정 / 삭제 ----
+  // ====================================================
+
+  // 헤더명 → ef_ 필드 매핑
+  var HEADER_TO_FIELD = {
+    'Date': 'date', 'Account Owner': 'accountOwner', 'Account': 'account',
+    'Region': 'region', 'Asset Type': 'assetType', 'Ticker': 'ticker',
+    'Name': 'name', 'Trade': 'trade', 'Price': 'price', 'Currency': 'currency',
+    'Quantity': 'quantity', 'Dividend': 'dividend', 'Tax': 'tax',
+    'Charge': 'charge', 'Purchase': 'purchase', 'Purchase Currency': 'purchaseCurrency',
+    'Comment': 'comment',
+  };
+
+  function openEditModal(sheetRow, rowIdx) {
+    editingSheetRow = sheetRow;
+    var headers = lastQueryResult.headers;
+    var row     = lastQueryResult.data[rowIdx];
+
+    // 모든 필드 초기화
+    Object.values(HEADER_TO_FIELD).forEach(function(fieldId) {
+      var el = document.getElementById('ef_' + fieldId);
+      if (el) el.value = '';
+    });
+
+    // 현재 값 채우기
+    headers.forEach(function(h, i) {
+      var fieldId = HEADER_TO_FIELD[h];
+      if (!fieldId) return;
+      var el = document.getElementById('ef_' + fieldId);
+      if (!el) return;
+      var val = row[i];
+      if (val === null || val === undefined) val = '';
+      el.value = val;
+    });
+
+    document.getElementById('editSaveBtn').disabled = false;
+    document.getElementById('editModal').classList.remove('hidden');
+  }
+
+  function closeEditModal() {
+    editingSheetRow = null;
+    document.getElementById('editModal').classList.add('hidden');
+  }
+
+  async function submitEditForm() {
+    if (!editingSheetRow) return;
+    var btn = document.getElementById('editSaveBtn');
+    btn.disabled = true;
+    btn.textContent = '저장 중...';
+
+    var fields = {};
+    Object.entries(HEADER_TO_FIELD).forEach(function([h, fieldId]) {
+      var el = document.getElementById('ef_' + fieldId);
+      fields[fieldId] = el ? el.value : '';
+    });
+
+    try {
+      var res = await fetch('/api/update-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheetRow: editingSheetRow, fields: fields }),
+      });
+      var json = await res.json();
+      if (!json.success) throw new Error(json.error || '수정 실패');
+      closeEditModal();
+      alert('✅ 수정 완료! 목록을 다시 조회합니다.');
+      document.getElementById('queryBtn').click();
+    } catch (e) {
+      alert('❌ 오류: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '저장';
+    }
+  }
+
+  async function deleteTransaction(sheetRow) {
+    if (!confirm('이 거래 내역을 삭제하시겠습니까?\n(되돌릴 수 없습니다)')) return;
+    try {
+      var res = await fetch('/api/delete-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheetRow: sheetRow }),
+      });
+      var json = await res.json();
+      if (!json.success) throw new Error(json.error || '삭제 실패');
+      alert('✅ 삭제 완료! 목록을 다시 조회합니다.');
+      document.getElementById('queryBtn').click();
+    } catch (e) {
+      alert('❌ 오류: ' + e.message);
+    }
   }
 
   // ====================================================
