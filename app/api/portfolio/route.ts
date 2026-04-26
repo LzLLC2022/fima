@@ -79,7 +79,6 @@ export async function POST(req: NextRequest) {
     };
 
     // ── 거래 집계 ──
-    const debugRows: any[] = [];
     ledgerData.slice(1).forEach((row: any[]) => {
       if (!rowFilter(row)) return;
 
@@ -93,37 +92,26 @@ export async function POST(req: NextRequest) {
       const divAmt = Number(row[divIdx])   || 0;
       const tax    = taxIdx >= 0 ? (Number(row[taxIdx]) || 0) : 0;
       const charge = chgIdx >= 0 ? (Number(row[chgIdx]) || 0) : 0;
-      const date   = dateIdx >= 0 ? String(row[dateIdx] ?? '') : '';
 
       if (rate > 0 && region) latestRate[region] = rate;
       if (!cashFX[region]) cashFX[region] = 0;
 
-      let delta = 0;
       if (t.startsWith('dep')) {
-        delta = price - tax - charge;
+        cashFX[region] += price - tax - charge;
       } else if (t.startsWith('with')) {
-        delta = -(price + tax + charge);
+        cashFX[region] -= price + tax + charge;
       } else if (t === 'buy') {
         if (asset.toLowerCase() === 'cash') {
-          delta = price * (qty || 1);
+          cashFX[region] += price * (qty || 1);
         } else {
-          delta = -(price * qty + charge);
+          cashFX[region] -= price * qty + charge;
         }
       } else if (t === 'sell') {
-        delta = price * qty - tax - charge;
+        cashFX[region] += price * qty - tax - charge;
       } else if (t.startsWith('div') && !t.includes('stock')) {
-        delta = (divAmt || price) - tax - charge;
+        cashFX[region] += (divAmt || price) - tax - charge;
       } else if (t.includes('stock')) {
-        delta = divAmt - price * qty - charge - tax;
-      }
-      cashFX[region] += delta;
-
-      if (filters.debug) {
-        debugRows.push({
-          date, trade: String(row[tradeIdx] ?? '').trim(), asset, region,
-          price, qty, div: divAmt, tax, charge, delta,
-          cashRunning: Math.round(cashFX[region]),
-        });
+        cashFX[region] += divAmt - price * qty - charge - tax;
       }
 
       // 종목 포지션
@@ -275,7 +263,6 @@ export async function POST(req: NextRequest) {
       success: true, cash, stocks, funds,
       totalKRW     : totalCashKRW + totalStockKRW + totalFundKRW,
       totalCashKRW, totalStockKRW, totalFundKRW,
-      ...(filters.debug ? { debugRows } : {}),
     });
 
   } catch (e: any) {
