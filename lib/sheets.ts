@@ -1,8 +1,10 @@
 import { google } from 'googleapis';
 
-export const SHEET_ID          = process.env.GOOGLE_SHEET_ID!;
-export const LEDGER_SHEET_NAME = 'Ledger';
-export const MASTER_SHEET_NAME = 'Master';
+// 시트명은 lib/config.ts 에서 관리합니다.
+export { LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
+
+// Vercel 환경변수: GOOGLE_SHEET_ID / GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY
+export const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 
 function getAuth() {
   return new google.auth.GoogleAuth({
