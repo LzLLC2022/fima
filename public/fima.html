@@ -964,6 +964,28 @@
 
     <!-- ===================== 포트폴리오 탭 ===================== -->
     <div id="tab-portfolio" class="tab-content">
+
+      <!-- 포트폴리오 필터 카드 -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">🔎 조회 조건</div>
+        <div class="ov-filter-row">
+          <div class="field">
+            <label>Account</label>
+            <select id="pfAccount">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyPfFilter()">조회</button>
+              <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetPfFilter()">초기화</button>
+            </div>
+          </div>
+        </div>
+        <div id="pfFilterBadge" class="ov-filter-badge hidden"></div>
+      </div>
+
       <div id="pfLoading" style="text-align:center;padding:40px;color:#718096;display:none;">⏳ 데이터 조회 중... (역사적 시세 포함, 수십 초 소요될 수 있습니다)</div>
       <div id="pfError" style="color:#e53e3e;padding:16px;display:none;"></div>
       <div id="pfContent" style="display:none;">
@@ -1264,6 +1286,11 @@
     if (selected === currentAccountOwner) return;  // 동일 값 재선택 시 무시
     currentAccountOwner = selected;
     currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
+    // 포트폴리오 탭 Account 필터도 초기화
+    pfCurrentAccount = '';
+    if (document.getElementById('pfAccount')) document.getElementById('pfAccount').value = '';
+    if (document.getElementById('pfFilterBadge')) document.getElementById('pfFilterBadge').classList.add('hidden');
+    pfAnalysisLoaded = false;
     // 화면 초기화 후 재조회
     document.getElementById('ovTotalKRW').textContent = '-';
     document.getElementById('ovCashTotal').textContent = '-';
@@ -1357,6 +1384,9 @@
 
     // 현황 탭 Account
     fillSelectWithAll('ovAccount', data.accounts || []);
+
+    // 포트폴리오 탭 Account (동일 목록)
+    fillSelectWithAll('pfAccount', data.accounts || []);
 
     const regionSel = document.getElementById('region');
     regionSel.innerHTML = '<option value="">선택...</option>';
@@ -2734,6 +2764,26 @@
 
   // ── 포트폴리오 분석 탭 ─────────────────────────────────────────────
   var pfAnalysisLoaded = false;
+  var pfCurrentAccount = '';
+
+  function applyPfFilter() {
+    pfCurrentAccount = document.getElementById('pfAccount').value;
+    var badge = document.getElementById('pfFilterBadge');
+    if (pfCurrentAccount) {
+      badge.textContent = '필터: Account = ' + pfCurrentAccount;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+    loadPortfolioAnalysis(true);
+  }
+
+  function resetPfFilter() {
+    document.getElementById('pfAccount').value = '';
+    pfCurrentAccount = '';
+    document.getElementById('pfFilterBadge').classList.add('hidden');
+    loadPortfolioAnalysis(true);
+  }
 
   function loadPortfolioAnalysis(force) {
     if (pfAnalysisLoaded && !force) return;
@@ -2746,10 +2796,13 @@
     errEl.style.display   = 'none';
     content.style.display = 'none';
 
+    var body = { owner: currentOwner, accountOwner: currentAccountOwner };
+    if (pfCurrentAccount) body.account = pfCurrentAccount;
+
     fetch('/api/portfolio-analysis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner: currentOwner, accountOwner: currentAccountOwner }),
+      body: JSON.stringify(body),
     }).then(function(r) { return r.json(); }).then(function(data) {
       loading.style.display = 'none';
       if (!data.success) {
