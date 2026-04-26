@@ -35,6 +35,56 @@ export async function getSheetValues(sheetName: string): Promise<any[][]> {
 }
 
 /**
+ * 시트 내부 sheetId 조회 (batchUpdate용)
+ */
+async function getSheetId(sheetName: string): Promise<number> {
+  const sheets = await getSheets();
+  const res = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const sheet = res.data.sheets?.find(s => s.properties?.title === sheetName);
+  if (sheet?.properties?.sheetId === undefined) throw new Error(`Sheet not found: ${sheetName}`);
+  return sheet.properties.sheetId!;
+}
+
+/**
+ * 특정 행 업데이트 (sheetRowNumber: 1-indexed 시트 행 번호)
+ */
+export async function updateRow(sheetName: string, sheetRowNumber: number, values: any[]): Promise<void> {
+  const sheets = await getSheets();
+  const lastCol = String.fromCharCode(64 + values.length); // A=65
+  const range = `${sheetName}!A${sheetRowNumber}:${lastCol}${sheetRowNumber}`;
+  const formatted = values.map(v => (v === null || v === undefined ? '' : v));
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [formatted] },
+  });
+}
+
+/**
+ * 특정 행 삭제 (sheetRowNumber: 1-indexed 시트 행 번호)
+ */
+export async function deleteRow(sheetName: string, sheetRowNumber: number): Promise<void> {
+  const sheets = await getSheets();
+  const sheetId = await getSheetId(sheetName);
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: sheetRowNumber - 1,  // 0-indexed
+            endIndex:   sheetRowNumber,       // exclusive
+          },
+        },
+      }],
+    },
+  });
+}
+
+/**
  * 시트에 행 추가
  */
 export async function appendRow(sheetName: string, values: any[]): Promise<void> {
