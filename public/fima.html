@@ -1165,18 +1165,15 @@
   // ---- 앱 시작 (로그인 후) ----
   async function initApp() {
     // 네비게이션 owner 드롭다운 채우기
+    // ※ innerHTML 한 번에 세팅 → 옵션 추가 도중 onchange 트리거 방지
     try {
       var res = await fetch('/api/auth');
       var data = await res.json();
       var sel = document.getElementById('navOwnerSelect');
-      sel.innerHTML = '';
-      (data.owners || []).forEach(function(name) {
-        var opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = '👤 ' + name;
-        if (name === currentOwner) opt.selected = true;
-        sel.appendChild(opt);
-      });
+      sel.innerHTML = (data.owners || []).map(function(name) {
+        var sel2 = (name === currentOwner) ? ' selected' : '';
+        return '<option value="' + name + '"' + sel2 + '>👤 ' + name + '</option>';
+      }).join('');
     } catch(_) {}
 
     currentOvFilters = { owner: currentOwner };  // 로그인 후 owner 동기화
@@ -1188,6 +1185,7 @@
     var sel = document.getElementById('navOwnerSelect');
     var selected = sel.value;
     if (!selected) return;
+    if (selected === currentOwner) return;  // 동일 owner 재선택 시 무시
     currentOwner = selected;
     sessionStorage.setItem('fimaOwner', currentOwner);
     currentOvFilters = { owner: currentOwner };
