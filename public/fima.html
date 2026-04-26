@@ -301,6 +301,21 @@
       transition: width 0.4s ease;
     }
 
+    /* ---- sticky 컬럼 (거래조회 테이블) ---- */
+    .sticky-left {
+      position: sticky; left: 0; z-index: 3;
+      background: white;
+    }
+    thead .sticky-left { background: #1e3a5f; z-index: 4; }
+    tbody tr:hover .sticky-left { background: #f7fafc; }
+    .sticky-right {
+      position: sticky; right: 0; z-index: 3;
+      background: white;
+      box-shadow: -2px 0 6px rgba(0,0,0,0.06);
+    }
+    thead .sticky-right { background: #1e3a5f; z-index: 4; }
+    tbody tr:hover .sticky-right { background: #f7fafc; }
+
     /* ---- 수정/삭제 버튼 ---- */
     .btn-edit {
       padding: 3px 9px; font-size: 0.72rem; border-radius: 5px; border: none;
@@ -1933,6 +1948,13 @@
       });
   }
 
+  var sortDateAsc = false;  // 기본: 최신순(내림차순)
+
+  function toggleDateSort() {
+    sortDateAsc = !sortDateAsc;
+    renderTable(lastQueryResult.headers, lastQueryResult.data, lastQueryResult.rowIndices);
+  }
+
   function renderTable(headers, rows, rowIndices) {
     const container = document.getElementById('queryResult');
 
@@ -1946,41 +1968,65 @@
     }
 
     // \uCEEC\uB7FC \uC778\uB371\uC2A4
-    const tradeCol      = headers.indexOf('Trade');
-    const priceCol      = headers.indexOf('Price');
-    const qtyCol        = headers.indexOf('Quantity');
-    const regionCol     = headers.indexOf('Region');
-    const exRateCol     = headers.indexOf('Currency');
-    const divCol        = headers.indexOf('Dividend');
-    const taxCol        = headers.indexOf('Tax');
-    const chargeCol     = headers.indexOf('Charge');
-    const purchaseCol   = headers.indexOf('Purchase');
+    const dateIdx    = headers.indexOf('Date');
+    const tradeCol   = headers.indexOf('Trade');
+    const priceCol   = headers.indexOf('Price');
+    const qtyCol     = headers.indexOf('Quantity');
+    const regionCol  = headers.indexOf('Region');
+    const exRateCol  = headers.indexOf('Currency');
+    const divCol     = headers.indexOf('Dividend');
+    const taxCol     = headers.indexOf('Tax');
+    const chargeCol  = headers.indexOf('Charge');
+    const purchaseCol = headers.indexOf('Purchase');
 
-    // \uD1B5\uD654 \uB9C8\uD06C \uBD99\uC77C \uCEEC\uB7FC (\uBCF8 \uD1B5\uD654\uB85C \uD45C\uC2DC)
     const currMarkCols = new Set([priceCol, divCol, taxCol, chargeCol, purchaseCol].filter(i => i !== -1));
-    // \uC22B\uC790 \uD615\uC2DD \uCEEC\uB7FC
     const numColNames  = new Set(['Price','Currency','Quantity','Dividend','Tax','Charge','Purchase','Purchase Currency']);
+    const insertAfter  = qtyCol !== -1 ? qtyCol : headers.length - 1;
 
-    // \uD5E4\uB354 \uC0BD\uC785: Quantity \uB2E4\uC74C \uD569\uACC4(KRW)\uB9CC \uCD94\uAC00 (\uACC4\uC0B0\uCEEC\uB7FC \uCD5C\uC18C\uD654)
-    const insertAfter = qtyCol !== -1 ? qtyCol : headers.length - 1;
+    // \uB0A0\uC9DC \uC815\uB82C (rowIndices\uB3C4 \uD568\uAED8 \uC815\uB82C)
+    var sortedData = rows.map(function(row, i) {
+      return { row: row, sheetRow: (rowIndices && rowIndices[i]) ? rowIndices[i] : 0 };
+    });
+    if (dateIdx !== -1) {
+      sortedData.sort(function(a, b) {
+        var da = String(a.row[dateIdx] || '');
+        var db = String(b.row[dateIdx] || '');
+        return sortDateAsc ? da.localeCompare(db) : db.localeCompare(da);
+      });
+    }
+
+    // \uD5E4\uB354 \uBE4C\uB4DC (Date \ucEEC\uB7FC\uC5D0 \uC815\uB82C \uBC84\uD2BC \uCD94\uAC00)
+    const sortIcon = sortDateAsc ? ' \u25B2' : ' \u25BC';
     const dispHeaders = [];
     headers.forEach(function(h, i) {
       dispHeaders.push(h);
-      if (i === insertAfter) { dispHeaders.push('\uD569\uACC4(KRW)'); }
+      if (i === insertAfter) dispHeaders.push('\uD569\uACC4(KRW)');
     });
+    const theadCells = dispHeaders.map(function(h) {
+      if (h === 'Date') {
+        return '<th class="sticky-left" style="cursor:pointer;user-select:none;min-width:96px;" onclick="toggleDateSort()">Date' + sortIcon + '</th>';
+      }
+      return '<th>' + h + '</th>';
+    }).join('');
+    const thead = `<thead><tr>${theadCells}<th class="sticky-right">\uC791\uC5C5</th></tr></thead>`;
 
-    const thead = `<thead><tr>${dispHeaders.map(function(h) { return '<th>' + h + '</th>'; }).join('')}<th>\uC791\uC5C5</th></tr></thead>`;
-    const tbody = `<tbody>${rows.map(function(row, rowIdx) {
-      const sheetRow = (rowIndices && rowIndices[rowIdx]) ? rowIndices[rowIdx] : 0;
-      const region      = regionCol  !== -1 ? String(row[regionCol]).trim() : '';
-      const currCode    = regionMap[region] || 'KRW';
-      const isKRW       = currCode === 'KRW';
-      const exRate      = exRateCol !== -1 ? Number(row[exRateCol]) || 1 : 1;
+    // \uD589 \uBE4C\uB4DC
+    const tbody = '<tbody>' + sortedData.map(function(item, rowIdx) {
+      const row      = item.row;
+      const sheetRow = item.sheetRow;
 
-      const price    = priceCol !== -1 ? Number(row[priceCol]) || 0 : 0;
-      const qty      = qtyCol   !== -1 ? Number(row[qtyCol])   || 0 : 0;
+      // \uD5E4\uB354 \uAE38\uC774\uB85C \uD328\uB529 (\uD589\uB9C8\uB2E4 \uD0DC\uC77C\uB9C1 \uBE48 \uC140 \uCC44\uC6B0\uAE30)
+      const paddedRow = headers.map(function(_, i) {
+        var v = i < row.length ? row[i] : '';
+        return (v === null || v === undefined) ? '' : v;
+      });
 
-      // Buy/Sell: Price x Qty / Deposit/Withdraw \uB4F1 Qty=0: Price \uADF8\uB300\uB85C
+      const region   = regionCol  !== -1 ? String(paddedRow[regionCol]).trim() : '';
+      const currCode = regionMap[region] || 'KRW';
+      const isKRW    = currCode === 'KRW';
+      const exRate   = exRateCol !== -1 ? Number(paddedRow[exRateCol]) || 1 : 1;
+      const price    = priceCol  !== -1 ? Number(paddedRow[priceCol])  || 0 : 0;
+      const qty      = qtyCol    !== -1 ? Number(paddedRow[qtyCol])    || 0 : 0;
       const total    = price > 0 ? (qty > 0 ? price * qty : price) : 0;
       const totalKRW = isKRW ? total : total * exRate;
 
@@ -1989,42 +2035,44 @@
       const kCell = function(v) {
         return v > 0 ? fmtK(v) + ' <span style="font-size:0.75em;color:#718096;">KRW</span>' : '';
       };
-
       const totalKRWCell = '<td class="num" style="font-weight:600;color:#2f855a;">' + kCell(totalKRW) + '</td>';
 
       const cells = [];
-      row.forEach(function(cell, i) {
+      paddedRow.forEach(function(cell, i) {
         const h = headers[i];
         let cls = '';
-        let val = cell === null || cell === undefined ? '' : cell;
+        let val = String(cell === '' ? '' : cell);
 
         if (numColNames.has(h) && val !== '') {
           cls = 'num';
           const n = Number(val);
-          if (currMarkCols.has(i)) {
-            val = fmt(n) + ' <span style="font-size:0.75em;color:#718096;">' + currCode + '</span>';
-          } else {
-            val = fmt(n);
+          if (!isNaN(n)) {
+            val = currMarkCols.has(i)
+              ? fmt(n) + ' <span style="font-size:0.75em;color:#718096;">' + currCode + '</span>'
+              : fmt(n);
           }
         }
         if (i === tradeCol) {
-          const t = String(val).toLowerCase();
-          cls = t === 'buy'  || t === '\uB9E4\uC218' ? 'trade-buy'
-              : t === 'sell' || t === '\uB9E4\uB3C4' ? 'trade-sell' : '';
+          const t = val.toLowerCase();
+          cls = t === 'buy'  ? 'trade-buy' : t === 'sell' ? 'trade-sell' : '';
         }
-        cells.push('<td class="' + cls + '">' + val + '</td>');
 
-        // \uACC4\uC0B0 \uCEEC\uB7FC \uC0BD\uC785 (\uD569\uACC4(KRW)\uB9CC)
-        if (i === insertAfter) { cells.push(totalKRWCell); }
+        // Date \uCEEC\uB7FC sticky
+        const extraCls = (i === dateIdx) ? ' sticky-left' : '';
+        const extraStyle = (i === dateIdx) ? ' style="background:inherit;"' : '';
+        cells.push('<td class="' + cls + extraCls + '"' + extraStyle + '>' + val + '</td>');
+
+        if (i === insertAfter) cells.push(totalKRWCell);
       });
 
-      // 수정/삭제 버튼 셀
-      var actionCell = '<td style="white-space:nowrap;">'
-        + (sheetRow > 0 ? '<button class="btn-edit" onclick="openEditModal(' + sheetRow + ', ' + rowIdx + ')">\u270F\uFE0F \uC218\uC815</button>'
-          + '<button class="btn-del" onclick="deleteTransaction(' + sheetRow + ')">\uD83D\uDDD1 \uC0AD\uC81C</button>' : '')
+      const actionCell = '<td class="sticky-right" style="white-space:nowrap;background:white;">'
+        + (sheetRow > 0
+          ? '<button class="btn-edit" onclick="openEditModal(' + sheetRow + ',' + rowIdx + ')">\u270F\uFE0F \uC218\uC815</button>'
+          + '<button class="btn-del" onclick="deleteTransaction(' + sheetRow + ')">\uD83D\uDDD1 \uC0AD\uC81C</button>'
+          : '')
         + '</td>';
       return '<tr>' + cells.join('') + actionCell + '</tr>';
-    }).join('')}</tbody>`;
+    }).join('') + '</tbody>';
 
     container.innerHTML = `
       <div class="result-info-row">
