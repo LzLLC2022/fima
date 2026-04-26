@@ -1081,6 +1081,7 @@
 
   // ---- 로그인 상태 ----
   var currentOwner = sessionStorage.getItem('fimaOwner') || '';
+  var currentAccountOwner = '';  // 스프레드시트 내 Account Owner 필터
 
   // ---- 미리보기 / 매입 정보 캐시 ----
   let _purchaseKRW    = 0;
@@ -1164,31 +1165,46 @@
 
   // ---- 앱 시작 (로그인 후) ----
   async function initApp() {
-    // 네비게이션 owner 드롭다운 채우기
+    // 스프레드시트 Ledger의 Account Owner 고유값으로 nav 드롭다운 채우기
     // ※ innerHTML 한 번에 세팅 → 옵션 추가 도중 onchange 트리거 방지
     try {
-      var res = await fetch('/api/auth');
+      var res = await fetch('/api/account-owners', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ owner: currentOwner }),
+      });
       var data = await res.json();
+      var owners = data.owners || [];
       var sel = document.getElementById('navOwnerSelect');
-      sel.innerHTML = (data.owners || []).map(function(name) {
-        var sel2 = (name === currentOwner) ? ' selected' : '';
-        return '<option value="' + name + '"' + sel2 + '>👤 ' + name + '</option>';
-      }).join('');
-    } catch(_) {}
 
-    currentOvFilters = { owner: currentOwner };  // 로그인 후 owner 동기화
+      if (owners.length === 0) {
+        // 데이터 없으면 로그인 이름만 표시
+        owners = [currentOwner];
+      }
+
+      // 로그인한 앱 owner 이름과 일치하는 값 우선 선택, 없으면 첫 번째
+      var matched = owners.find(function(n) { return n === currentOwner; }) || owners[0];
+      currentAccountOwner = matched;
+
+      sel.innerHTML = owners.map(function(name) {
+        var isSelected = (name === matched) ? ' selected' : '';
+        return '<option value="' + name + '"' + isSelected + '>👤 ' + name + '</option>';
+      }).join('');
+    } catch(_) {
+      currentAccountOwner = currentOwner;
+    }
+
+    currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
     loadMasterData();
   }
 
-  // ---- 네비게이션 Owner 변경 ----
+  // ---- 네비게이션 Account Owner 변경 ----
   function onNavOwnerChange() {
     var sel = document.getElementById('navOwnerSelect');
     var selected = sel.value;
     if (!selected) return;
-    if (selected === currentOwner) return;  // 동일 owner 재선택 시 무시
-    currentOwner = selected;
-    sessionStorage.setItem('fimaOwner', currentOwner);
-    currentOvFilters = { owner: currentOwner };
+    if (selected === currentAccountOwner) return;  // 동일 값 재선택 시 무시
+    currentAccountOwner = selected;
+    currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
     // 화면 초기화 후 재조회
     document.getElementById('ovTotalKRW').textContent = '-';
     document.getElementById('ovCashTotal').textContent = '-';
@@ -2033,10 +2049,11 @@
   // ====================================================
   function runQuery() {
     const filters = {
-      owner:     currentOwner,
-      startDate: document.getElementById('qStartDate').value,
-      endDate:   document.getElementById('qEndDate').value,
-      account:   document.getElementById('qAccount').value,
+      owner:        currentOwner,
+      accountOwner: currentAccountOwner,
+      startDate:    document.getElementById('qStartDate').value,
+      endDate:      document.getElementById('qEndDate').value,
+      account:      document.getElementById('qAccount').value,
     };
 
     showLoading(true);
@@ -2208,7 +2225,7 @@
   // ---- \uD604\uD669 \uD0ED ----
   // ====================================================
   let portfolioLoaded = false;
-  let currentOvFilters = { owner: currentOwner };
+  let currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
 
   function applyOvFilter() {
     if (!currentOwner) return;
@@ -2216,7 +2233,7 @@
     const account = document.getElementById('ovAccount').value;
     const endDate = document.getElementById('ovEndDate').value;
 
-    currentOvFilters = { owner: currentOwner };
+    currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
     if (account) currentOvFilters.account = account;
     if (endDate) currentOvFilters.endDate = endDate;
 
@@ -2239,7 +2256,7 @@
   function resetOvFilter() {
     document.getElementById('ovAccount').value = '';
     document.getElementById('ovEndDate').value = '';
-    currentOvFilters = { owner: currentOwner };
+    currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
     document.getElementById('ovFilterBadge').classList.add('hidden');
     portfolioLoaded = false;
     loadPortfolioData(true);
