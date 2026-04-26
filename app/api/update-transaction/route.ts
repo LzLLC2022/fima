@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateRow, LEDGER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
   try {
-    const { sheetRow, fields: f } = await req.json();
+    const { owner, sheetRow, fields: f } = await req.json();
+    const spreadsheetId = getOwnerSheetId(owner);
 
     if (!sheetRow || sheetRow < 2) {
       return NextResponse.json({ success: false, error: '유효하지 않은 행 번호' }, { status: 400 });
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const values = [
       String(f.date || ''),
-      f.accountOwner || '',
+      owner,
       f.account      || '',
       f.region       || '',
       f.assetType    || '',
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
       f.comment || '',
     ];
 
-    await updateRow(LEDGER_SHEET_NAME, sheetRow, values);
+    await updateRow(spreadsheetId, LEDGER_SHEET_NAME, sheetRow, values);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
