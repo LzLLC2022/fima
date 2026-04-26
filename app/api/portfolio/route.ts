@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice, getExchangeRate } from '@/lib/stock';
+import { getStockPrice, getExchangeRate, getNaverBondInfo } from '@/lib/stock';
+
+function isKoreanBondISIN(ticker: string): boolean {
+  return /^KR[A-Z0-9]{10}$/i.test(ticker.trim());
+}
 
 const EMPTY = { success: true, cash: [], stocks: [], funds: [],
                 totalKRW: 0, totalCashKRW: 0, totalStockKRW: 0, totalFundKRW: 0 };
@@ -174,6 +178,16 @@ export async function POST(req: NextRequest) {
       priceMap[tk] = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
     });
 
+    // ── 채권 ISIN 이름 조회 (Naver 채권 API) ──
+    const bondNameMap: Record<string, string> = {};
+    const bondTickers = tickers.filter(isKoreanBondISIN);
+    if (bondTickers.length > 0 && !endDateStr) {
+      await Promise.allSettled(bondTickers.map(async tk => {
+        const { name } = await getNaverBondInfo(tk).catch(() => ({ price: 0, name: '' }));
+        if (name && name !== tk) bondNameMap[tk] = name;
+      }));
+    }
+
     // ── 환율 조회 (기준일 지정 시 역사적 환율, 없으면 현재 환율) ──
     const histRateMap: Record<string, number> = { KRW: 1 };
     const uniqueCurrencies = Array.from(new Set([
@@ -224,8 +238,11 @@ export async function POST(req: NextRequest) {
       const marketValueFX = curPriceFX  * netQty;
       const pnlFX         = marketValueFX - purchaseAmtFX;
 
+      // 채권 ISIN인 경우 Naver에서 가져온 이름 우선 사용
+      const displayName = bondNameMap[p.ticker] || p.name || p.ticker;
+
       const item = {
-        ticker: p.ticker, name: p.name, currency, region: p.region,
+        ticker: p.ticker, name: displayName, currency, region: p.region,
         quantity: netQty, avgPrice: avgPriceFX,
         purchaseAmt  : purchaseAmtKRW, currentPrice: curPriceFX,
         marketValue  : marketValueKRW, pnl, pnlPct,
@@ -236,8 +253,8 @@ export async function POST(req: NextRequest) {
       };
 
       const at = p.assetType.toLowerCase();
-      if (at === 'stock' || at === 'etf') stocks.push(item);   // ETF → Stock(ETF) 섹션
-      else if (at === 'fund')             funds.push(item);    // Fund만 Fund 섹션
+      if (at === 'stock' || at === 'etf')    stocks.push(item);   // Stock(ETF) 섹션
+      else if (at === 'fund' || at === 'bond') funds.push(item);  // Fund/Bond 섹션
     });
 
     stocks.sort((a, b) => a.ticker.localeCompare(b.ticker));
