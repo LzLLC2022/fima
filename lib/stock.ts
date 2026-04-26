@@ -2,7 +2,7 @@
  * 주식 정보 조회 라이브러리
  * GAS의 Stock.gs를 Node.js fetch로 변환
  * - 한국 종목 (6자리 코드): 네이버 금융 API
- * - 한국 채권 ISIN (KR + 10자리): 네이버 채권 API
+ * - 한국 채권 ISIN (KR + 10자리): KRX OpenAPI (환경변수 KRX_AUTH_KEY 필요)
  * - 해외 종목 (영문 티커): 야후 파이낸스 v8 API
  */
 
@@ -18,15 +18,76 @@ function isKoreanBondISIN(code: string): boolean {
   return /^KR[A-Z0-9]{10}$/i.test(code.trim());
 }
 
+// ── KRX OpenAPI 채권 시장 구분 ────────────────────────────────────────────
+// ISIN 4~5번째 자리(분류코드)로 시장 판별
+// 10xx: 국채 계열 → 국채전문유통시장 (kts_bydd_trd)
+// 20xx/30xx: 국민주택채권, 지방채 → 소액채권시장 (smb_bydd_trd)
+// 그 외: 일반채권시장 (bnd_bydd_trd)
+function krxBondApiId(isin: string): string {
+  const prefix = isin.toUpperCase().slice(2, 6); // KR 다음 4자리
+  if (prefix.startsWith('10')) return 'kts_bydd_trd';  // 국채전문유통시장
+  if (prefix.startsWith('20') || prefix.startsWith('30')) return 'smb_bydd_trd'; // 소액채권시장
+  return 'bnd_bydd_trd'; // 일반채권시장
+}
+
+/**
+ * KRX OpenAPI로 채권 종가 조회
+ * - 환경변수 KRX_AUTH_KEY 필요 (Vercel 환경변수 설정)
+ * - 날짜별 전체 목록 조회 후 ISIN(ISU_CD)으로 필터링
+ * - 당일 거래 없으면 최대 7 영업일 전까지 소급 조회
+ */
+async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
+  const authKey = process.env.KRX_AUTH_KEY;
+  if (!authKey) return 0;
+
+  const isinUpper = isin.toUpperCase();
+  const apiId     = krxBondApiId(isinUpper);
+  const pad2      = (n: number) => String(n).padStart(2, '0');
+
+  // 기준일 → YYYYMMDD 변환 (없으면 오늘)
+  const baseDate = date ? new Date(date + 'T00:00:00Z') : new Date();
+
+  // 최대 7일 전까지 소급 (주말/공휴일 대응)
+  for (let offset = 0; offset <= 7; offset++) {
+    const d = new Date(baseDate.getTime() - offset * 86400 * 1000);
+    const basDd = `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}`;
+
+    const url = `https://data-dbg.krx.co.kr/svc/apis/bon/${apiId}.json`
+              + `?AUTH_KEY=${authKey}&basDd=${basDd}`;
+
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+      });
+      if (!res.ok) continue;
+
+      const json = await res.json();
+      const items: any[] = json?.OutBlock_1 ?? [];
+      if (items.length === 0) continue; // 해당 날짜 거래 없음 → 이전 날 재시도
+
+      const bond = items.find((item: any) =>
+        String(item.ISU_CD ?? '').trim().toUpperCase() === isinUpper
+      );
+      if (!bond) return 0; // 목록에 없음 → 미상장 채권
+
+      const price = parseFloat(String(bond.CLSPRC ?? '').replace(/,/g, ''));
+      if (price > 0) return price;
+    } catch (_e) {
+      // 네트워크 오류 시 다음 날짜로
+    }
+  }
+  return 0;
+}
+
 // ── 채권 ISIN 정보 조회 (가격 + 이름) ────────────────────────────────────
-// 국민주택채권 등 장외채권은 Naver/KRX API 미지원 → price: 0, name: 시트 Name 우선
-// 시트 Ledger의 Name 컬럼에 직접 채권명을 입력하면 그 값이 포트폴리오에 표시됨
+// KRX OpenAPI 우선 조회, 실패 시 0 반환 (시트 Name 컬럼 값 표시)
 export async function getNaverBondInfo(isin: string): Promise<{ price: number; name: string }> {
-  return { price: 0, name: isin.toUpperCase() };
+  const price = await getKrxBondPrice(isin).catch(() => 0);
+  return { price, name: '' }; // name은 시트 Name 컬럼 우선 사용
 }
 
 async function getNaverBondPrice(isin: string): Promise<number> {
-  return 0;
+  return getKrxBondPrice(isin).catch(() => 0);
 }
 
 async function getNaverStockInfo(code: string, item?: string): Promise<any> {
@@ -177,10 +238,9 @@ export async function getStockPrice(ticker: string, date?: string): Promise<numb
   if (!ticker) return 0;
   ticker = ticker.toString().trim().toUpperCase();
 
-  // 한국 채권 ISIN: 역사적 가격은 미지원(0 반환), 현재가는 네이버 채권 API
+  // 한국 채권 ISIN: KRX OpenAPI로 현재가 및 역사적 종가 조회
   if (isKoreanBondISIN(ticker)) {
-    if (date) return 0; // 채권 역사적 종가 미지원
-    return getNaverBondPrice(ticker).catch(() => 0);
+    return getKrxBondPrice(ticker, date).catch(() => 0);
   }
 
   if (!date) {
