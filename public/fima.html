@@ -15,7 +15,7 @@
       color: #1a202c;
     }
 
-    .container { max-width: 900px; margin: 0 auto; }
+    .container { max-width: 1400px; margin: 0 auto; }
 
     /* 헤더 */
     .header {
@@ -235,6 +235,25 @@
       border-radius: 10px;
       border: 1px solid #e2e8f0;
     }
+    /* 거래조회 전용: 높이 제한 + 헤더 sticky */
+    .table-wrap-scroll {
+      overflow: auto;
+      max-height: calc(100vh - 260px);
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .table-wrap-scroll thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    /* sticky-left + sticky-top 교차점 (Date 헤더) */
+    .table-wrap-scroll thead .sticky-left  { z-index: 8; }
+    .table-wrap-scroll thead .sticky-right { z-index: 7; }
+    /* tbody sticky */
+    .table-wrap-scroll tbody .sticky-left  { z-index: 3; }
+    .table-wrap-scroll tbody .sticky-right { z-index: 3; }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -2078,7 +2097,7 @@
       <div class="result-info-row">
         <div class="result-info">\uCD1D <strong>${rows.length}\uAC74</strong>\uC758 \uAC70\uB798 \uB0B4\uC5ED &nbsp;\u00B7&nbsp; \uD569\uACC4(KRW) = Price \u00D7 Qty \u00D7 \uD658\uC728</div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap-scroll">
         <table>${thead}${tbody}</table>
       </div>`;
     lastQueryResult = { headers: headers, data: rows, rowIndices: rowIndices || [] };
