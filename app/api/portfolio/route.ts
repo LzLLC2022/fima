@@ -229,7 +229,10 @@ export async function POST(req: NextRequest) {
       const effRate2    = isKRW ? 1 : resolveRate(p.region, p.lastRate > 0 ? p.lastRate : (latestRate[p.region] || 1));
 
       const purchaseAmtKRW = isKRW ? avgPriceFX * netQty : avgPriceFX * netQty * avgRate;
-      const curPriceFX     = priceMap[p.ticker] || 0;
+      // 현재가 조회 불가(0)인 경우: Bond ISIN이면 매입단가로 대체 (평가손실 0%)
+      const rawPriceFX  = priceMap[p.ticker] || 0;
+      const curPriceFX  = rawPriceFX > 0 ? rawPriceFX
+                        : isKoreanBondISIN(p.ticker) ? avgPriceFX : 0;
       const marketValueKRW = isKRW ? curPriceFX * netQty : curPriceFX * netQty * effRate2;
       const pnl            = marketValueKRW - purchaseAmtKRW;
       const pnlPct         = purchaseAmtKRW > 0 ? pnl / purchaseAmtKRW * 100 : 0;
