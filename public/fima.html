@@ -466,6 +466,7 @@
       outline: none;
       min-width: 130px;
       transition: border-color 0.15s;
+      margin-right: 8px;
     }
     .nav-owner-select option { color: #1a202c; background: white; }
     .nav-owner-select:focus { border-color: rgba(255,255,255,0.6); }
@@ -637,12 +638,6 @@
     }
     .sample-btn:hover { background: #edf2f7; border-color: #cbd5e0; }
 
-    /* 네비게이션 로그인 사용자 표시 */
-    .nav-owner-name {
-      color: white; font-size: 0.82rem; font-weight: 600;
-      padding: 4px 10px; background: rgba(255,255,255,0.12);
-      border-radius: 6px; margin-right: 6px;
-    }
     .nav-logout-btn {
       background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
       color: white; border-radius: 7px; padding: 5px 12px;
@@ -660,12 +655,12 @@
     <div class="login-subtitle">Financial Management</div>
     <div class="login-field">
       <label>Account Owner</label>
-      <input type="text" id="loginOwner" placeholder="이름 입력"
+      <input type="text" id="loginOwner" placeholder="이름 입력 (예: Lz)"
              onkeydown="if(event.key==='Enter')document.getElementById('loginPin').focus()" />
     </div>
     <div class="login-field" id="pinFieldWrap">
-      <label>PIN <span style="font-weight:400;color:#a0aec0;">(없으면 공백)</span></label>
-      <input type="password" id="loginPin" placeholder="PIN 입력"
+      <label>PIN</label>
+      <input type="password" id="loginPin" placeholder="PIN 입력 (없으면 빈칸)"
              onkeydown="if(event.key==='Enter')doLogin()" />
     </div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">입장</button>
@@ -689,7 +684,9 @@
     <button class="group-tab-btn" id="group-manage-btn" onclick="switchGroup('manage')">&#9998; 입력관리</button>
     <!-- 로그인 사용자 표시 (우측) -->
     <div class="nav-owner-wrap">
-      <span id="navOwnerName" class="nav-owner-name"></span>
+      <select id="navOwnerSelect" class="nav-owner-select" onchange="onNavOwnerChange()">
+        <option value="">-- 선택 --</option>
+      </select>
       <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -1165,9 +1162,43 @@
   }
 
   // ---- 앱 시작 (로그인 후) ----
-  function initApp() {
-    document.getElementById('navOwnerName').textContent = '👤 ' + currentOwner;
+  async function initApp() {
+    // 네비게이션 owner 드롭다운 채우기
+    try {
+      var res = await fetch('/api/auth');
+      var data = await res.json();
+      var sel = document.getElementById('navOwnerSelect');
+      sel.innerHTML = '';
+      (data.owners || []).forEach(function(name) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = '👤 ' + name;
+        if (name === currentOwner) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    } catch(_) {}
+
     currentOvFilters = { owner: currentOwner };  // 로그인 후 owner 동기화
+    loadMasterData();
+  }
+
+  // ---- 네비게이션 Owner 변경 ----
+  function onNavOwnerChange() {
+    var sel = document.getElementById('navOwnerSelect');
+    var selected = sel.value;
+    if (!selected) return;
+    currentOwner = selected;
+    sessionStorage.setItem('fimaOwner', currentOwner);
+    currentOvFilters = { owner: currentOwner };
+    // 화면 초기화 후 재조회
+    document.getElementById('ovTotalKRW').textContent = '-';
+    document.getElementById('ovCashTotal').textContent = '-';
+    document.getElementById('ovStockTotal').textContent = '-';
+    document.getElementById('ovFundTotal').textContent = '-';
+    var msg = '<p style="color:#a0aec0;font-size:0.9rem;">조회 버튼을 눌러 데이터를 불러오세요.</p>';
+    document.getElementById('ovCashSection').innerHTML = msg;
+    document.getElementById('ovStockSection').innerHTML = msg;
+    document.getElementById('ovFundSection').innerHTML = msg;
     loadMasterData();
   }
 
