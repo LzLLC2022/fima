@@ -1,11 +1,9 @@
 import { google } from 'googleapis';
 
-// 시트명은 lib/config.ts 에서 관리합니다.
+// 시트명·설정은 lib/config.ts 에서 관리
 export { LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
 
-// Vercel 환경변수: GOOGLE_SHEET_ID / GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY
-export const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
-
+// Vercel 환경변수: GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY (모든 owner 공유)
 function getAuth() {
   return new google.auth.GoogleAuth({
     credentials: {
@@ -22,13 +20,25 @@ export async function getSheets() {
 }
 
 /**
- * 시트 전체 데이터 읽기
- * - 숫자는 숫자형, 날짜는 "YYYY-MM-DD" 형식 문자열로 반환
+ * 시트 내부 탭 ID 조회 (deleteDimension용)
  */
-export async function getSheetValues(sheetName: string): Promise<any[][]> {
+async function getSheetTabId(spreadsheetId: string, sheetName: string): Promise<number> {
+  const sheets = await getSheets();
+  const res = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = res.data.sheets?.find(s => s.properties?.title === sheetName);
+  if (sheet?.properties?.sheetId === undefined) throw new Error(`Sheet not found: ${sheetName}`);
+  return sheet.properties.sheetId!;
+}
+
+/**
+ * 시트 전체 데이터 읽기
+ * @param spreadsheetId - owner의 Google Spreadsheet ID
+ * @param sheetName     - 시트 탭 이름 (예: 'Ledger')
+ */
+export async function getSheetValues(spreadsheetId: string, sheetName: string): Promise<any[][]> {
   const sheets = await getSheets();
   const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId,
     range: sheetName,
     valueRenderOption: 'UNFORMATTED_VALUE',
     dateTimeRenderOption: 'FORMATTED_STRING',
@@ -37,59 +47,9 @@ export async function getSheetValues(sheetName: string): Promise<any[][]> {
 }
 
 /**
- * 시트 내부 sheetId 조회 (batchUpdate용)
- */
-async function getSheetId(sheetName: string): Promise<number> {
-  const sheets = await getSheets();
-  const res = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-  const sheet = res.data.sheets?.find(s => s.properties?.title === sheetName);
-  if (sheet?.properties?.sheetId === undefined) throw new Error(`Sheet not found: ${sheetName}`);
-  return sheet.properties.sheetId!;
-}
-
-/**
- * 특정 행 업데이트 (sheetRowNumber: 1-indexed 시트 행 번호)
- */
-export async function updateRow(sheetName: string, sheetRowNumber: number, values: any[]): Promise<void> {
-  const sheets = await getSheets();
-  const lastCol = String.fromCharCode(64 + values.length); // A=65
-  const range = `${sheetName}!A${sheetRowNumber}:${lastCol}${sheetRowNumber}`;
-  const formatted = values.map(v => (v === null || v === undefined ? '' : v));
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values: [formatted] },
-  });
-}
-
-/**
- * 특정 행 삭제 (sheetRowNumber: 1-indexed 시트 행 번호)
- */
-export async function deleteRow(sheetName: string, sheetRowNumber: number): Promise<void> {
-  const sheets = await getSheets();
-  const sheetId = await getSheetId(sheetName);
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    requestBody: {
-      requests: [{
-        deleteDimension: {
-          range: {
-            sheetId,
-            dimension: 'ROWS',
-            startIndex: sheetRowNumber - 1,  // 0-indexed
-            endIndex:   sheetRowNumber,       // exclusive
-          },
-        },
-      }],
-    },
-  });
-}
-
-/**
  * 시트에 행 추가
  */
-export async function appendRow(sheetName: string, values: any[]): Promise<void> {
+export async function appendRow(spreadsheetId: string, sheetName: string, values: any[]): Promise<void> {
   const sheets = await getSheets();
   const formatted = values.map(v => {
     if (v instanceof Date) {
@@ -102,9 +62,48 @@ export async function appendRow(sheetName: string, values: any[]): Promise<void>
     return v;
   });
   await sheets.spreadsheets.values.append({
-    spreadsheetId: SHEET_ID,
+    spreadsheetId,
     range: sheetName,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [formatted] },
+  });
+}
+
+/**
+ * 특정 행 업데이트 (sheetRowNumber: 1-indexed 시트 행 번호)
+ */
+export async function updateRow(spreadsheetId: string, sheetName: string, sheetRowNumber: number, values: any[]): Promise<void> {
+  const sheets = await getSheets();
+  const lastCol = String.fromCharCode(64 + values.length);
+  const range = `${sheetName}!A${sheetRowNumber}:${lastCol}${sheetRowNumber}`;
+  const formatted = values.map(v => (v === null || v === undefined ? '' : v));
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [formatted] },
+  });
+}
+
+/**
+ * 특정 행 삭제 (sheetRowNumber: 1-indexed 시트 행 번호)
+ */
+export async function deleteRow(spreadsheetId: string, sheetName: string, sheetRowNumber: number): Promise<void> {
+  const sheets = await getSheets();
+  const sheetId = await getSheetTabId(spreadsheetId, sheetName);
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: sheetRowNumber - 1,
+            endIndex: sheetRowNumber,
+          },
+        },
+      }],
+    },
   });
 }
