@@ -756,7 +756,7 @@
         <div class="total-asset-sub">
           <span id="ovCashTotal">현금 -</span>
           <span id="ovStockTotal">주식·ETF -</span>
-          <span id="ovFundTotal">펀드 -</span>
+          <span id="ovFundTotal">펀드·채권 -</span>
         </div>
       </div>
 
@@ -774,7 +774,7 @@
 
       <!-- Fund / ETF -->
       <div class="card">
-        <div class="card-title">📊 Fund 현황</div>
+        <div class="card-title">📊 Fund/Bond 현황</div>
         <div id="ovFundSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
       </div>
 
@@ -2430,7 +2430,7 @@
     document.getElementById('ovTotalKRW').textContent   = fmtK(data.totalKRW) + ' KRW';
     document.getElementById('ovCashTotal').textContent  = '\uD604\uAE08 ' + fmtK(data.totalCashKRW)  + ' KRW';
     document.getElementById('ovStockTotal').textContent = '\uC8FC\uC2DD\u00B7ETF ' + fmtK(data.totalStockKRW) + ' KRW';
-    document.getElementById('ovFundTotal').textContent  = '\uD380\uB4DC ' + fmtK(data.totalFundKRW)  + ' KRW';
+    document.getElementById('ovFundTotal').textContent  = '\uD380\uB4DC\u00B7\uCC44\uAD8C ' + fmtK(data.totalFundKRW)  + ' KRW';
 
     // \uD604\uAE08 \uC139\uC158
     const cashSec = document.getElementById('ovCashSection');
