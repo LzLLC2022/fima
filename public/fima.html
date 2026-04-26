@@ -174,8 +174,14 @@
     .ticker-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
       background: white; border: 1.5px solid #3182ce;
-      border-radius: 8px; max-height: 200px; overflow-y: auto;
+      border-radius: 8px; max-height: 240px; overflow-y: auto;
       z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .ticker-drop-header {
+      padding: 6px 12px; font-size: 0.72rem; font-weight: 700;
+      color: #a0aec0; letter-spacing: 0.4px; text-transform: uppercase;
+      background: #f7fafc; border-bottom: 1px solid #e2e8f0;
+      border-radius: 8px 8px 0 0;
     }
     .ticker-option {
       padding: 8px 12px; cursor: pointer; font-size: 0.87rem;
@@ -813,8 +819,9 @@
             <div class="field">
               <label>Ticker <span class="req">*</span></label>
               <div class="ticker-wrap">
-                <input type="text" id="ticker" placeholder="코드 입력 또는 선택"
+                <input type="text" id="ticker" placeholder="클릭 또는 코드 입력"
                        autocomplete="off"
+                       onfocus="onTickerFocus()"
                        oninput="onTickerInput()"
                        onblur="onTickerBlur()" required />
                 <div id="tickerDropdown" class="ticker-dropdown hidden"></div>
@@ -1128,6 +1135,7 @@
   // ---- 앱 상태 ----
   let masterData     = {};
   let tickerList     = [];
+  let ledgerTickers  = [];   // Ledger 실제 거래 종목 (빈도순)
   let regionMap      = {};
 
   // ---- 로그인 상태 ----
@@ -1309,6 +1317,7 @@
         masterData = data;
         populateDropdowns(data);
         loadTickerData();
+        loadLedgerTickers();
         // 현황 탭 자동 로드
         loadPortfolioData(true);
       }).catch(err => {
@@ -1325,6 +1334,16 @@
       tickerList = data || [];
       showLoading(false);
     }).catch(() => { showLoading(false); });
+  }
+
+  function loadLedgerTickers() {
+    ledgerTickers = [];
+    fetch('/api/ledger-tickers', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ owner: currentOwner, accountOwner: currentAccountOwner }),
+    }).then(r => r.json()).then(data => {
+      ledgerTickers = data || [];
+    }).catch(() => {});
   }
 
   // ---- 드롭다운 채우기 ----
@@ -1564,24 +1583,49 @@
   }
 
   // ---- Ticker \uC790\uB3D9\uC644\uC131 ----
+  function buildTickerDropdownHtml(items, header) {
+    if (!items.length) return '';
+    return (header ? '<div class="ticker-drop-header">' + header + '</div>' : '') +
+      items.map(function(t) {
+        return '<div class="ticker-option" onmousedown="selectTicker(\'' + esc(t.ticker) + '\',\'' + esc(t.name || '') + '\')">'
+          + '<span class="t-code">' + t.ticker + '</span>'
+          + '<span class="t-name">' + (t.name || '') + '</span>'
+          + '</div>';
+      }).join('');
+  }
+
+  function onTickerFocus() {
+    const val  = document.getElementById('ticker').value.trim();
+    const drop = document.getElementById('tickerDropdown');
+    if (val) { onTickerInput(); return; }
+    if (!ledgerTickers.length) return;
+    drop.innerHTML = buildTickerDropdownHtml(ledgerTickers.slice(0, 20), '최근 거래 종목');
+    drop.classList.remove('hidden');
+  }
+
   function onTickerInput() {
     const val  = document.getElementById('ticker').value.trim().toUpperCase();
     const drop = document.getElementById('tickerDropdown');
     document.getElementById('name').value = '';
 
-    if (!val) { drop.classList.add('hidden'); return; }
+    if (!val) {
+      if (ledgerTickers.length) {
+        drop.innerHTML = buildTickerDropdownHtml(ledgerTickers.slice(0, 20), '최근 거래 종목');
+        drop.classList.remove('hidden');
+      } else {
+        drop.classList.add('hidden');
+      }
+      return;
+    }
 
-    const matched = tickerList.filter(t =>
-      t.ticker.toUpperCase().includes(val) ||
-      (t.name && t.name.toLowerCase().includes(val.toLowerCase()))
-    ).slice(0, 12);
+    const allList = tickerList.length ? tickerList : ledgerTickers;
+    const matched = allList.filter(function(t) {
+      return t.ticker.toUpperCase().includes(val) ||
+             (t.name && t.name.toLowerCase().includes(val.toLowerCase()));
+    }).slice(0, 14);
 
     if (!matched.length) { drop.classList.add('hidden'); return; }
-    drop.innerHTML = matched.map(t => `
-      <div class="ticker-option" onmousedown="selectTicker('${esc(t.ticker)}','${esc(t.name)}')">
-        <span class="t-code">${t.ticker}</span>
-        <span class="t-name">${t.name || ''}</span>
-      </div>`).join('');
+    drop.innerHTML = buildTickerDropdownHtml(matched, '');
     drop.classList.remove('hidden');
   }
 
