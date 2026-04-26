@@ -2,12 +2,84 @@
  * 주식 정보 조회 라이브러리
  * GAS의 Stock.gs를 Node.js fetch로 변환
  * - 한국 종목 (6자리 코드): 네이버 금융 API
+ * - 한국 채권 ISIN (KR + 10자리): 네이버 채권 API
  * - 해외 종목 (영문 티커): 야후 파이낸스 v8 API
  */
 
 function isKoreanCode(code: string): boolean {
   const c = code.toString().trim().toUpperCase().split('.')[0];
+  // ISIN (12자, KR로 시작)은 제외
+  if (c.length === 12 && c.startsWith('KR')) return false;
   return /^[0-9A-Z]{6}$/.test(c) && /\d/.test(c);
+}
+
+/** 한국 채권 ISIN 판별 (KR + 10자리 영숫자, 총 12자) */
+function isKoreanBondISIN(code: string): boolean {
+  return /^KR[A-Z0-9]{10}$/i.test(code.trim());
+}
+
+// ── 네이버 채권 현재가 조회 ────────────────────────────────────────────
+async function getNaverBondPrice(isin: string): Promise<number> {
+  const upper = isin.toUpperCase();
+
+  // 시도 1: 네이버 polling API (채권)
+  try {
+    const url = `https://polling.finance.naver.com/api/realtime/domestic/bond/${upper}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Referer':    'https://finance.naver.com',
+        'Accept':     'application/json',
+      },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const d = json.datas?.[0];
+      if (d) {
+        const raw = d.closePriceRaw ?? d.currentPriceRaw ?? d.nxtDdClosingPriceRaw ?? '';
+        const price = Number(String(raw).replace(/,/g, ''));
+        if (price > 0) return price;
+      }
+    }
+  } catch (_) { /* fallthrough */ }
+
+  // 시도 2: 네이버 모바일 채권 API
+  try {
+    const url = `https://m.stock.naver.com/api/bond/${upper}/basic`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+        'Referer':    'https://m.stock.naver.com',
+        'Accept':     'application/json',
+      },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const price = Number(
+        json.closePrice ?? json.currentPrice ?? json.nxtDdClosingPrice ?? 0
+      );
+      if (price > 0) return price;
+    }
+  } catch (_) { /* fallthrough */ }
+
+  // 시도 3: 네이버 증권 채권 sise API
+  try {
+    const url = `https://finance.naver.com/api/sise/bondItemTotal.nhn?reutersCode=${upper}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Referer':    'https://finance.naver.com/bond/',
+        'Accept':     'application/json',
+      },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const price = Number(json.closePrice ?? json.nxtDdClosingPrice ?? 0);
+      if (price > 0) return price;
+    }
+  } catch (_) { /* fallthrough */ }
+
+  throw new Error(`채권 시세 조회 실패: ${isin}`);
 }
 
 async function getNaverStockInfo(code: string, item?: string): Promise<any> {
@@ -122,13 +194,21 @@ function resolveItem(data: Record<string, any>, item?: string): any {
 }
 
 /**
- * 메인 함수: 한국 또는 해외 종목 정보 조회
- * @param code  - 종목코드 (예: "005930", "AAPL")
+ * 메인 함수: 한국 또는 해외 종목/채권 정보 조회
+ * @param code  - 종목코드 (예: "005930", "AAPL") 또는 채권 ISIN (예: "KR2032521043")
  * @param item  - 조회 항목 (예: "price", "name", "all")
  */
 export async function getStockInfo(code: string, item?: string): Promise<any> {
   if (!code) return null;
   code = code.toString().trim().toUpperCase();
+
+  // 한국 채권 ISIN
+  if (isKoreanBondISIN(code)) {
+    const price = await getNaverBondPrice(code).catch(() => 0);
+    const data = { name: code, price, change: 0, changepct: 0,
+                   market: 'KRX채권', currency: 'KRW', baseDate: '' };
+    return resolveItem(data, item);
+  }
 
   if (isKoreanCode(code)) {
     return getNaverStockInfo(code, item);
@@ -149,6 +229,12 @@ export async function getStockInfo(code: string, item?: string): Promise<any> {
 export async function getStockPrice(ticker: string, date?: string): Promise<number> {
   if (!ticker) return 0;
   ticker = ticker.toString().trim().toUpperCase();
+
+  // 한국 채권 ISIN: 역사적 가격은 미지원(0 반환), 현재가는 네이버 채권 API
+  if (isKoreanBondISIN(ticker)) {
+    if (date) return 0; // 채권 역사적 종가 미지원
+    return getNaverBondPrice(ticker).catch(() => 0);
+  }
 
   if (!date) {
     const v = await getStockInfo(ticker, 'price').catch(() => 0);
