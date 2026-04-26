@@ -119,18 +119,22 @@ export async function POST(req: NextRequest) {
       return true;
     });
 
-    // 날짜순 정렬
+    // 날짜순 정렬 — 날짜 없는 행은 epoch(0)으로 처리해 맨 앞에 놓음
+    // (현황 탭과 동일하게 날짜 없는 입금도 순투자액에 포함)
+    const EPOCH = new Date(0);
     const sorted = rows
-      .map((row: any[]) => ({ row, date: parseDate(row[dateIdx]) }))
-      .filter(({ date }) => date !== null)
-      .sort((a, b) => a.date!.getTime() - b.date!.getTime());
+      .map((row: any[]) => ({ row, date: parseDate(row[dateIdx]) ?? EPOCH }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    if (sorted.length === 0) {
+    // 분석 시작월은 epoch를 제외한 첫 실제 날짜 기준
+    const firstActual = sorted.find(({ date }) => date.getTime() > 0)?.date;
+
+    if (!firstActual) {
       return NextResponse.json({ success: true, summary: null, monthly: [], indices: {}, stocks: [] });
     }
 
     // ── 분석 대상 월 목록 (최근 13개월) ─────────────────────────────
-    const firstDate = sorted[0].date!;
+    const firstDate = firstActual;
     const now       = new Date();
     const nowMM     = toYYYYMM(now);
 
