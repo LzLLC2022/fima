@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { appendRow, LEDGER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
 export async function POST(req: NextRequest) {
   try {
     const f = await req.json();
+    const spreadsheetId = getOwnerSheetId(f.owner);
 
     const dateParts = String(f.date || '').split('-');
     const dateValue = dateParts.length === 3
@@ -26,9 +28,9 @@ export async function POST(req: NextRequest) {
                        : 0;
     const withdrawKRW  = convertFX * rate;
 
-    const own  = f.accountOwner || '';
-    const acct = f.account      || '';
-    const note = f.comment      || '';
+    const own  = f.owner   || '';
+    const acct = f.account || '';
+    const note = f.comment || '';
     const rows: any[][] = [];
 
     // ① Withdraw (KRW 출금) — 환전 시에만
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     for (const row of rows) {
-      await appendRow(LEDGER_SHEET_NAME, row);
+      await appendRow(spreadsheetId, LEDGER_SHEET_NAME, row);
     }
 
     return NextResponse.json({ success: true, recordsCreated: rows.length });
