@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
-import { getExchangeRate } from '@/lib/stock';
+import { getExchangeRate, getStockPrice } from '@/lib/stock';
+
+// ── 한국 종목 Yahoo 티커 변환 (476550 → 476550.KS) ─────────────────────
+function toYahooTicker(ticker: string, currency: string): string {
+  if (currency === 'KRW' && !ticker.includes('.')) return `${ticker}.KS`;
+  return ticker;
+}
 
 // ── 월별 종가 조회 (Yahoo Finance 1mo interval) ──────────────────────────
 async function fetchMonthlyCloses(
@@ -225,12 +231,18 @@ export async function POST(req: NextRequest) {
       .map(([t]) => t);
 
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
-    const [tickerHistory, indexHistory, exchangeRates] = await Promise.all([
-      // 종목 월별 종가
-      Promise.all(heldTickers.map(async t => ({
-        ticker: t,
-        data: await fetchMonthlyCloses(t, 15).catch(() => [] as { month: string; close: number }[]),
-      }))),
+    const [tickerHistory, currentPriceList, indexHistory, exchangeRates] = await Promise.all([
+      // 종목 월별 역사적 종가 (Yahoo Finance — 한국 종목은 .KS 접미사)
+      Promise.all(heldTickers.map(async t => {
+        const currency = currencyMap[currentState.positions[t].region] || 'KRW';
+        const yahooTk  = toYahooTicker(t, currency);
+        return {
+          ticker: t,
+          data: await fetchMonthlyCloses(yahooTk, 15).catch(() => [] as { month: string; close: number }[]),
+        };
+      })),
+      // 종목 현재가 (getStockPrice — portfolio 탭과 동일 방식)
+      Promise.allSettled(heldTickers.map(t => getStockPrice(t))),
       // 지수 월별 종가
       Promise.all([
         fetchMonthlyCloses('^KS11', 15).then(d => ({ name: 'KOSPI',  data: d })).catch(() => ({ name: 'KOSPI',  data: [] })),
@@ -251,12 +263,22 @@ export async function POST(req: NextRequest) {
       })(),
     ]);
 
-    // ticker → month → price 맵
+    // ticker → month → price 맵 (역사적 종가)
     const priceMap: Record<string, Record<string, number>> = {};
-    const currentPrice: Record<string, number> = {};
     tickerHistory.forEach(({ ticker, data }) => {
       priceMap[ticker] = Object.fromEntries(data.map(d => [d.month, d.close]));
-      if (data.length > 0) currentPrice[ticker] = data[data.length - 1].close;
+    });
+
+    // 현재가: getStockPrice 우선, 없으면 Yahoo 마지막 월 종가로 폴백
+    const currentPrice: Record<string, number> = {};
+    heldTickers.forEach((t, i) => {
+      const r = currentPriceList[i];
+      const fromApi = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
+      const fromHistory = (() => {
+        const d = tickerHistory.find(h => h.ticker === t)?.data || [];
+        return d.length > 0 ? d[d.length - 1].close : 0;
+      })();
+      currentPrice[t] = fromApi > 0 ? fromApi : fromHistory;
     });
 
     // ── 요약 ──────────────────────────────────────────────────────
