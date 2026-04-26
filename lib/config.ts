@@ -10,12 +10,18 @@
  *   3. 해당 Google Spreadsheet를 서비스 계정에 편집자로 공유
  *
  * Vercel 환경변수 (Settings → Environment Variables):
- *   GOOGLE_CLIENT_EMAIL  — 서비스 계정 이메일 (모든 사용자 공유)
- *   GOOGLE_PRIVATE_KEY   — 서비스 계정 키 (모든 사용자 공유)
- *   GOOGLE_SHEET_ID_LZ   — Lz의 스프레드시트 ID
- *   PIN_LZ               — Lz의 PIN (선택)
- *   GOOGLE_SHEET_ID_SPOUSE — Spouse의 스프레드시트 ID
- *   PIN_SPOUSE           — Spouse의 PIN (선택)
+ *   GOOGLE_CLIENT_EMAIL    — 서비스 계정 이메일 (모든 사용자 공유)
+ *   GOOGLE_PRIVATE_KEY     — 서비스 계정 키 (모든 사용자 공유)
+ *   GOOGLE_SHEET_ID_LZ     — Lz의 스프레드시트 ID
+ *   PIN_LZ                 — Lz의 PIN (선택)
+ *   GOOGLE_SHEET_ID_FOREST — Forest의 스프레드시트 ID
+ *   PIN_FOREST             — Forest의 PIN (선택)
+ *   GOOGLE_SHEET_ID_JENNY  — Jenny의 스프레드시트 ID
+ *   PIN_JENNY              — Jenny의 PIN (선택)
+ *   GOOGLE_SHEET_ID_JACK   — Jack의 스프레드시트 ID
+ *   PIN_JACK               — Jack의 PIN (선택)
+ *   GOOGLE_SHEET_ID_ERIC   — Eric의 스프레드시트 ID
+ *   PIN_ERIC               — Eric의 PIN (선택)
  *   ...
  * ============================================================
  */
@@ -35,15 +41,22 @@ export const OWNER_CONFIG: Record<string, OwnerConfig> = {
     sheetId: process.env.GOOGLE_SHEET_ID_LZ ?? process.env.GOOGLE_SHEET_ID ?? '',
     pin:     process.env.PIN_LZ ?? '',
   },
-  // ── 새 사용자 추가 예시 ──────────────────────────────────
-  // 'Spouse': {
-  //   sheetId: process.env.GOOGLE_SHEET_ID_SPOUSE ?? '',
-  //   pin:     process.env.PIN_SPOUSE ?? '1234',
-  // },
-  // 'Child': {
-  //   sheetId: process.env.GOOGLE_SHEET_ID_CHILD ?? '',
-  //   pin:     '',   // PIN 없음
-  // },
+  'Forest': {
+    sheetId: process.env.GOOGLE_SHEET_ID_FOREST ?? '',
+    pin:     process.env.PIN_FOREST ?? '',
+  },
+  'Jenny': {
+    sheetId: process.env.GOOGLE_SHEET_ID_JENNY ?? '',
+    pin:     process.env.PIN_JENNY ?? '',
+  },
+  'Jack': {
+    sheetId: process.env.GOOGLE_SHEET_ID_JACK ?? '',
+    pin:     process.env.PIN_JACK ?? '',
+  },
+  'Eric': {
+    sheetId: process.env.GOOGLE_SHEET_ID_ERIC ?? '',
+    pin:     process.env.PIN_ERIC ?? '',
+  },
 };
 
 // ── Owner sheetId 조회 헬퍼 ──────────────────────────────
