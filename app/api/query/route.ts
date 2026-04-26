@@ -45,19 +45,32 @@ export async function POST(req: NextRequest) {
         return true;
       });
 
-    // 날짜 포맷 정규화
+    // 날짜 포맷 정규화 → 수정 모달의 <input type="date"> 호환을 위해 항상 YYYY-MM-DD로 변환
+    const toISODate = (cell: any): string => {
+      if (!cell && cell !== 0) return '';
+      if (typeof cell === 'number') {
+        const d = new Date((cell - 25569) * 86400 * 1000);
+        const y = d.getUTCFullYear();
+        const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+      // 문자열 날짜: 파싱 후 YYYY-MM-DD로 재포맷 시도
+      const str = String(cell).trim();
+      const parsed = new Date(str);
+      if (!isNaN(parsed.getTime())) {
+        // new Date("YYYY-MM-DD") → UTC 자정으로 파싱됨 → getUTC* 사용
+        const y = parsed.getUTCFullYear();
+        const m = String(parsed.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+      return str; // 파싱 실패 시 원본 반환
+    };
+
     const result = filteredWithIdx.map(({ row }) =>
       row.map((cell: any, i: number) => {
-        if (i === dateIdx) {
-          if (typeof cell === 'number') {
-            const d = new Date((cell - 25569) * 86400 * 1000);
-            const y = d.getUTCFullYear();
-            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(d.getUTCDate()).padStart(2, '0');
-            return `${y}-${m}-${day}`;
-          }
-          return cell ?? '';
-        }
+        if (i === dateIdx) return toISODate(cell);
         return cell === null || cell === undefined ? '' : cell;
       })
     );
