@@ -18,9 +18,10 @@ function isKoreanBondISIN(code: string): boolean {
   return /^KR[A-Z0-9]{10}$/i.test(code.trim());
 }
 
-// ── 네이버 채권 현재가 조회 ────────────────────────────────────────────
-async function getNaverBondPrice(isin: string): Promise<number> {
+// ── 네이버 채권 정보 조회 (가격 + 이름) ───────────────────────────────
+export async function getNaverBondInfo(isin: string): Promise<{ price: number; name: string }> {
   const upper = isin.toUpperCase();
+  const fallback = { price: 0, name: upper };
 
   // 시도 1: 네이버 polling API (채권)
   try {
@@ -36,9 +37,10 @@ async function getNaverBondPrice(isin: string): Promise<number> {
       const json = await res.json();
       const d = json.datas?.[0];
       if (d) {
-        const raw = d.closePriceRaw ?? d.currentPriceRaw ?? d.nxtDdClosingPriceRaw ?? '';
+        const raw   = d.closePriceRaw ?? d.currentPriceRaw ?? d.nxtDdClosingPriceRaw ?? '';
         const price = Number(String(raw).replace(/,/g, ''));
-        if (price > 0) return price;
+        const name  = String(d.bondName ?? d.stockName ?? d.name ?? '').trim() || upper;
+        if (price > 0) return { price, name };
       }
     }
   } catch (_) { /* fallthrough */ }
@@ -54,11 +56,10 @@ async function getNaverBondPrice(isin: string): Promise<number> {
       },
     });
     if (res.ok) {
-      const json = await res.json();
-      const price = Number(
-        json.closePrice ?? json.currentPrice ?? json.nxtDdClosingPrice ?? 0
-      );
-      if (price > 0) return price;
+      const json  = await res.json();
+      const price = Number(json.closePrice ?? json.currentPrice ?? json.nxtDdClosingPrice ?? 0);
+      const name  = String(json.bondName ?? json.itemName ?? json.name ?? '').trim() || upper;
+      if (price > 0) return { price, name };
     }
   } catch (_) { /* fallthrough */ }
 
@@ -73,13 +74,19 @@ async function getNaverBondPrice(isin: string): Promise<number> {
       },
     });
     if (res.ok) {
-      const json = await res.json();
+      const json  = await res.json();
       const price = Number(json.closePrice ?? json.nxtDdClosingPrice ?? 0);
-      if (price > 0) return price;
+      const name  = String(json.bondName ?? json.itemName ?? '').trim() || upper;
+      if (price > 0) return { price, name };
     }
   } catch (_) { /* fallthrough */ }
 
-  throw new Error(`채권 시세 조회 실패: ${isin}`);
+  return fallback;
+}
+
+async function getNaverBondPrice(isin: string): Promise<number> {
+  const { price } = await getNaverBondInfo(isin);
+  return price;
 }
 
 async function getNaverStockInfo(code: string, item?: string): Promise<any> {
