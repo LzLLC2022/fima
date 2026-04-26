@@ -1,52 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-async function tryFetch(url: string, headers: Record<string, string>) {
+async function tryFetch(label: string, url: string, init: RequestInit = {}) {
   try {
-    const res = await fetch(url, { headers });
-    const text = await res.text();          // body를 한 번만 읽음
+    const res = await fetch(url, { ...init });
+    const text = await res.text();
     let body: any;
-    try { body = JSON.parse(text); } catch { body = text.slice(0, 800); }
-    return { status: res.status, body };
+    try { body = JSON.parse(text); } catch { body = text.slice(0, 600); }
+    return { label, status: res.status, body };
   } catch (e: any) {
-    return { error: e.message };
+    return { label, error: e.message };
   }
 }
 
 // GET /api/bond-debug?isin=KR2032521043
 export async function GET(req: NextRequest) {
-  const isin  = (req.nextUrl.searchParams.get('isin') || 'KR2032521043').toUpperCase();
-  const ua    = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
-  const uaMob = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)';
+  const isin = (req.nextUrl.searchParams.get('isin') || 'KR2032521043').toUpperCase();
+  const ua   = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
-  const results = await Promise.all([
-    // 1. Naver polling (채권)
-    tryFetch(`https://polling.finance.naver.com/api/realtime/domestic/bond/${isin}`,
-      { 'User-Agent': ua, 'Referer': 'https://finance.naver.com', 'Accept': 'application/json' }),
+  const calls = await Promise.all([
+    // KRX 채권 이름 검색 (POST)
+    tryFetch('krx_bond', 'https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': ua, 'Referer': 'https://data.krx.co.kr' },
+      body: `bld=dbms%2FMDC%2FSTAT%2Fstandard%2FMDCSTAT09901&isuCd=${isin}&strtDd=20250101&endDd=20260426`,
+    }),
 
-    // 2. Naver mobile bond basic
-    tryFetch(`https://m.stock.naver.com/api/bond/${isin}/basic`,
-      { 'User-Agent': uaMob, 'Referer': 'https://m.stock.naver.com', 'Accept': 'application/json' }),
+    // KRX ISIN 검색 (POST)
+    tryFetch('krx_isin', 'https://isin.krx.co.kr/srh/srh0101IsinSrch.do', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': ua, 'Referer': 'https://isin.krx.co.kr' },
+      body: `isinCd=${isin}&kind=B`,
+    }),
 
-    // 3. Naver sise bondItemTotal
-    tryFetch(`https://finance.naver.com/api/sise/bondItemTotal.nhn?reutersCode=${isin}`,
-      { 'User-Agent': ua, 'Referer': 'https://finance.naver.com/bond/', 'Accept': 'application/json' }),
+    // KRX ISIN JSON API
+    tryFetch('krx_isin_json', `https://isin.krx.co.kr/srh/srh0101IsinSrch.do?isinCd=${isin}&kind=B`, {
+      headers: { 'Accept': 'application/json', 'User-Agent': ua, 'Referer': 'https://isin.krx.co.kr' },
+    }),
 
-    // 4. KSD ISIN 검색 (한국예탁결제원)
-    tryFetch(`https://isin.krx.co.kr/srh/srh0101IsinSrch.do`,
-      { 'User-Agent': ua, 'Referer': 'https://isin.krx.co.kr', 'Content-Type': 'application/x-www-form-urlencoded' }),
+    // KOFIA 채권 기본정보
+    tryFetch('kofia', `https://www.kofiabond.or.kr/service/bondBasicInfo.do?standardCd=${isin}`, {
+      headers: { 'User-Agent': ua, 'Accept': 'application/json, text/plain, */*', 'Referer': 'https://www.kofiabond.or.kr' },
+    }),
 
-    // 5. Naver mobile bond detail
-    tryFetch(`https://m.stock.naver.com/api/bond/${isin}/detail`,
-      { 'User-Agent': uaMob, 'Referer': 'https://m.stock.naver.com', 'Accept': 'application/json' }),
+    // KOFIA 장외채권 정보시스템
+    tryFetch('kofiabond', `https://www.kofiabond.or.kr/bnd/svc/bndMst/getBndMstListByISIN.do?isin=${isin}`, {
+      headers: { 'User-Agent': ua, 'Accept': 'application/json', 'Referer': 'https://www.kofiabond.or.kr' },
+    }),
 
-    // 6. Naver finance bond detail page (HTML)
-    tryFetch(`https://finance.naver.com/bond/detailData.nhn?codeType=2&code=${isin}`,
-      { 'User-Agent': ua, 'Referer': 'https://finance.naver.com/bond/' }),
+    // 금투협 채권 가격 API
+    tryFetch('kfia_price', `https://www.kofiabond.or.kr/bnd/svc/bondprice/getClosePriceListByISIN.do?isin=${isin}`, {
+      headers: { 'User-Agent': ua, 'Accept': 'application/json', 'Referer': 'https://www.kofiabond.or.kr' },
+    }),
   ]);
 
-  const keys = ['polling', 'mobile_basic', 'sise', 'ksd', 'mobile_detail', 'naver_detail'];
   const out: Record<string, any> = {};
-  keys.forEach((k, i) => { out[k] = results[i]; });
-
+  calls.forEach(r => { out[r.label] = r; });
   return NextResponse.json({ isin, results: out });
 }
