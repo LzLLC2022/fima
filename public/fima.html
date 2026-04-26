@@ -1594,12 +1594,21 @@
       }).join('');
   }
 
+  function getRecentList() {
+    // 최근 거래 종목 우선, 없으면 마스터 목록 전체
+    return ledgerTickers.length ? ledgerTickers : tickerList;
+  }
+  function getRecentHeader() {
+    return ledgerTickers.length ? '최근 거래 종목' : '종목 목록';
+  }
+
   function onTickerFocus() {
     const val  = document.getElementById('ticker').value.trim();
     const drop = document.getElementById('tickerDropdown');
     if (val) { onTickerInput(); return; }
-    if (!ledgerTickers.length) return;
-    drop.innerHTML = buildTickerDropdownHtml(ledgerTickers.slice(0, 20), '최근 거래 종목');
+    const list = getRecentList();
+    if (!list.length) return;
+    drop.innerHTML = buildTickerDropdownHtml(list.slice(0, 20), getRecentHeader());
     drop.classList.remove('hidden');
   }
 
@@ -1609,8 +1618,9 @@
     document.getElementById('name').value = '';
 
     if (!val) {
-      if (ledgerTickers.length) {
-        drop.innerHTML = buildTickerDropdownHtml(ledgerTickers.slice(0, 20), '최근 거래 종목');
+      const list = getRecentList();
+      if (list.length) {
+        drop.innerHTML = buildTickerDropdownHtml(list.slice(0, 20), getRecentHeader());
         drop.classList.remove('hidden');
       } else {
         drop.classList.add('hidden');
@@ -1618,8 +1628,15 @@
       return;
     }
 
-    const allList = tickerList.length ? tickerList : ledgerTickers;
-    const matched = allList.filter(function(t) {
+    // 타이핑 시: 마스터 + 장부 통합 검색 (중복 제거)
+    const seen = {};
+    const merged = [];
+    [tickerList, ledgerTickers].forEach(function(src) {
+      src.forEach(function(t) {
+        if (!seen[t.ticker]) { seen[t.ticker] = true; merged.push(t); }
+      });
+    });
+    const matched = merged.filter(function(t) {
       return t.ticker.toUpperCase().includes(val) ||
              (t.name && t.name.toLowerCase().includes(val.toLowerCase()));
     }).slice(0, 14);
