@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 import { getStockPrice, getExchangeRate } from '@/lib/stock';
 
 const EMPTY = { success: true, cash: [], stocks: [], funds: [],
@@ -9,6 +10,8 @@ export async function POST(req: NextRequest) {
   const filters = await req.json().catch(() => ({}));
 
   try {
+    const spreadsheetId = getOwnerSheetId(filters.owner);
+
     // ── 기준일 파싱 ──
     let endDate: Date | null = null;
     if (filters.endDate) {
@@ -21,8 +24,8 @@ export async function POST(req: NextRequest) {
 
     // ── 시트 데이터 읽기 ──
     const [ledgerData, masterData] = await Promise.all([
-      getSheetValues(LEDGER_SHEET_NAME),
-      getSheetValues(MASTER_SHEET_NAME).catch(() => [] as any[][]),
+      getSheetValues(spreadsheetId, LEDGER_SHEET_NAME),
+      getSheetValues(spreadsheetId, MASTER_SHEET_NAME).catch(() => [] as any[][]),
     ]);
 
     if (ledgerData.length < 2) return NextResponse.json(EMPTY);
@@ -36,7 +39,6 @@ export async function POST(req: NextRequest) {
     const currIdx   = col('currency');  const qtyIdx    = col('quantity');
     const divIdx    = col('dividend');  const taxIdx    = col('tax');
     const chgIdx    = col('charge');    const dateIdx   = col('date');
-    const ownerIdx  = col('account owner');
     const acctIdx   = col('account');
 
     // ── Master → region-currency 매핑 ──
@@ -66,9 +68,6 @@ export async function POST(req: NextRequest) {
           rowDate = new Date(String(raw ?? ''));
         }
         if (!isNaN(rowDate.getTime()) && rowDate > endDate) return false;
-      }
-      if (filters.accountOwner && ownerIdx >= 0) {
-        if (String(row[ownerIdx] ?? '').trim() !== filters.accountOwner) return false;
       }
       if (filters.account && acctIdx >= 0) {
         if (String(row[acctIdx] ?? '').trim() !== filters.account) return false;
