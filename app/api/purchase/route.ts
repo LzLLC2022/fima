@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
 const EMPTY = { success: true, totalBuyQty: 0, remainingQty: 0,
                 avgPrice: 0, avgRate: 0, purchase: 0, purchaseFX: 0, purchaseCurrency: 0 };
 
 export async function POST(req: NextRequest) {
   try {
-    const { ticker, sellQuantity } = await req.json();
+    const { owner, ticker, sellQuantity } = await req.json();
+    const spreadsheetId = getOwnerSheetId(owner);
 
-    const data = await getSheetValues(LEDGER_SHEET_NAME);
+    const data = await getSheetValues(spreadsheetId, LEDGER_SHEET_NAME);
     if (data.length < 2) return NextResponse.json(EMPTY);
 
     const headers    = data[0].map((h: any) => String(h ?? '').trim().toLowerCase());
