@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     const dateIdx    = headers.indexOf('Date');
     const accountIdx = headers.indexOf('Account');
     const tickerIdx  = headers.indexOf('Ticker');
+    const aoIdx      = headers.indexOf('Account Owner');
 
     // 인덱스 보존하면서 필터 (sheetRow = 시트 행 번호, 1-indexed, 헤더=1이므로 i+2)
     const filteredWithIdx = rows
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
             if (rowDate > end) return false;
           }
         }
+        if (filters.accountOwner && aoIdx >= 0 && String(row[aoIdx] ?? '').trim() !== filters.accountOwner) return false;
         if (filters.account && String(row[accountIdx] ?? '').trim() !== filters.account) return false;
         if (filters.ticker  && String(row[tickerIdx]  ?? '').trim().toUpperCase() !== String(filters.ticker).trim().toUpperCase()) return false;
         return true;
