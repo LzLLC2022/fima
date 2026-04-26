@@ -654,7 +654,8 @@
     <div class="login-subtitle">Financial Management</div>
     <div class="login-field">
       <label>Account Owner</label>
-      <select id="loginOwner"><option value="">선택...</option></select>
+      <input type="text" id="loginOwner" placeholder="이름 입력"
+             onkeydown="if(event.key==='Enter')document.getElementById('loginPin').focus()" />
     </div>
     <div class="login-field" id="pinFieldWrap">
       <label>PIN <span style="font-weight:400;color:#a0aec0;">(없으면 공백)</span></label>
@@ -1092,16 +1093,10 @@
       // 이미 로그인된 경우: 바로 앱 시작
       document.getElementById('loginOverlay').classList.add('hidden');
       initApp();
-    } else {
-      // 로그인 필요: owner 목록 로드
-      fetch('/api/auth').then(r => r.json()).then(function(data) {
-        var sel = document.getElementById('loginOwner');
-        (data.owners || []).forEach(function(o) {
-          var opt = document.createElement('option');
-          opt.value = opt.textContent = o;
-          sel.appendChild(opt);
-        });
-      }).catch(function() {});
+    }
+    // 로그인 화면: 입력 필드에 포커스
+    else {
+      document.getElementById('loginOwner').focus();
     }
   });
 
@@ -1130,7 +1125,8 @@
         document.getElementById('loginOverlay').classList.add('hidden');
         initApp();
       } else {
-        errEl.textContent = data.error || '로그인 실패';
+        errEl.textContent = '등록된 사용자 정보를 확인할 수 없습니다.';
+        document.getElementById('loginPin').value = '';
         btn.disabled = false;
         btn.textContent = '입장';
       }
@@ -1149,6 +1145,7 @@
   // ---- 앱 시작 (로그인 후) ----
   function initApp() {
     document.getElementById('navOwnerName').textContent = '👤 ' + currentOwner;
+    currentOvFilters = { owner: currentOwner };  // 로그인 후 owner 동기화
     loadMasterData();
   }
 
