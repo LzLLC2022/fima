@@ -3,8 +3,15 @@ import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
 import { getExchangeRate, getStockPrice } from '@/lib/stock';
 
+// ── 한국 채권 ISIN 판별 (KR + 10자리) ────────────────────────────────────
+function isKoreanBondISIN(ticker: string): boolean {
+  return /^KR[A-Z0-9]{10}$/i.test(ticker.trim());
+}
+
 // ── 한국 종목 Yahoo 티커 변환 (476550 → 476550.KS) ─────────────────────
+// 채권 ISIN(KR...)은 Yahoo로 조회하지 않으므로 변환 제외
 function toYahooTicker(ticker: string, currency: string): string {
+  if (isKoreanBondISIN(ticker)) return ticker; // ISIN은 변환 불필요
   if (currency === 'KRW' && !ticker.includes('.')) return `${ticker}.KS`;
   return ticker;
 }
@@ -232,8 +239,12 @@ export async function POST(req: NextRequest) {
 
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
     const [tickerHistory, currentPriceList, indexHistory, exchangeRates] = await Promise.all([
-      // 종목 월별 역사적 종가 (Yahoo Finance — 한국 종목은 .KS 접미사)
+      // 종목 월별 역사적 종가 (Yahoo Finance — 한국 종목은 .KS / 채권 ISIN은 조회 불가)
       Promise.all(heldTickers.map(async t => {
+        if (isKoreanBondISIN(t)) {
+          // 채권은 Yahoo 역사적 종가 미지원 → 빈 배열
+          return { ticker: t, data: [] as { month: string; close: number }[] };
+        }
         const currency = currencyMap[currentState.positions[t].region] || 'KRW';
         const yahooTk  = toYahooTicker(t, currency);
         return {
