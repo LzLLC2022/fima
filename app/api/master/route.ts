@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, MASTER_SHEET_NAME } from '@/lib/sheets';
+import { getOwnerSheetId } from '@/lib/config';
 
-export async function GET() {
+export async function POST(req: NextRequest) {
   try {
-    const data = await getSheetValues(MASTER_SHEET_NAME);
+    const { owner } = await req.json();
+    const spreadsheetId = getOwnerSheetId(owner);
+    const data = await getSheetValues(spreadsheetId, MASTER_SHEET_NAME);
     if (data.length < 1) return NextResponse.json({ error: 'Master 시트가 비어 있습니다.' });
 
     const headers = data[0].map((h: any) => String(h ?? '').trim());
@@ -35,11 +38,10 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      accountOwners: getColumnValues('Account Owner'),
-      accounts     : getColumnValues('Account'),
+      accounts  : getColumnValues('Account'),
       regions,
-      assetTypes   : getColumnValues('Asset Type'),
-      trades       : getColumnValues('Trade'),
+      assetTypes: getColumnValues('Asset Type'),
+      trades    : getColumnValues('Trade'),
     });
   } catch (e: any) {
     return NextResponse.json({ error: '데이터 읽기 오류: ' + e.message }, { status: 500 });
