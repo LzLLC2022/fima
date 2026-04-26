@@ -630,6 +630,12 @@
     .login-btn:hover { filter: brightness(1.1); }
     .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .login-error { color: #c53030; font-size: 0.82rem; margin-top: 10px; min-height: 20px; }
+    .sample-btn {
+      width: 100%; padding: 10px; background: #f7fafc; border: 1.5px solid #e2e8f0;
+      border-radius: 9px; font-size: 0.88rem; font-weight: 600; color: #4a5568;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .sample-btn:hover { background: #edf2f7; border-color: #cbd5e0; }
 
     /* 네비게이션 로그인 사용자 표시 */
     .nav-owner-name {
@@ -664,6 +670,10 @@
     </div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">입장</button>
     <p id="loginError" class="login-error"></p>
+    <div id="sampleBtnWrap" class="hidden" style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:14px;">
+      <button class="sample-btn" onclick="doSampleLogin()">👀 샘플 보기</button>
+      <p style="font-size:0.72rem;color:#a0aec0;margin-top:6px;">Account Owner 없이 샘플 데이터로 둘러보기</p>
+    </div>
   </div>
 </div>
 
@@ -1101,13 +1111,24 @@
   });
 
   // ---- 로그인 / 로그아웃 ----
+  async function doSampleLogin() {
+    currentOwner = 'Sample';
+    sessionStorage.setItem('fimaOwner', currentOwner);
+    document.getElementById('loginOverlay').classList.add('hidden');
+    initApp();
+  }
+
   async function doLogin() {
     var owner = document.getElementById('loginOwner').value.trim();
     var pin   = document.getElementById('loginPin').value;
     var errEl = document.getElementById('loginError');
     var btn   = document.getElementById('loginBtn');
 
-    if (!owner) { errEl.textContent = 'Account Owner를 선택하세요.'; return; }
+    if (!owner) {
+      errEl.textContent = 'Account Owner를 입력하세요.';
+      document.getElementById('sampleBtnWrap').classList.remove('hidden');
+      return;
+    }
 
     btn.disabled = true;
     btn.textContent = '확인 중...';
@@ -1127,6 +1148,7 @@
       } else {
         errEl.textContent = '등록된 사용자 정보를 확인할 수 없습니다.';
         document.getElementById('loginPin').value = '';
+        document.getElementById('sampleBtnWrap').classList.remove('hidden');
         btn.disabled = false;
         btn.textContent = '입장';
       }
