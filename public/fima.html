@@ -3188,7 +3188,10 @@
 
     function fmtAmt(v) {
       var n = v / unitDiv;
-      return (n >= 0 ? '+' : '') + n.toFixed(useOk ? 2 : 0);
+      var sign = n >= 0 ? '+' : '-';
+      var parts = Math.abs(n).toFixed(useOk ? 2 : 0).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return sign + parts.join('.');
     }
 
     // SVG 레이아웃
@@ -3316,12 +3319,18 @@
     function fmtDiv(v) {
       if (!v) return '0';
       var n = v / unitDiv;
-      return n.toFixed(useOk ? 2 : 0);
+      var parts = n.toFixed(useOk ? 2 : 0).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return parts.join('.');
     }
     function fmtKRW(v) {
       if (!v) return '-';
-      if (v >= 100000000) return (v / 100000000).toFixed(2) + '억';
-      if (v >= 10000)     return Math.round(v / 10000) + '만';
+      if (v >= 100000000) {
+        var parts = (v / 100000000).toFixed(2).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.') + '억';
+      }
+      if (v >= 10000) return Math.round(v / 10000).toLocaleString() + '만';
       return Math.round(v).toLocaleString();
     }
 
