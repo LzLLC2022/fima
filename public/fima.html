@@ -1247,6 +1247,15 @@
       if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
     });
 
+    // 포트폴리오 차트 토글 – 이벤트 위임 (CSP 우회, 스코프 문제 방지)
+    var pfTogglesEl = document.getElementById('pfChartToggles');
+    if (pfTogglesEl) {
+      pfTogglesEl.addEventListener('click', function(e) {
+        var btn = e.target.closest('button[data-series]');
+        if (btn) togglePfSeries(btn.getAttribute('data-series'));
+      });
+    }
+
     if (currentOwner) {
       // 이미 로그인된 경우: 바로 앱 시작
       document.getElementById('loginOverlay').classList.add('hidden');
@@ -2990,7 +2999,7 @@
         var active = pfSeriesVisible[s.key] !== false;
         var bg   = active ? s.color : 'white';
         var txt  = active ? 'white' : s.color;
-        return '<button type="button" onclick="togglePfSeries(\'' + s.key + '\')" '
+        return '<button type="button" data-series="' + s.key + '" '
           + 'style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;'
           + 'border-radius:20px;cursor:pointer;transition:all 0.15s;font-family:inherit;'
           + 'font-size:0.82rem;font-weight:700;user-select:none;'
