@@ -2967,6 +2967,7 @@
 
   // 시리즈 토글 (window에 명시적 등록 – 스코프 문제 방지)
   window.togglePfSeries = function togglePfSeries(key) {
+    console.log('[PF-TOGGLE] togglePfSeries:', key, JSON.stringify(pfSeriesVisible));
     var visibleCount = Object.keys(pfSeriesVisible).filter(function(k) { return pfSeriesVisible[k]; }).length;
     if (pfSeriesVisible[key] && visibleCount <= 1) return; // 최소 1개 유지
     pfSeriesVisible[key] = !pfSeriesVisible[key];
@@ -3010,8 +3011,12 @@
       }).join('');
       // 버튼마다 직접 클릭 리스너 부착 (innerHTML 교체 후 새 DOM에 바로 등록)
       Array.from(toggleEl.querySelectorAll('button[data-series]')).forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          window.togglePfSeries(btn.getAttribute('data-series'));
+        var key = btn.getAttribute('data-series');
+        console.log('[PF-TOGGLE] listener attached for:', key);
+        btn.addEventListener('click', function(e) {
+          console.log('[PF-TOGGLE] clicked:', key);
+          e.stopPropagation();
+          window.togglePfSeries(key);
         });
       });
     }
