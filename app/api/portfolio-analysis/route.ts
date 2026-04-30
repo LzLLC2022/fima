@@ -177,6 +177,7 @@ export async function POST(req: NextRequest) {
         const region  = String(row[regionIdx] ?? '').trim();
         const asset   = String(row[assetIdx]  ?? '').trim();
         const ticker  = String(row[tickerIdx] ?? '').trim().toUpperCase();
+        const name    = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
         const price   = Number(row[priceIdx]) || 0;
         const rate    = Number(row[currIdx])  || 0;
         const qty     = Number(row[qtyIdx])   || 0;
@@ -184,16 +185,19 @@ export async function POST(req: NextRequest) {
         const tax     = taxIdx >= 0 ? (Number(row[taxIdx]) || 0) : 0;
         const charge  = chgIdx >= 0 ? (Number(row[chgIdx]) || 0) : 0;
 
+        // 순투자액 반영 여부: NAME이 "투자금"인 경우만 (이자소득·자동환전·잔액보정 등 제외)
+        const isRealInvestment = name === '투자금';
+
         if (!runningState.cashFX[region]) runningState.cashFX[region] = 0;
         const effRate = rate > 0 ? rate : (runningState.latestRate[region] || 1);
         if (rate > 0) runningState.latestRate[region] = rate;
 
         if (t.startsWith('dep')) {
           runningState.cashFX[region]    += price - tax - charge;
-          runningState.netDepositKRW     += (price - tax - charge) * effRate;
+          if (isRealInvestment) runningState.netDepositKRW += (price - tax - charge) * effRate;
         } else if (t.startsWith('with')) {
           runningState.cashFX[region]    -= price + tax + charge;
-          runningState.netDepositKRW     -= (price + tax + charge) * effRate;
+          if (isRealInvestment) runningState.netDepositKRW -= (price + tax + charge) * effRate;
         } else if (t === 'buy') {
           if (asset.toLowerCase() === 'cash') {
             runningState.cashFX[region] += price * (qty || 1);
