@@ -362,8 +362,8 @@
       z-index: 1000;
     }
     .edit-modal {
-      background: white; border-radius: 16px; padding: 28px 32px;
-      width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+      background: white; border-radius: 16px; padding: 20px 20px;
+      width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto;
       box-shadow: 0 8px 40px rgba(0,0,0,0.2);
     }
     .edit-modal h3 {
@@ -446,12 +446,6 @@
       cursor: pointer; color: #4a5568; font-family: inherit;
     }
     .btn-refresh:hover { background: #e2e8f0; }
-    @media (max-width: 600px) {
-      .total-asset-value { font-size: 1.5rem; }
-      .total-asset-sub { flex-direction: column; gap: 4px; }
-      .cash-grid { grid-template-columns: 1fr; }
-    }
-
     /* 네비게이션 Account Owner 선택 */
     .nav-owner-wrap {
       margin-left: auto;
@@ -494,10 +488,6 @@
       color: #2c5282;
       font-weight: 600;
     }
-    @media (max-width: 600px) {
-      .ov-filter-row { grid-template-columns: 1fr 1fr; }
-    }
-
     /* 환전 방법 선택 박스 (해외 Buy 전용) */
     .exchange-box {
       background: #f0f7ff; border: 1px solid #90cdf4;
@@ -535,11 +525,86 @@
       margin-top: 6px; line-height: 1.5;
     }
 
+    /* 포트폴리오 요약 카드 그리드 */
+    .pf-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    /* ===== 모바일 반응형 (≤ 600px) ===== */
     @media (max-width: 600px) {
+      /* 전체 여백 축소 */
+      body { padding: 6px 6px; }
+
+      /* 헤더 */
+      .header { padding: 12px 14px; border-radius: 12px; }
+      .header h1 { font-size: 1.1rem; }
+
+      /* 그룹 탭: 탭버튼 행 / nav-owner-wrap 2번째 행 */
+      .group-tabs { flex-wrap: wrap; padding: 0 6px; }
+      .group-tab-btn { padding: 8px 12px; font-size: 0.75rem; }
+      .nav-owner-wrap {
+        width: 100%; margin-left: 0;
+        padding: 4px 0 6px;
+        border-top: 1px solid rgba(255,255,255,0.12);
+        gap: 6px;
+      }
+      .nav-owner-select { flex: 1; min-width: 0; font-size: 0.8rem; padding: 4px 8px; }
+      .nav-logout-btn { padding: 4px 10px; font-size: 0.75rem; }
+
+      /* 서브 탭: 가로 스크롤 */
+      .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 6px; scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tab-btn { padding: 10px 14px; font-size: 0.82rem; white-space: nowrap; }
+
+      /* 탭 콘텐츠 여백 */
+      .tab-content { padding: 12px; }
+
+      /* 거래 입력 그리드 */
       .grid { grid-template-columns: 1fr; }
       .span2 { grid-column: span 1; }
-      .query-filter-row { grid-template-columns: 1fr 1fr; }
-      .tab-content { padding: 16px; }
+
+      /* 현황 필터 행: 세로 스택 */
+      .ov-filter-row { grid-template-columns: 1fr; }
+
+      /* 거래조회 필터 행: 세로 스택 */
+      .query-filter-row { grid-template-columns: 1fr; }
+
+      /* 자산 요약 박스 */
+      .total-asset-value { font-size: 1.4rem; letter-spacing: -0.3px; }
+      .total-asset-sub { flex-direction: column; gap: 4px; align-items: center; }
+      .cash-grid { grid-template-columns: 1fr; }
+
+      /* 새로고침 행 */
+      .ov-refresh-row { flex-wrap: wrap; gap: 6px; }
+      .ov-note { font-size: 0.72rem; }
+
+      /* 포트폴리오 필터 행 */
+      .pf-filter-row { grid-template-columns: 1fr !important; }
+
+      /* 버튼 행 */
+      .btn-row { flex-wrap: wrap; }
+
+      /* 포트폴리오 요약 카드: 2×2 */
+      .pf-summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .pf-summary-grid .card { padding: 12px 10px; }
+      .pf-summary-grid .card [style*="font-size:1.3rem"] { font-size: 1rem !important; }
+
+      /* 포트폴리오 필터 행: 1열 */
+      .ov-filter-row { grid-template-columns: 1fr; }
+
+      /* 수정 모달 */
+      .edit-modal { padding: 16px; border-radius: 12px; }
+      .edit-grid { grid-template-columns: 1fr; }
+      .edit-field.full { grid-column: 1; }
+
+      /* 빈 라벨 숨기기 */
+      .lbl-hidden { display: none; }
+
+      /* 거래조회 버튼을 가로 나열 */
+      #qSearchBtn, #exportBtn { font-size: 0.82rem; padding: 8px 14px; }
     }
 
     /* ---- 미리보기 모달 ---- */
@@ -726,11 +791,11 @@
             </select>
           </div>
           <div class="field">
-            <label>기준일 (이 날짜까지의 거래 집계)</label>
+            <label>기준일 <span style="font-weight:400;color:#a0aec0;">(해당 날짜까지의 거래 집계)</span></label>
             <input type="date" id="ovEndDate" />
           </div>
-          <div class="field">
-            <label>&nbsp;</label>
+          <div class="field ov-btn-field">
+            <label class="lbl-hidden">&nbsp;</label>
             <div style="display:flex;gap:6px;">
               <button class="btn btn-search" id="ovSearchBtn" style="padding:9px 22px;font-size:0.87rem;" onclick="applyOvFilter()">조회</button>
               <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetOvFilter()">초기화</button>
@@ -991,7 +1056,7 @@
       <div id="pfContent" style="display:none;">
 
         <!-- 요약 카드 -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        <div class="pf-summary-grid">
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">순 투자액</div>
             <div id="pfNetInv" style="font-size:1.3rem;font-weight:700;color:#2d3748;">-</div>
@@ -1012,7 +1077,10 @@
 
         <!-- 월별 수익률 차트 -->
         <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d3748;margin-bottom:12px;">📈 월별 누적 수익률 비교</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <div style="font-weight:700;color:#2d3748;">📈 월별 누적 수익률 비교</div>
+            <div id="pfChartToggles" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          </div>
           <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 포트폴리오: 순투자액 대비 평가손익률 / 지수: 동기간 누적 등락률</div>
           <div id="pfChart"></div>
           <div id="pfChartNote" style="font-size:0.75rem;color:#a0aec0;margin-top:8px;"></div>
@@ -2775,6 +2843,9 @@
   // ── 포트폴리오 분석 탭 ─────────────────────────────────────────────
   var pfAnalysisLoaded = false;
   var pfCurrentAccount = '';
+  var pfChartMonthly = null;
+  var pfChartIndices = null;
+  var pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
 
   function applyPfFilter() {
     pfCurrentAccount = document.getElementById('pfAccount').value;
@@ -2844,7 +2915,10 @@
       pctEl.style.color = pnlCol(s.pnlPct);
 
       // ── 차트 ─────────────────────────────────────────────
-      renderPfChart(data.monthly, data.indices);
+      pfChartMonthly = data.monthly;
+      pfChartIndices = data.indices;
+      pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
+      renderPfChart(pfChartMonthly, pfChartIndices);
 
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
@@ -2882,6 +2956,15 @@
     });
   }
 
+  // 시리즈 토글
+  function togglePfSeries(key) {
+    // 현재 visible 개수 체크 (마지막 하나는 끌 수 없음)
+    var visibleCount = Object.keys(pfSeriesVisible).filter(function(k) { return pfSeriesVisible[k]; }).length;
+    if (pfSeriesVisible[key] && visibleCount <= 1) return; // 최소 1개 유지
+    pfSeriesVisible[key] = !pfSeriesVisible[key];
+    renderPfChart(pfChartMonthly, pfChartIndices);
+  }
+
   function renderPfChart(monthly, indices) {
     var el = document.getElementById('pfChart');
     if (!monthly || monthly.length === 0) {
@@ -2889,8 +2972,8 @@
       return;
     }
 
-    // 시리즈 정의
-    var series = [
+    // 전체 시리즈 정의 (데이터 있는 것만)
+    var allSeries = [
       { key: 'portfolio', label: '포트폴리오', color: '#3182ce',
         data: monthly.map(function(m) { return { month: m.month, v: m.returnPct }; }) },
       { key: 'KOSPI',  label: 'KOSPI',   color: '#e53e3e',
@@ -2900,6 +2983,26 @@
       { key: 'NASDAQ', label: 'NASDAQ',  color: '#805ad5',
         data: ((indices || {}).NASDAQ || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
     ].filter(function(s) { return s.data.length > 0; });
+
+    // 토글 버튼 렌더링
+    var toggleEl = document.getElementById('pfChartToggles');
+    if (toggleEl) {
+      toggleEl.innerHTML = allSeries.map(function(s) {
+        var active = pfSeriesVisible[s.key] !== false;
+        var bg   = active ? s.color : '#f7fafc';
+        var txt  = active ? 'white' : '#a0aec0';
+        var bord = active ? s.color : '#e2e8f0';
+        return '<button onclick="togglePfSeries(\'' + s.key + '\')" '
+          + 'style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;'
+          + 'border:1.5px solid ' + bord + ';background:' + bg + ';color:' + txt + ';'
+          + 'font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.15s;font-family:inherit;">'
+          + '<span style="width:10px;height:3px;border-radius:2px;background:' + (active ? 'white' : s.color) + ';display:inline-block;"></span>'
+          + s.label + '</button>';
+      }).join('');
+    }
+
+    // 표시할 시리즈만 필터
+    var series = allSeries.filter(function(s) { return pfSeriesVisible[s.key] !== false; });
 
     var months = monthly.map(function(m) { return m.month; });
 
@@ -2913,8 +3016,8 @@
     minV -= pad; maxV += pad;
 
     // SVG 레이아웃
-    var W = 820, H = 300;
-    var ml = 62, mr = 24, mt = 18, mb = 54;
+    var W = 820, H = 280;
+    var ml = 62, mr = 24, mt = 18, mb = 32;
     var cw = W - ml - mr, ch = H - mt - mb;
 
     function xPos(i) {
@@ -2992,18 +3095,6 @@
     months.forEach(function(mm, i) {
       if (months.length > 7 && i % 2 !== 0) return;
       svg += '<text x="' + xPos(i).toFixed(1) + '" y="' + (mt + ch + 16) + '">' + mm.slice(2) + '</text>';
-    });
-    svg += '</g>';
-
-    // 범례
-    var legY = mt + ch + 38;
-    svg += '<g font-size="11.5" fill="#4a5568" font-family="inherit">';
-    var legX = ml;
-    series.forEach(function(s) {
-      if (legX + 110 > W - mr + 10) return;
-      svg += '<rect x="' + legX + '" y="' + (legY - 8) + '" width="20" height="4" rx="2" fill="' + s.color + '"/>';
-      svg += '<text x="' + (legX + 26) + '" y="' + (legY + 1) + '">' + s.label + '</text>';
-      legX += 110;
     });
     svg += '</g>';
 
