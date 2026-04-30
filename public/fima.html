@@ -2965,8 +2965,8 @@
     });
   }
 
-  // 시리즈 토글 (전역 함수 – inline onclick에서 호출)
-  function togglePfSeries(key) {
+  // 시리즈 토글 (window에 명시적 등록 – 스코프 문제 방지)
+  window.togglePfSeries = function togglePfSeries(key) {
     var visibleCount = Object.keys(pfSeriesVisible).filter(function(k) { return pfSeriesVisible[k]; }).length;
     if (pfSeriesVisible[key] && visibleCount <= 1) return; // 최소 1개 유지
     pfSeriesVisible[key] = !pfSeriesVisible[key];
@@ -3008,6 +3008,12 @@
           + 'background:' + (active ? 'rgba(255,255,255,0.9)' : s.color) + ';"></span>'
           + s.label + '</button>';
       }).join('');
+      // 버튼마다 직접 클릭 리스너 부착 (innerHTML 교체 후 새 DOM에 바로 등록)
+      Array.from(toggleEl.querySelectorAll('button[data-series]')).forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          window.togglePfSeries(btn.getAttribute('data-series'));
+        });
+      });
     }
 
     // 표시할 시리즈만 필터
