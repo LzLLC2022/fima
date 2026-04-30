@@ -1043,6 +1043,14 @@
             </select>
           </div>
           <div class="field">
+            <label>시작월</label>
+            <input type="month" id="pfStartMonth" style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.87rem;color:#2d3748;" />
+          </div>
+          <div class="field">
+            <label>종료월</label>
+            <input type="month" id="pfEndMonth" style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.87rem;color:#2d3748;" />
+          </div>
+          <div class="field">
             <label>&nbsp;</label>
             <div style="display:flex;gap:6px;">
               <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyPfFilter()">조회</button>
@@ -2858,15 +2866,23 @@
   // ── 포트폴리오 분석 탭 ─────────────────────────────────────────────
   var pfAnalysisLoaded = false;
   var pfCurrentAccount = '';
+  var pfStartMonth = '';
+  var pfEndMonth   = '';
   var pfChartMonthly = null;
   var pfChartIndices = null;
   var pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
 
   function applyPfFilter() {
     pfCurrentAccount = document.getElementById('pfAccount').value;
+    pfStartMonth     = document.getElementById('pfStartMonth').value;
+    pfEndMonth       = document.getElementById('pfEndMonth').value;
+    var parts = [];
+    if (pfCurrentAccount) parts.push('Account = ' + pfCurrentAccount);
+    if (pfStartMonth)     parts.push('시작: ' + pfStartMonth);
+    if (pfEndMonth)       parts.push('종료: ' + pfEndMonth);
     var badge = document.getElementById('pfFilterBadge');
-    if (pfCurrentAccount) {
-      badge.textContent = '필터: Account = ' + pfCurrentAccount;
+    if (parts.length > 0) {
+      badge.textContent = '필터: ' + parts.join(' / ');
       badge.classList.remove('hidden');
     } else {
       badge.classList.add('hidden');
@@ -2875,8 +2891,12 @@
   }
 
   function resetPfFilter() {
-    document.getElementById('pfAccount').value = '';
+    document.getElementById('pfAccount').value      = '';
+    document.getElementById('pfStartMonth').value   = '';
+    document.getElementById('pfEndMonth').value     = '';
     pfCurrentAccount = '';
+    pfStartMonth     = '';
+    pfEndMonth       = '';
     document.getElementById('pfFilterBadge').classList.add('hidden');
     loadPortfolioAnalysis(true);
   }
@@ -2893,7 +2913,9 @@
     content.style.display = 'none';
 
     var body = { owner: currentOwner, accountOwner: currentAccountOwner };
-    if (pfCurrentAccount) body.account = pfCurrentAccount;
+    if (pfCurrentAccount) body.account    = pfCurrentAccount;
+    if (pfStartMonth)     body.startMonth = pfStartMonth;
+    if (pfEndMonth)       body.endMonth   = pfEndMonth;
 
     fetch('/api/portfolio-analysis', {
       method: 'POST',

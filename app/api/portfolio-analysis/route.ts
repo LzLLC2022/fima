@@ -144,7 +144,20 @@ export async function POST(req: NextRequest) {
       allMonths.push(toYYYYMM(cur));
       cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
     }
-    const analyzeMonths = allMonths.slice(-13); // 최대 13개월
+
+    // 사용자 지정 월 범위 적용 (없으면 최근 13개월)
+    const startMonth = filters.startMonth ? String(filters.startMonth) : '';
+    const endMonth   = filters.endMonth   ? String(filters.endMonth)   : '';
+    let analyzeMonths: string[];
+    if (startMonth || endMonth) {
+      analyzeMonths = allMonths.filter(mm =>
+        (!startMonth || mm >= startMonth) &&
+        (!endMonth   || mm <= endMonth)
+      );
+      if (analyzeMonths.length === 0) analyzeMonths = allMonths.slice(-1); // 최소 1개
+    } else {
+      analyzeMonths = allMonths.slice(-13); // 기본값: 최근 13개월
+    }
 
     // ── 월별 누적 상태 계산 (단일 패스) ──────────────────────────────
     type Pos = { qty: number; buyCostFX: number; buyCostKRW: number; region: string; assetType: string; name: string; lastRate: number };
