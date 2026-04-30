@@ -2956,6 +2956,14 @@
     });
   }
 
+  // 시리즈 토글 (전역 함수 – inline onclick에서 호출)
+  function togglePfSeries(key) {
+    var visibleCount = Object.keys(pfSeriesVisible).filter(function(k) { return pfSeriesVisible[k]; }).length;
+    if (pfSeriesVisible[key] && visibleCount <= 1) return; // 최소 1개 유지
+    pfSeriesVisible[key] = !pfSeriesVisible[key];
+    renderPfChart(pfChartMonthly, pfChartIndices);
+  }
+
   function renderPfChart(monthly, indices) {
     var el = document.getElementById('pfChart');
     if (!monthly || monthly.length === 0) {
@@ -2975,40 +2983,22 @@
         data: ((indices || {}).NASDAQ || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
     ].filter(function(s) { return s.data.length > 0; });
 
-    // 토글 버튼 렌더링 (inline onclick 제거 → addEventListener 방식)
+    // 토글 버튼 렌더링
     var toggleEl = document.getElementById('pfChartToggles');
     if (toggleEl) {
-      // 기존 버튼 제거 후 재생성
-      toggleEl.innerHTML = '';
-      allSeries.forEach(function(s) {
+      toggleEl.innerHTML = allSeries.map(function(s) {
         var active = pfSeriesVisible[s.key] !== false;
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.setAttribute('data-series-key', s.key);
-        // 스타일 적용
-        btn.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:6px 14px;'
+        var bg   = active ? s.color : 'white';
+        var txt  = active ? 'white' : s.color;
+        return '<button type="button" onclick="togglePfSeries(\'' + s.key + '\')" '
+          + 'style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;'
           + 'border-radius:20px;cursor:pointer;transition:all 0.15s;font-family:inherit;'
           + 'font-size:0.82rem;font-weight:700;user-select:none;'
-          + (active
-            ? 'border:2px solid ' + s.color + ';background:' + s.color + ';color:white;'
-            : 'border:2px solid ' + s.color + ';background:white;color:' + s.color + ';');
-        // 색상 바 아이콘
-        var icon = document.createElement('span');
-        icon.style.cssText = 'width:14px;height:3px;border-radius:2px;display:inline-block;'
-          + 'background:' + (active ? 'rgba(255,255,255,0.9)' : s.color) + ';';
-        btn.appendChild(icon);
-        btn.appendChild(document.createTextNode(s.label));
-        // 클릭 이벤트 (inline onclick 없이 직접 바인딩)
-        btn.addEventListener('click', (function(key, color) {
-          return function() {
-            var visibleCount = Object.keys(pfSeriesVisible).filter(function(k) { return pfSeriesVisible[k]; }).length;
-            if (pfSeriesVisible[key] && visibleCount <= 1) return;
-            pfSeriesVisible[key] = !pfSeriesVisible[key];
-            renderPfChart(pfChartMonthly, pfChartIndices);
-          };
-        })(s.key, s.color));
-        toggleEl.appendChild(btn);
-      });
+          + 'border:2px solid ' + s.color + ';background:' + bg + ';color:' + txt + ';">'
+          + '<span style="width:14px;height:3px;border-radius:2px;display:inline-block;'
+          + 'background:' + (active ? 'rgba(255,255,255,0.9)' : s.color) + ';"></span>'
+          + s.label + '</button>';
+      }).join('');
     }
 
     // 표시할 시리즈만 필터
