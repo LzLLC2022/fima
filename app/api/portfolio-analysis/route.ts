@@ -133,6 +133,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, summary: null, monthly: [], indices: {}, stocks: [] });
     }
 
+    // ── 월별 배당 집계 (전체 기간 — 연도×월 크로스탭) ────────────────
+    const divByYearMonth: Record<string, Record<string, number>> = {};
+    const divRateCache: Record<string, number> = {};
+    sorted.forEach(({ row, date }) => {
+      if (date.getTime() === 0) return;
+      const t2 = String(row[tradeIdx] ?? '').trim().toLowerCase().replace(/[-\s]/g, '');
+      if (!t2.startsWith('div') && !t2.includes('stock')) return;
+      const region2 = String(row[regionIdx] ?? '').trim();
+      const price2  = Number(row[priceIdx]) || 0;
+      const rate2   = Number(row[currIdx])  || 0;
+      const div2    = Number(row[divIdx])   || 0;
+      const tax2    = taxIdx >= 0 ? (Number(row[taxIdx]) || 0) : 0;
+      const chg2    = chgIdx >= 0 ? (Number(row[chgIdx]) || 0) : 0;
+      if (rate2 > 0) divRateCache[region2] = rate2;
+      const eff2    = rate2 > 0 ? rate2 : (divRateCache[region2] || 1);
+      let divKRW = 0;
+      if (t2.startsWith('div') && !t2.includes('stock')) {
+        divKRW = ((div2 || price2) - tax2 - chg2) * eff2;
+      } else if (t2.includes('stock') && div2 > 0) {
+        divKRW = div2 * eff2;
+      }
+      if (divKRW <= 0) return;
+      const yr = String(date.getUTCFullYear());
+      const mo = String(date.getUTCMonth() + 1).padStart(2, '0');
+      if (!divByYearMonth[yr]) divByYearMonth[yr] = {};
+      divByYearMonth[yr][mo] = (divByYearMonth[yr][mo] || 0) + divKRW;
+    });
+
+    const dividends = Object.entries(divByYearMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([year, months]) => ({
+        year,
+        months: Object.fromEntries(
+          Object.entries(months).map(([k, v]) => [k, Math.round(v)])
+        ),
+        total: Math.round(Object.values(months).reduce((s, v) => s + v, 0)),
+      }));
+
     // ── 분석 대상 월 목록 (최근 13개월) ─────────────────────────────
     const firstDate = firstActual;
     const now       = new Date();
@@ -416,7 +454,7 @@ export async function POST(req: NextRequest) {
       }));
     });
 
-    return NextResponse.json({ success: true, summary, monthly, indices, stocks });
+    return NextResponse.json({ success: true, summary, monthly, indices, stocks, dividends });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
