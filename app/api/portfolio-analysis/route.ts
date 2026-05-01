@@ -454,7 +454,7 @@ export async function POST(req: NextRequest) {
       }));
     });
 
-    return NextResponse.json({ success: true, summary, monthly, indices, stocks, dividends });
+    return NextResponse.json({ success: true, summary, monthly, indices, stocks });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
