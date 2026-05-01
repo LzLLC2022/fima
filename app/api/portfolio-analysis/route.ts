@@ -437,8 +437,9 @@ export async function POST(req: NextRequest) {
         if (price === 0 && isKoreanBondISIN(t)) {
           price = p.qty > 0 ? p.buyCostFX / p.qty : 0;
         }
-        // 당월(월별 종가 미확정) → currentPrice 폴백
-        if (price === 0 && mm === nowMM) {
+        // 당월(mm===nowMM) 또는 월 초(1~5일)에 직전월 Yahoo 미확정 → currentPrice 폴백
+        const isLastMonth = mm === analyzeMonths[analyzeMonths.length - 1];
+        if (price === 0 && (mm === nowMM || (todayDay <= 5 && isLastMonth))) {
           price = currentPrice[t] || 0;
         }
         if (price > 0) val += price * p.qty * resolveRate(p.region);
