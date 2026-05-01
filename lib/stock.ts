@@ -30,24 +30,116 @@ function krxBondApiId(isin: string): string {
   return 'bnd_bydd_trd'; // 일반채권시장
 }
 
-/**
- * KRX OpenAPI로 채권 종가 조회
- * - 환경변수 KRX_AUTH_KEY 필요 (Vercel 환경변수 설정)
- * - 날짜별 전체 목록 조회 후 ISIN(ISU_CD)으로 필터링
- * - 당일 거래 없으면 최대 7 영업일 전까지 소급 조회
- */
-async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
-  const authKey = process.env.KRX_AUTH_KEY;
-  if (!authKey) return 0;
+// ── 국고채 시가평가가격 계산 (KRX 미거래 채권 폴백) ─────────────────────────
+// KRX kts_bydd_trd에 거래 내역이 없는 국고채(예: 만기 임박 구형채)를
+// 채권 가격 공식으로 계산하여 폴백 가격으로 사용합니다.
 
+/** 종목 메타데이터: ISIN → { coupon: 연이율, maturity: 만기일 YYYY-MM-DD } */
+const BOND_META: Record<string, { coupon: number; maturity: string }> = {
+  'KR103502G6C4': { coupon: 0.015, maturity: '2026-12-10' }, // 국고채권 01500-2612(16-8)
+};
+
+/**
+ * 최종호가수익률 테이블 (ktbinfo.or.kr 기준, 주기적 업데이트 필요)
+ * [잔존만기(월), 연수익률] — 선형보간으로 중간값 계산
+ * 2026-04-30 기준
+ */
+const KTB_YIELD_CURVE: [number, number][] = [
+  [3,   0.02562],  // 통안채(91일) 대용
+  [9,   0.02810],  // ~9개월 (실측: 국고01500-2612 평가수익률)
+  [12,  0.03020],  // 국고채권(1년)
+  [24,  0.03459],  // 국고채권(2년)
+  [36,  0.03568],  // 국고채권(3년)
+  [60,  0.03747],  // 국고채권(5년)
+  [120, 0.03888],  // 국고채권(10년)
+];
+
+/** 잔존만기(개월)로 최종호가수익률 선형보간 */
+function interpGovBondYield(months: number): number {
+  if (months <= KTB_YIELD_CURVE[0][0]) return KTB_YIELD_CURVE[0][1];
+  const last = KTB_YIELD_CURVE[KTB_YIELD_CURVE.length - 1];
+  if (months >= last[0]) return last[1];
+  for (let i = 0; i < KTB_YIELD_CURVE.length - 1; i++) {
+    const [m0, y0] = KTB_YIELD_CURVE[i];
+    const [m1, y1] = KTB_YIELD_CURVE[i + 1];
+    if (months >= m0 && months <= m1) {
+      return y0 + (y1 - y0) * (months - m0) / (m1 - m0);
+    }
+  }
+  return 0.03;
+}
+
+/**
+ * 채권 가격 계산 (반기 이표, 연속복리 할인)
+ * @param couponRate 연이율 (예: 0.015)
+ * @param maturityDate 만기일
+ * @param faceValue 액면가 (예: 10000)
+ * @param annualYield 연 할인율
+ */
+function calcBondPrice(
+  couponRate: number,
+  maturityDate: Date,
+  faceValue: number,
+  annualYield: number,
+): number {
+  const now = Date.now();
+  const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000;
+  const semiCoupon = faceValue * couponRate / 2;
+
+  // 남은 쿠폰 지급일 계산 (반기, 만기일 기준으로 6개월씩 역산)
+  const couponDates: number[] = [];
+  const d = new Date(maturityDate);
+  while (d.getTime() > now) {
+    couponDates.unshift(d.getTime());
+    d.setUTCMonth(d.getUTCMonth() - 6);
+  }
+  if (couponDates.length === 0) return faceValue; // 만기 경과
+
+  let price = 0;
+  for (let i = 0; i < couponDates.length; i++) {
+    const t = (couponDates[i] - now) / MS_PER_YEAR;
+    const cf = (i === couponDates.length - 1)
+      ? semiCoupon + faceValue  // 마지막: 쿠폰 + 원금
+      : semiCoupon;
+    price += cf / Math.pow(1 + annualYield, t);
+  }
+  return Math.round(price * 100) / 100;
+}
+
+/**
+ * BOND_META에 등록된 국고채 ISIN의 시가평가 계산가 반환
+ * (액면가 10,000원 기준)
+ */
+function getKorBondCalcPrice(isin: string): number {
+  const meta = BOND_META[isin.toUpperCase()];
+  if (!meta) return 0;
+
+  const maturityDate = new Date(meta.maturity + 'T00:00:00Z');
+  const now = new Date();
+  const monthsLeft = (maturityDate.getTime() - now.getTime()) / (30.4375 * 24 * 3600 * 1000);
+  if (monthsLeft <= 0) return 10000; // 만기 경과 시 액면가
+
+  const yield_ = interpGovBondYield(monthsLeft);
+  return calcBondPrice(meta.coupon, maturityDate, 10000, yield_);
+}
+
+// ── KRX OpenAPI 채권 가격 조회 ────────────────────────────────────────────────
+
+async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
   const isinUpper = isin.toUpperCase();
-  const apiId     = krxBondApiId(isinUpper);
-  const pad2      = (n: number) => String(n).padStart(2, '0');
+  const authKey = process.env.KRX_AUTH_KEY;
+
+  // KRX API 키 없으면 계산가로 폴백
+  if (!authKey) return getKorBondCalcPrice(isinUpper);
+
+  const apiId = krxBondApiId(isinUpper);
+  const pad2  = (n: number) => String(n).padStart(2, '0');
 
   // 기준일 → YYYYMMDD 변환 (없으면 오늘)
   const baseDate = date ? new Date(date + 'T00:00:00Z') : new Date();
 
   // 최대 7일 전까지 소급 (주말/공휴일 대응)
+  let foundInMarket = false; // 시장 목록 자체가 존재했는지 여부
   for (let offset = 0; offset <= 7; offset++) {
     const d = new Date(baseDate.getTime() - offset * 86400 * 1000);
     const basDd = `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}`;
@@ -65,16 +157,27 @@ async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
       const items: any[] = json?.OutBlock_1 ?? [];
       if (items.length === 0) continue; // 해당 날짜 거래 없음 → 이전 날 재시도
 
+      foundInMarket = true; // 시장 데이터는 있음 (종목이 없을 수도 있음)
       const bond = items.find((item: any) =>
         String(item.ISU_CD ?? '').trim().toUpperCase() === isinUpper
       );
-      if (!bond) return 0; // 목록에 없음 → 미상장 채권
+      if (!bond) {
+        // KRX 목록에 없음 → 시가평가 계산가로 폴백
+        const calcPrice = getKorBondCalcPrice(isinUpper);
+        return calcPrice > 0 ? calcPrice : 0;
+      }
 
       const price = parseFloat(String(bond.CLSPRC ?? '').replace(/,/g, ''));
       if (price > 0) return price;
     } catch (_e) {
       // 네트워크 오류 시 다음 날짜로
     }
+  }
+
+  // 7일 모두 거래 없음 (공휴일 연속) → 계산가 폴백
+  if (!foundInMarket) {
+    const calcPrice = getKorBondCalcPrice(isinUpper);
+    if (calcPrice > 0) return calcPrice;
   }
   return 0;
 }
