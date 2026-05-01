@@ -2599,11 +2599,17 @@
 
     const fmtAmt = (v, isK) => isK ? fmtK(v) : fmtN(v, 2);
 
+    // \uB9CC\uAE30\uBCF4\uC720 \uD3C9\uAC00 \uCEEC\uB7FC \uD45C\uC2DC \uC5EC\uBD80
+    const hasMaturiy = items.some(i => i.maturityEval);
+
     var priceColLabel = currentOvFilters.endDate ? '기준종가' : '현재가';
     // 한 줄 레이아웃: Ticker | Name | 수량 | 매입단가 | 매입금액 | 현재가 | 평가금액 | 손익 | 수익률
     const cols     = ['Ticker', 'Name', '수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률'];
-    const numCols  = new Set(['수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률', '누적배당금']);
+    const numCols  = new Set(['수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률', '누적배당금', '만기수령액', '만기손익', '만기수익률']);
     if (showDividend) cols.push('누적배당금');
+    if (hasMaturiy) {
+      cols.push('만기일', '만기수령액', '만기손익', '만기수익률');
+    }
 
     const thead = `<thead><tr>${cols.map(h => `<th${numCols.has(h) ? ' class="num"' : ''}>${h}</th>`).join('')}</tr></thead>`;
     const tbody = '<tbody>' + items.map(item => {
@@ -2648,6 +2654,22 @@
         <td class="num ${pc} gauge-cell">${pctStr}${gaugeHtml}</td>`;
       if (showDividend) {
         row += `<td class="num" style="color:#2f855a;">${divStr}</td>`;
+      }
+      if (hasMaturiy) {
+        const me = item.maturityEval;
+        if (me) {
+          const mpc = pnlCls(me.maturityPnlFX);
+          const matValStr = fmtAmt(me.maturityValueFX, isK) + ' ' + cur;
+          const matPnlStr = (me.maturityPnlFX >= 0 ? '+' : '') + fmtAmt(me.maturityPnlFX, isK) + ' ' + cur;
+          const matPctStr = fmtPct(me.maturityPnlPct);
+          const tooltipMsg = '\uC561\uBA74\uAC00(' + fmtAmt(me.faceValue, isK) + ')\xD7\uC218\uB7C9(' + fmtN(item.quantity, 0) + ') + \uC794\uC5EC\uCFE0\uD3F0 ' + me.remainingCoupons + '\uD68C(' + fmtAmt(me.couponPerUnit, isK) + '\xD7\uC218\uB7C9) | \uB9CC\uAE30\uAE4C\uC9C0 ' + me.daysLeft + '\uC77C';
+          row += `<td class="num" style="color:#553c9a;white-space:nowrap;">${me.maturityDate}</td>`;
+          row += `<td class="num" style="color:#553c9a;" title="${tooltipMsg}">${matValStr}</td>`;
+          row += `<td class="num ${mpc}">${matPnlStr}</td>`;
+          row += `<td class="num ${mpc}">${matPctStr}</td>`;
+        } else {
+          row += '<td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="num">-</td>';
+        }
       }
       row += '</tr>';
       return row;

@@ -1,10 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice, getExchangeRate, getNaverBondInfo } from '@/lib/stock';
+import { getStockPrice, getExchangeRate, getNaverBondInfo, BOND_META } from '@/lib/stock';
 
 function isKoreanBondISIN(ticker: string): boolean {
   return /^KR[A-Z0-9]{10}$/i.test(ticker.trim());
+}
+
+/**
+ * 만기보유시 평가 계산
+ * - 남은 쿠폰 지급일(반기) 합산 + 원금(액면가×수량)
+ * - purchaseAmtFX: 총 매입금액(현지통화 기준)
+ */
+function calcMaturityEval(isin: string, netQty: number, purchaseAmtFX: number) {
+  const meta = BOND_META[isin.toUpperCase()];
+  if (!meta) return null;
+
+  const faceValue   = meta.face ?? 10000;
+  const maturityDate = new Date(meta.maturity + 'T00:00:00Z');
+  const now          = new Date();
+
+  if (maturityDate <= now) return null; // 이미 만기
+
+  // 남은 쿠폰 지급일 계산 (반기, 만기일 기준으로 6개월씩 역산)
+  const couponPerUnit = faceValue * meta.coupon / 2; // 1회 지급액
+  const couponDates: Date[] = [];
+  const d = new Date(maturityDate);
+  while (d.getTime() > now.getTime()) {
+    couponDates.unshift(new Date(d));
+    d.setUTCMonth(d.getUTCMonth() - 6);
+  }
+
+  const remainingCoupons  = couponDates.length;
+  const totalCouponFX     = couponPerUnit * remainingCoupons * netQty;
+  const principalFX       = faceValue * netQty;
+  const maturityValueFX   = principalFX + totalCouponFX;
+  const maturityPnlFX     = maturityValueFX - purchaseAmtFX;
+  const maturityPnlPct    = purchaseAmtFX > 0 ? maturityPnlFX / purchaseAmtFX * 100 : 0;
+  const daysLeft          = Math.ceil((maturityDate.getTime() - now.getTime()) / (24 * 3600 * 1000));
+
+  return {
+    maturityDate    : meta.maturity,       // 만기일 YYYY-MM-DD
+    faceValue,                              // 액면가 per unit
+    couponPerUnit,                          // 1회 쿠폰 per unit
+    remainingCoupons,                       // 남은 쿠폰 횟수
+    principalFX,                            // 원금 총액(qty×face)
+    totalCouponFX,                          // 잔여 쿠폰 합계
+    maturityValueFX,                        // 만기 수령 합계
+    maturityPnlFX,                          // 만기 손익
+    maturityPnlPct,                         // 만기 수익률 %
+    daysLeft,                               // 만기까지 남은 일수
+  };
 }
 
 const EMPTY = { success: true, cash: [], stocks: [], funds: [],
@@ -244,6 +290,7 @@ export async function POST(req: NextRequest) {
       // 채권 ISIN인 경우 Naver에서 가져온 이름 우선 사용
       const displayName = bondNameMap[p.ticker] || p.name || p.ticker;
 
+      const purAmtFXForBond = isKRW ? purchaseAmtKRW : purchaseAmtFX;
       const item = {
         ticker: p.ticker, name: displayName, currency, region: p.region,
         quantity: netQty, avgPrice: avgPriceFX,
@@ -253,6 +300,10 @@ export async function POST(req: NextRequest) {
         marketValueFX: isKRW ? marketValueKRW : marketValueFX,
         pnlFX        : isKRW ? pnl            : pnlFX,
         divFX: p.divFX, divKRW: p.divKRW,
+        // 만기보유 평가 (BOND_META 등록 채권만, null이면 해당 없음)
+        maturityEval : isKoreanBondISIN(p.ticker)
+          ? calcMaturityEval(p.ticker, netQty, purAmtFXForBond)
+          : null,
       };
 
       const at = p.assetType.toLowerCase();

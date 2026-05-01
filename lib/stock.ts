@@ -34,9 +34,13 @@ function krxBondApiId(isin: string): string {
 // KRX kts_bydd_trd에 거래 내역이 없는 국고채(예: 만기 임박 구형채)를
 // 채권 가격 공식으로 계산하여 폴백 가격으로 사용합니다.
 
-/** 종목 메타데이터: ISIN → { coupon: 연이율, maturity: 만기일 YYYY-MM-DD } */
-const BOND_META: Record<string, { coupon: number; maturity: string }> = {
-  'KR103502G6C4': { coupon: 0.015, maturity: '2026-12-10' }, // 국고채권 01500-2612(16-8)
+/**
+ * 채권 메타데이터: ISIN → { coupon: 연이율(소수), maturity: 만기일 YYYY-MM-DD, face: 액면가 }
+ * - 새 채권 추가 시 이 테이블에 항목을 추가하면 됩니다.
+ * - KRX API 미거래 채권 가격 계산 및 만기보유 평가에 사용됩니다.
+ */
+export const BOND_META: Record<string, { coupon: number; maturity: string; face?: number }> = {
+  'KR103502G6C4': { coupon: 0.015, maturity: '2026-12-10', face: 10000 }, // 국고채권 01500-2612(16-8)
 };
 
 /**
