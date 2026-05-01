@@ -197,13 +197,6 @@ export async function POST(req: NextRequest) {
       analyzeMonths = allMonths.slice(-13); // 기본값: 최근 13개월
     }
 
-    // 월 초(1~5일)이고 사용자 지정 endMonth 없으면 당월 제외
-    // (당월은 Yahoo 월별 종가 미확정 → 평가액 왜곡 방지)
-    const todayDay = now.getUTCDate();
-    if (!endMonth && todayDay <= 5 && analyzeMonths[analyzeMonths.length - 1] === nowMM) {
-      analyzeMonths = analyzeMonths.slice(0, -1);
-    }
-
     // ── 월별 누적 상태 계산 (단일 패스) ──────────────────────────────
     type Pos = { qty: number; buyCostFX: number; buyCostKRW: number; region: string; assetType: string; name: string; lastRate: number };
 
@@ -436,10 +429,6 @@ export async function POST(req: NextRequest) {
         // 채권 ISIN: 역사적 가격 미지원 → 매입 평균단가로 대체 (평가손익 0% 표시)
         if (price === 0 && isKoreanBondISIN(t)) {
           price = p.qty > 0 ? p.buyCostFX / p.qty : 0;
-        }
-        // 당월(월별 종가 미확정) → currentPrice 폴백
-        if (price === 0 && mm === nowMM) {
-          price = currentPrice[t] || 0;
         }
         if (price > 0) val += price * p.qty * resolveRate(p.region);
       });
