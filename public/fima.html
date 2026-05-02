@@ -3613,12 +3613,16 @@
       }
       rbSheetItems    = sd.items || [];
       rbPortfolioData = pd;
-      rbAmountKRW     = pd.totalKRW || 0;
       rbTargetState   = {};
       rbLoaded        = true;
 
+      // 수동 입력값이 있으면 유지, 없으면 총평가자산으로 초기화
       var inp = document.getElementById('rbAmountInput');
-      if (inp) inp.value = Math.round(rbAmountKRW).toLocaleString('ko-KR');
+      var hasManual = inp && inp.value.replace(/[^0-9]/g, '').length > 0;
+      if (!hasManual) {
+        rbAmountKRW = pd.totalKRW || 0;
+        if (inp) inp.value = Math.round(rbAmountKRW).toLocaleString('ko-KR');
+      }
 
       renderRebalanceTable();
       document.getElementById('rbTableCard').style.display = 'block';
