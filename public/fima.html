@@ -1131,7 +1131,7 @@
           <div class="table-wrap">
             <table id="pfStockTable">
               <thead><tr>
-                <th>Ticker</th><th>Name</th>
+                <th>Name</th>
                 <th style="text-align:right;">현재가</th>
                 <th style="text-align:right;">매입금액</th>
                 <th style="text-align:right;">평가금액</th>
@@ -3105,7 +3105,7 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
         tbody.innerHTML = data.stocks.map(function(st) {
           var cur   = st.currency || 'KRW';
@@ -3141,9 +3141,13 @@
             ? fmtFX(st.marketValueFX) + ' ' + cur
             : (st.marketValueKRW > 0 ? fmtK(st.marketValueKRW) + ' KRW' : '-');
 
+          var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+          var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           return '<tr>'
-            + '<td style="font-weight:600;">' + st.ticker + '</td>'
-            + '<td>' + (st.name || '-') + '</td>'
+            + '<td data-ticker="' + safePfTicker + '" style="cursor:pointer;white-space:nowrap;" onclick="showStockDetail(this.dataset.ticker,event,'')">'
+            + '<span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
+            + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
+            + '</td>'
             + '<td style="text-align:right;">' + cpStr + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
             + '<td style="text-align:right;">' + mvStr + '</td>'
