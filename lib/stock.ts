@@ -388,8 +388,9 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
     : [ticker];
 
   const fetchDiv = async (yticker: string): Promise<number> => {
-    // v8 chart API에 events=dividends 추가, 1년치 월봉 요청
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1mo&range=1y&events=dividends`;
+    // v8 chart API에 events=dividends 추가, 2년치 일봉 요청 후 최근 365일만 합산
+    // (월봉 1년 range는 분기 배당 등을 누락할 수 있어 일봉 2년으로 개선)
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1d&range=2y&events=dividends`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -401,9 +402,14 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
     const json = await res.json();
     const events = json?.chart?.result?.[0]?.events?.dividends;
     if (!events) return 0;
-    // 지난 1년간 배당 이벤트 합산
-    const total = Object.values(events as Record<string, { amount: number }>)
-      .reduce((s, d) => s + (d.amount || 0), 0);
+    // 최근 365일 이내 배당 이벤트만 합산 (TTM)
+    const cutoff = Date.now() / 1000 - 365 * 24 * 3600;
+    const total = Object.entries(events as Record<string, { amount: number; date?: number }>)
+      .filter(([ts, d]) => {
+        const t = d.date ?? Number(ts);
+        return t >= cutoff;
+      })
+      .reduce((s, [, d]) => s + (d.amount || 0), 0);
     return Math.round(total * 10000) / 10000;
   };
 
