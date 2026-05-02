@@ -3784,8 +3784,16 @@
             : Math.floor(tgtBase / (livePrice * liveRate)))
         : 0;
 
+      // 52주 고저가 서브라인
+      var hlStr = '';
+      if (item.weekHigh52 > 0) {
+        var isKrw52 = (liveCur === 'KRW');
+        var hFmt = isKrw52 ? fmtN(item.weekHigh52, 0) : fmtN(item.weekHigh52, 2);
+        var lFmt = isKrw52 ? fmtN(item.weekLow52,  0) : fmtN(item.weekLow52,  2);
+        hlStr = '<div style="font-size:0.75em;color:#a0aec0;margin-top:1px;">↑' + hFmt + ' / ↓' + lFmt + '</div>';
+      }
       var priceStr = livePrice > 0
-        ? fmtN(livePrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur
+        ? fmtN(livePrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur + hlStr
         : '<span style="color:#a0aec0;">-</span>';
 
       // 매입단가 (기준통화)
@@ -3845,7 +3853,9 @@
       }
 
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
-        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' + item.name + '</td>' +
+        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' + item.name +
+          '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + '</div>' +
+        '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + avgHtml + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#718096;">' + currPct.toFixed(2) + '%</td>' +
