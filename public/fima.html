@@ -4250,8 +4250,22 @@
       '</div>';
     }
 
+    // ── 52W 차트 (전체 너비) ──
+    function w52Col(pd) {
+      if (!pd || !pd.prices || pd.prices.length < 2) return '';
+      var c = pd.changePct >= 0 ? '#276749' : '#c53030';
+      var s = pd.changePct >= 0 ? '+' : '';
+      return '<div style="background:#f7fafc;border-radius:7px;padding:9px 12px;">' +
+        '<div style="font-weight:700;color:#2d3748;font-size:0.85em;margin-bottom:4px;">52W (52주 이내)</div>' +
+        '<div style="font-size:0.8em;color:#718096;margin-bottom:3px;">최고 <b style="color:#2d3748;">' + fmtP(pd.high) + '</b>&nbsp; 최저 <b style="color:#2d3748;">' + fmtP(pd.low) + '</b></div>' +
+        '<div style="margin:4px 0;">' + miniLineChart(pd.prices, 380, 72) + '</div>' +
+        '<div style="font-size:0.82em;color:' + c + ';font-weight:600;">' + s + fmtD(pd.change) + ' (' + s + pd.changePct + '%)</div>' +
+      '</div>';
+    }
+
     var leftCol =
       '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        w52Col(d.w52) +
         periodCol('YTD (연초 이후)', d.ytd) +
         periodCol('MTD (월초 이후)', d.mtd) +
       '</div>';
