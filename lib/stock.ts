@@ -44,13 +44,12 @@ export const BOND_META: Record<string, { coupon: number; maturity: string; face?
 };
 
 /**
- * 최종호가수익률 테이블 (ktbinfo.or.kr 기준, 주기적 업데이트 필요)
- * [잔존만기(월), 연수익률] — 선형보간으로 중간값 계산
- * 2026-04-30 기준
+ * 폴백 국고채 수익률 테이블 (Yahoo Finance 조회 실패 시 사용)
+ * [잔존만기(월), 연수익률] — 2026-04-30 기준
  */
-const KTB_YIELD_CURVE: [number, number][] = [
+const KTB_YIELD_CURVE_FALLBACK: [number, number][] = [
   [3,   0.02562],  // 통안채(91일) 대용
-  [9,   0.02810],  // ~9개월 (실측: 국고01500-2612 평가수익률)
+  [9,   0.02810],  // ~9개월
   [12,  0.03020],  // 국고채권(1년)
   [24,  0.03459],  // 국고채권(2년)
   [36,  0.03568],  // 국고채권(3년)
@@ -58,14 +57,80 @@ const KTB_YIELD_CURVE: [number, number][] = [
   [120, 0.03888],  // 국고채권(10년)
 ];
 
-/** 잔존만기(개월)로 최종호가수익률 선형보간 */
-function interpGovBondYield(months: number): number {
-  if (months <= KTB_YIELD_CURVE[0][0]) return KTB_YIELD_CURVE[0][1];
-  const last = KTB_YIELD_CURVE[KTB_YIELD_CURVE.length - 1];
+// ── 국고채 실시간 수익률 캐시 ──────────────────────────────────────────────
+interface YieldCacheEntry {
+  curve: [number, number][];
+  fetchedAt: number;
+}
+let _ktbYieldCache: YieldCacheEntry | null = null;
+const KTB_YIELD_CACHE_TTL = 60 * 60 * 1000; // 1시간
+
+/**
+ * Yahoo Finance에서 한국 국채 벤치마크 수익률 실시간 조회
+ * 심볼: KR1YT=RR / KR2YT=RR / KR3YT=RR / KR5YT=RR / KR10YT=RR
+ */
+async function fetchKtbYieldCurve(): Promise<[number, number][]> {
+  const targets: [number, string][] = [
+    [12,  'KR1YT%3DRR'],
+    [24,  'KR2YT%3DRR'],
+    [36,  'KR3YT%3DRR'],
+    [60,  'KR5YT%3DRR'],
+    [120, 'KR10YT%3DRR'],
+  ];
+
+  const results = await Promise.allSettled(
+    targets.map(async ([months, sym]) => {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Accept'    : 'application/json',
+          'Referer'   : 'https://finance.yahoo.com/',
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const price = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (typeof price !== 'number' || price <= 0) throw new Error('invalid yield');
+      return [months, price / 100] as [number, number]; // % → 소수 변환
+    })
+  );
+
+  const curve: [number, number][] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') curve.push(r.value);
+  }
+  if (curve.length < 3) throw new Error(`KTB yield fetch insufficient: ${curve.length}/5`);
+  curve.sort((a, b) => a[0] - b[0]);
+  return curve;
+}
+
+/**
+ * 국고채 수익률 커브 반환 (1시간 캐시 → Yahoo Finance → 폴백 테이블 순)
+ */
+async function getKtbYieldCurve(): Promise<[number, number][]> {
+  const now = Date.now();
+  if (_ktbYieldCache && now - _ktbYieldCache.fetchedAt < KTB_YIELD_CACHE_TTL) {
+    return _ktbYieldCache.curve;
+  }
+  try {
+    const curve = await fetchKtbYieldCurve();
+    _ktbYieldCache = { curve, fetchedAt: now };
+    return curve;
+  } catch (_e) {
+    // Yahoo Finance 조회 실패 → 폴백 테이블 사용
+    return KTB_YIELD_CURVE_FALLBACK;
+  }
+}
+
+/** 수익률 커브에서 잔존만기(개월)에 해당하는 수익률 선형보간 */
+function interpYield(curve: [number, number][], months: number): number {
+  if (months <= curve[0][0]) return curve[0][1];
+  const last = curve[curve.length - 1];
   if (months >= last[0]) return last[1];
-  for (let i = 0; i < KTB_YIELD_CURVE.length - 1; i++) {
-    const [m0, y0] = KTB_YIELD_CURVE[i];
-    const [m1, y1] = KTB_YIELD_CURVE[i + 1];
+  for (let i = 0; i < curve.length - 1; i++) {
+    const [m0, y0] = curve[i];
+    const [m1, y1] = curve[i + 1];
     if (months >= m0 && months <= m1) {
       return y0 + (y1 - y0) * (months - m0) / (m1 - m0);
     }
@@ -111,20 +176,21 @@ function calcBondPrice(
 }
 
 /**
- * BOND_META에 등록된 국고채 ISIN의 시가평가 계산가 반환
+ * BOND_META에 등록된 국고채 ISIN의 시가평가 계산가 반환 (실시간 수익률 커브 사용)
  * (액면가 10,000원 기준)
  */
-function getKorBondCalcPrice(isin: string): number {
+async function getKorBondCalcPrice(isin: string): Promise<number> {
   const meta = BOND_META[isin.toUpperCase()];
   if (!meta) return 0;
 
   const maturityDate = new Date(meta.maturity + 'T00:00:00Z');
   const now = new Date();
   const monthsLeft = (maturityDate.getTime() - now.getTime()) / (30.4375 * 24 * 3600 * 1000);
-  if (monthsLeft <= 0) return 10000; // 만기 경과 시 액면가
+  if (monthsLeft <= 0) return meta.face ?? 10000; // 만기 경과 시 액면가
 
-  const yield_ = interpGovBondYield(monthsLeft);
-  return calcBondPrice(meta.coupon, maturityDate, 10000, yield_);
+  const curve  = await getKtbYieldCurve();
+  const yield_ = interpYield(curve, monthsLeft);
+  return calcBondPrice(meta.coupon, maturityDate, meta.face ?? 10000, yield_);
 }
 
 // ── KRX OpenAPI 채권 가격 조회 ────────────────────────────────────────────────
@@ -134,7 +200,7 @@ async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
   const authKey = process.env.KRX_AUTH_KEY;
 
   // KRX API 키 없으면 계산가로 폴백
-  if (!authKey) return getKorBondCalcPrice(isinUpper);
+  if (!authKey) return await getKorBondCalcPrice(isinUpper);
 
   const apiId = krxBondApiId(isinUpper);
   const pad2  = (n: number) => String(n).padStart(2, '0');
@@ -167,7 +233,7 @@ async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
       );
       if (!bond) {
         // KRX 목록에 없음 → 시가평가 계산가로 폴백
-        const calcPrice = getKorBondCalcPrice(isinUpper);
+        const calcPrice = await getKorBondCalcPrice(isinUpper);
         return calcPrice > 0 ? calcPrice : 0;
       }
 
@@ -180,7 +246,7 @@ async function getKrxBondPrice(isin: string, date?: string): Promise<number> {
 
   // 7일 모두 거래 없음 (공휴일 연속) → 계산가 폴백
   if (!foundInMarket) {
-    const calcPrice = getKorBondCalcPrice(isinUpper);
+    const calcPrice = await getKorBondCalcPrice(isinUpper);
     if (calcPrice > 0) return calcPrice;
   }
   return 0;
