@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSheetValues, batchUpdateCells } from '@/lib/sheets';
+import { getSheets, getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
 
 const REBALANCING_SHEET_NAME = 'Rebalancing';
@@ -7,7 +7,9 @@ const REBALANCING_SHEET_NAME = 'Rebalancing';
 /**
  * POST /api/rebalancing/save
  * Body: { owner, items: [{ ticker, targetPct }] }
- * Updates 구성비중(%) column in Rebalancing sheet for matching tickers
+ *
+ * Rebalancing 시트에서 각 ticker를 직접 찾아
+ * 해당 행의 구성비중(%) 셀만 개별 업데이트
  */
 export async function POST(req: NextRequest) {
   try {
@@ -24,42 +26,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '시트 데이터 없음' }, { status: 404 });
     }
 
-    const headers = data[0].map((h: any) => String(h ?? '').trim());
+    const headers   = data[0].map((h: any) => String(h ?? '').trim());
     const tickerIdx = headers.findIndex((h: string) => h === 'Ticker');
     const wgtIdx    = headers.findIndex((h: string) => h === '구성비중(%)');
 
     if (tickerIdx === -1) return NextResponse.json({ error: 'Ticker 컬럼 없음' }, { status: 400 });
-    if (wgtIdx === -1)    return NextResponse.json({ error: '구성비중(%) 컬럼 없음' }, { status: 400 });
+    if (wgtIdx    === -1) return NextResponse.json({ error: '구성비중(%) 컬럼 없음' }, { status: 400 });
 
-    // Build a map: ticker → targetPct
-    const updateMap: Record<string, number> = {};
-    for (const it of items) {
-      if (it.ticker) updateMap[String(it.ticker).trim().toUpperCase()] = Number(it.targetPct) ?? 0;
+    const colLetter = String.fromCharCode(65 + wgtIdx); // 구성비중(%) 컬럼 문자 (A=65)
+    const sheets    = await getSheets();
+    const rows      = data.slice(1); // 헤더 제외
+
+    let updatedCount = 0;
+
+    for (const item of items) {
+      const inputTicker = String(item.ticker ?? '').trim().toUpperCase();
+      const inputBase   = inputTicker.replace(/\.(KS|KQ)$/, '');
+      if (!inputTicker) continue;
+
+      // Rebalancing 시트에서 해당 ticker 행 찾기
+      const rowIdx = rows.findIndex((row: any[]) => {
+        const sheetTicker = String(row[tickerIdx] ?? '').trim().toUpperCase();
+        const sheetBase   = sheetTicker.replace(/\.(KS|KQ)$/, '');
+        return sheetTicker === inputTicker || sheetBase === inputBase;
+      });
+
+      if (rowIdx === -1) continue; // 시트에 없는 종목은 건너뜀
+
+      const sheetRow = rowIdx + 2; // 1-indexed: 헤더=1, 데이터 시작=2
+      const range    = `${REBALANCING_SHEET_NAME}!${colLetter}${sheetRow}`;
+      const newPct   = Number(item.targetPct) ?? 0;
+
+      // 해당 셀 개별 업데이트
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [[newPct]] },
+      });
+
+      updatedCount++;
     }
 
-    // Collect updates: match rows by ticker (rows are 0-indexed; row 0 = header, so sheet row = i+1+1 = i+2)
-    const updates: { range: string; value: any }[] = [];
-    const rows = data.slice(1);
-    rows.forEach((row: any[], i: number) => {
-      const ticker = String(row[tickerIdx] ?? '').trim().toUpperCase();
-      if (!ticker) return;
-      // Try exact match, then .KS/.KQ stripped
-      const base = ticker.replace(/\.(KS|KQ)$/, '');
-      const newPct = updateMap[ticker] ?? updateMap[base] ?? null;
-      if (newPct === null) return;
-
-      const sheetRow = i + 2; // 1-indexed: header is row 1, first data is row 2
-      const colLetter = String.fromCharCode(65 + wgtIdx); // A=65
-      updates.push({ range: `${REBALANCING_SHEET_NAME}!${colLetter}${sheetRow}`, value: newPct });
-    });
-
-    if (updates.length === 0) {
+    if (updatedCount === 0) {
       return NextResponse.json({ message: '업데이트할 항목 없음', updated: 0 });
     }
 
-    await batchUpdateCells(spreadsheetId, updates);
-
-    return NextResponse.json({ message: '저장 완료', updated: updates.length });
+    return NextResponse.json({ message: '저장 완료', updated: updatedCount });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
