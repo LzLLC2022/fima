@@ -3693,15 +3693,15 @@
       var tgtPct   = (rbTargetState[item.ticker] !== undefined) ? rbTargetState[item.ticker] : item.targetPct;
       var tgtKRW   = rbAmountKRW * tgtPct / 100;
 
-      // 배분수량: 목표금액 / (현재가 × 환율), 소수점 버림
-      var allocQty = (livePrice > 0 && liveRate > 0)
-        ? Math.floor(tgtKRW / (livePrice * liveRate))
-        : 0;
-
       // 현재가: 포트폴리오 > rebalancing API 순으로 fallback
       var livePrice = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
       var liveCur   = pos.currency || 'KRW';
       var liveRate  = pos.rate > 0 ? pos.rate : 1;
+
+      // 배분수량: 목표금액 / (현재가 × 환율), 소수점 버림
+      var allocQty = (livePrice > 0 && liveRate > 0)
+        ? Math.floor(tgtKRW / (livePrice * liveRate))
+        : 0;
       var priceStr  = livePrice > 0
         ? fmtN(livePrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur
         : '<span style="color:#a0aec0;">-</span>';
