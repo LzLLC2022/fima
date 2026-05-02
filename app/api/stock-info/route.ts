@@ -140,8 +140,8 @@ export async function POST(req: NextRequest) {
       fwdYield   = price > 0 ? Math.round(fwdAmount / price * 10000) / 100 : 0;
     }
 
-    // 배당 히스토리 (최근 36건)
-    const history = divList.slice(0, 36).map(d => ({
+    // 배당 히스토리 (1년 이내)
+    const history = ttmDivs.map(d => ({
       exDate:  fmtDate(d.date),
       payDate: '-',
       amount:  Math.round(d.amount * 100000) / 100000,
