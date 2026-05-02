@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
+import { getStockPrice } from '@/lib/stock';
 
 const REBALANCING_SHEET_NAME = 'Rebalancing';
 
 /**
  * POST /api/rebalancing
  * Body: { owner, region? }
- * Returns: { items: Array<{ region, ticker, name, divCycle, divCount, targetPct }> }
+ * Returns: { items: Array<{ region, ticker, name, divCycle, divCount, targetPct, currentPrice }> }
  *
  * Rebalancing 시트 구조 (헤더 행):
  *   Region | Ticker | Name | 연배당주기 | 연배당횟수 | 구성비중(%)
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     const cntIdx    = ci('연배당횟수');
     const wgtIdx    = ci('구성비중(%)');
 
-    const items = rows
+    const filtered = rows
       .filter((r: any[]) => {
         const tk = tickerIdx !== -1 ? String(r[tickerIdx] ?? '').trim() : '';
         if (!tk) return false;
@@ -55,14 +56,24 @@ export async function POST(req: NextRequest) {
         }
 
         return {
-          region:   regionIdx !== -1 ? String(r[regionIdx] ?? '').trim() : '',
-          ticker:   tickerIdx !== -1 ? String(r[tickerIdx] ?? '').trim() : '',
-          name:     nameIdx   !== -1 ? String(r[nameIdx]   ?? '').trim() : '',
-          divCycle: freqIdx   !== -1 ? String(r[freqIdx]   ?? '').trim() : '',
-          divCount: cntIdx    !== -1 ? (Number(r[cntIdx]   ?? 0) || 0)  : 0,
-          targetPct: Math.round(numW * 100) / 100,  // 소수 2자리
+          region:    regionIdx !== -1 ? String(r[regionIdx] ?? '').trim() : '',
+          ticker:    tickerIdx !== -1 ? String(r[tickerIdx] ?? '').trim() : '',
+          name:      nameIdx   !== -1 ? String(r[nameIdx]   ?? '').trim() : '',
+          divCycle:  freqIdx   !== -1 ? String(r[freqIdx]   ?? '').trim() : '',
+          divCount:  cntIdx    !== -1 ? (Number(r[cntIdx]   ?? 0) || 0)  : 0,
+          targetPct: Math.round(numW * 100) / 100,
         };
       });
+
+    // 현재가 병렬 조회
+    const prices = await Promise.all(
+      filtered.map((it: any) => getStockPrice(it.ticker).catch(() => 0))
+    );
+
+    const items = filtered.map((it: any, i: number) => ({
+      ...it,
+      currentPrice: prices[i] || 0,
+    }));
 
     return NextResponse.json({ items });
   } catch (e: any) {
