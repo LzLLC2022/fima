@@ -412,9 +412,9 @@ export async function POST(req: NextRequest) {
       const mpsp = pm[prevMonth] || 0;
 
       // 현지 통화 기준 값
-      const marketValueFX = cp * p.qty;                          // 평가금액 (현지)
-      const avgCostFX     = p.qty > 0 ? p.buyCostFX / p.qty : 0; // 평균 매입단가 (현지)
-      const pnlPct        = avgCostFX > 0 ? (cp - avgCostFX) / avgCostFX * 100 : null; // 투자수익률
+      const marketValueFX = cp * p.qty;           // 평가금액 (현지통화, 현재가 × 보유수량)
+      const buyCostFX     = p.buyCostFX;           // 매입금액 (현지통화, 누적 매수금액)
+      const pnlPct        = buyCostFX > 0 ? (marketValueFX - buyCostFX) / buyCostFX * 100 : null; // 투자수익률
 
       return {
         ticker: t, name: p.name,
@@ -422,7 +422,7 @@ export async function POST(req: NextRequest) {
         marketValueKRW: Math.round(mktVal),
         marketValueFX:  marketValueFX,
         currentPrice:   cp,
-        avgCostFX:      avgCostFX,
+        buyCostFX:      buyCostFX,
         pnlPct:         pnlPct,
         annualReturnPct:  ysp  > 0 && cp > 0 ? (cp - ysp)  / ysp  * 100 : null,
         monthlyReturnPct: mpsp > 0 && cp > 0 ? (cp - mpsp) / mpsp * 100 : null,
