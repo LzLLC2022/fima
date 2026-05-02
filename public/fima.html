@@ -1121,7 +1121,9 @@
               <thead><tr>
                 <th>Ticker</th><th>Name</th>
                 <th style="text-align:right;">현재가</th>
-                <th style="text-align:right;">평가금액 (KRW)</th>
+                <th style="text-align:right;">매입금액</th>
+                <th style="text-align:right;">평가금액</th>
+                <th style="text-align:right;">투자수익률</th>
                 <th style="text-align:right;">연간 수익률 (YTD)</th>
                 <th style="text-align:right;">월간 수익률 (MTD)</th>
               </tr></thead>
@@ -3097,23 +3099,49 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
         tbody.innerHTML = data.stocks.map(function(st) {
+          var cur   = st.currency || 'KRW';
+          var isKRW = (cur === 'KRW');
+          var fmtFX = function(v) {
+            return isKRW
+              ? Math.round(v).toLocaleString('ko-KR')
+              : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          };
+          var fmtPrice = function(v) {
+            return isKRW
+              ? Math.round(v).toLocaleString('ko-KR')
+              : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+          };
+
           var annStr = st.annualReturnPct !== null
             ? '<span style="color:' + pnlCol(st.annualReturnPct) + '">' + fmtPct(st.annualReturnPct) + '</span>'
             : '<span style="color:#a0aec0">-</span>';
           var monStr = st.monthlyReturnPct !== null
             ? '<span style="color:' + pnlCol(st.monthlyReturnPct) + '">' + fmtPct(st.monthlyReturnPct) + '</span>'
             : '<span style="color:#a0aec0">-</span>';
-          var cpStr  = st.currentPrice > 0
-            ? Number(st.currentPrice).toLocaleString('ko-KR', { maximumFractionDigits: 4 }) + '\u00a0' + (st.currency || '')
+          var pnlStr = (st.pnlPct !== null && st.pnlPct !== undefined)
+            ? '<span style="color:' + pnlCol(st.pnlPct) + ';font-weight:700;">' + fmtPct(st.pnlPct) + '</span>'
+            : '<span style="color:#a0aec0">-</span>';
+
+          var cpStr = st.currentPrice > 0
+            ? fmtPrice(st.currentPrice) + ' ' + cur
             : '-';
+          var acStr = (st.avgCostFX > 0)
+            ? fmtPrice(st.avgCostFX) + ' ' + cur
+            : '-';
+          var mvStr = (st.marketValueFX > 0)
+            ? fmtFX(st.marketValueFX) + ' ' + cur
+            : (st.marketValueKRW > 0 ? fmtK(st.marketValueKRW) + ' KRW' : '-');
+
           return '<tr>'
             + '<td style="font-weight:600;">' + st.ticker + '</td>'
             + '<td>' + (st.name || '-') + '</td>'
             + '<td style="text-align:right;">' + cpStr + '</td>'
-            + '<td style="text-align:right;">' + fmtK(st.marketValueKRW) + '</td>'
+            + '<td style="text-align:right;">' + acStr + '</td>'
+            + '<td style="text-align:right;">' + mvStr + '</td>'
+            + '<td style="text-align:right;">' + pnlStr + '</td>'
             + '<td style="text-align:right;">' + annStr + '</td>'
             + '<td style="text-align:right;">' + monStr + '</td>'
             + '</tr>';
