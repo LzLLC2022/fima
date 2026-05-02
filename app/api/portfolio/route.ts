@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice, getExchangeRate, getNaverBondInfo, BOND_META } from '@/lib/stock';
+import { getStockPrice, getExchangeRate, getNaverBondInfo, BOND_META, getAnnualDividendPerShare } from '@/lib/stock';
 
 function isKoreanBondISIN(ticker: string): boolean {
   return /^KR[A-Z0-9]{10}$/i.test(ticker.trim());
@@ -213,15 +213,22 @@ export async function POST(req: NextRequest) {
       ? `${endDate.getFullYear()}-${pad2(endDate.getMonth() + 1)}-${pad2(endDate.getDate())}`
       : undefined;
 
-    // ── 현재가 / 역사적 종가 병렬 조회 ──
+    // ── 현재가 / 역사적 종가 + 연배당 병렬 조회 ──
     const tickers      = Object.keys(posMap);
-    const priceResults = await Promise.allSettled(
-      tickers.map(tk => getStockPrice(tk, endDateStr).catch(() => 0))
-    );
+    const [priceResults, annDivResults] = await Promise.all([
+      Promise.allSettled(tickers.map(tk => getStockPrice(tk, endDateStr).catch(() => 0))),
+      // 기준일 지정 시에는 연배당 조회 불필요 (현재 포트폴리오만 의미 있음)
+      endDateStr
+        ? Promise.resolve(tickers.map(() => ({ status: 'fulfilled' as const, value: 0 })))
+        : Promise.allSettled(tickers.map(tk => getAnnualDividendPerShare(tk).catch(() => 0))),
+    ]);
     const priceMap: Record<string, number> = {};
+    const annDivMap: Record<string, number> = {};
     tickers.forEach((tk, i) => {
       const r = priceResults[i];
       priceMap[tk] = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
+      const d = annDivResults[i];
+      annDivMap[tk] = d.status === 'fulfilled' ? (Number(d.value) || 0) : 0;
     });
 
     // ── 채권 ISIN 이름 조회 (Naver 채권 API) ──
@@ -300,6 +307,9 @@ export async function POST(req: NextRequest) {
         marketValueFX: isKRW ? marketValueKRW : marketValueFX,
         pnlFX        : isKRW ? pnl            : pnlFX,
         divFX: p.divFX, divKRW: p.divKRW,
+        // 예상 연배당 (주당 연배당 × 보유수량)
+        annualDivFX : (annDivMap[p.ticker] || 0) * netQty,
+        annualDivKRW: (annDivMap[p.ticker] || 0) * netQty * (isKRW ? 1 : resolveRate(p.region, p.lastRate || 1)),
         // 만기보유 평가 (BOND_META 등록 채권만, null이면 해당 없음)
         maturityEval : isKoreanBondISIN(p.ticker)
           ? calcMaturityEval(p.ticker, netQty, purAmtFXForBond)
