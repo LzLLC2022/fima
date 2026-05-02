@@ -1308,7 +1308,7 @@
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재비중</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#553c9a;">목표비중</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">배분금액</th>
-                <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;">예상 연배당</th>
+                <th id="rbDivYieldTh" style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;cursor:pointer;user-select:none;" onclick="toggleRbDivSort()" title="배당율 기준 정렬">예상 연배당 <span id="rbDivSortIcon"></span></th>
                 <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#2b6cb0;">매수/매도</th>
               </tr>
             </thead>
@@ -3773,6 +3773,7 @@
   var rbExRate        = 1;    // KRW/USD 환율
   var rbTargetState   = {};   // { ticker: targetPct } 사용자 수정값 보존
   var rbLoaded        = false;
+  var rbDivSortDir    = 0;    // 0=원본순, 1=배당율↓(내림), -1=배당율↑(오름)
 
   var rbPrevRegion = ''; // Region 변경 감지용
 
@@ -3792,6 +3793,7 @@
       rbSheetItems    = [];
       rbTargetState   = {};
       rbLoaded        = false;
+      rbDivSortDir    = 0;
       var inp = document.getElementById('rbAmountInput');
       if (inp) inp.value = '';
       var lbl = document.getElementById('rbAmountLabel');
@@ -3973,7 +3975,36 @@
       return s + Math.max(0, rbIsUSD ? (p.marketValueFX || p.marketValueKRW / rbExRate) : p.marketValueKRW);
     }, 0);
 
-    var rows = items.map(function(item) {
+    // ── 배당율 기준 정렬 아이콘 갱신 ──
+    var sortIconEl = document.getElementById('rbDivSortIcon');
+    if (sortIconEl) sortIconEl.textContent = rbDivSortDir === 1 ? '▼' : rbDivSortDir === -1 ? '▲' : '';
+
+    // ── 배당율 미리 계산 후 정렬 ──
+    var itemsWithYield = items.map(function(it) {
+      var pos = portMap[it.ticker] || { currentPrice:0, quantity:0, divKRW:0, divFX:0, rate:rbExRate||1 };
+      var lp = pos.currentPrice > 0 ? pos.currentPrice : (it.currentPrice || 0);
+      var dpa = it.divPerShare > 0 ? it.divPerShare
+              : (pos.quantity > 0 ? (rbIsUSD ? (pos.divFX||0) : (pos.divKRW||0)) / pos.quantity : 0);
+      var dy = (lp > 0 && dpa > 0) ? dpa / lp * 100 : 0;
+      return Object.assign({}, it, { _divYield: dy });
+    });
+    if (rbDivSortDir !== 0) {
+      itemsWithYield.sort(function(a, b) {
+        // CASH 항목은 항상 맨 뒤
+        if (a.ticker === 'CASH') return 1;
+        if (b.ticker === 'CASH') return -1;
+        // 배당율 0(미집계)은 정렬 방향 무관 맨 뒤
+        if (a._divYield === 0 && b._divYield > 0) return 1;
+        if (b._divYield === 0 && a._divYield > 0) return -1;
+        return rbDivSortDir === 1
+          ? b._divYield - a._divYield   // 내림차순 (높은 배당율 먼저)
+          : a._divYield - b._divYield;  // 오름차순
+      });
+    } else {
+      itemsWithYield = items.map(function(it) { return Object.assign({}, it, { _divYield: 0 }); });
+    }
+
+    var rows = itemsWithYield.map(function(item) {
       var pos = portMap[item.ticker] || { currentPrice: 0, currency: rbIsUSD ? 'USD' : 'KRW',
         marketValueKRW: 0, marketValueFX: 0, quantity: 0, rate: rbExRate || 1, avgPrice: 0, divKRW: 0, divFX: 0 };
 
@@ -4126,6 +4157,12 @@
     updateRbWeightBadge(totalTgtPct);
   }
 
+  function toggleRbDivSort() {
+    // 0 → 1(내림차순, 높은 배당율↓) → -1(오름차순, 낮은 배당율↑) → 0(원본) 순환
+    rbDivSortDir = rbDivSortDir === 0 ? 1 : rbDivSortDir === 1 ? -1 : 0;
+    renderRebalanceTable();
+  }
+
   function onRbTargetInput() {
     recalcRebalance();
     var btn = document.getElementById('rbSaveBtn');
@@ -4177,10 +4214,15 @@
     var trs    = document.querySelectorAll('#rbTbody tr');
     var totalTgtPct = 0;
 
+    // ticker → item 맵 (정렬 후 index 불일치 방지)
+    var itemMap = {};
+    rbSheetItems.forEach(function(it) { itemMap[it.ticker] = it; });
+
     inputs.forEach(function(inp, idx) {
       totalTgtPct += parseFloat(inp.value) || 0;
-      var item = rbSheetItems[idx];
-      var tr   = trs[idx];
+      var ticker = inp.dataset.ticker;
+      var item   = ticker ? itemMap[ticker] : rbSheetItems[idx];
+      var tr     = trs[idx];
       if (!item || !tr) return;
 
       var pos       = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, marketValueFX: 0, rate: 1, quantity: 0, divKRW: 0, divFX: 0 };
@@ -4263,11 +4305,11 @@
       var lTds = lastTr.querySelectorAll('td');
       if (lTds[4]) lTds[4].textContent = rbIsUSD ? fmtU(rbAmountBase, 2) + ' USD' : fmtK(rbAmountKRW) + ' KRW';
 
-      // 현재 입력값으로 ticker→targetPct 맵 구성 (rbTargetState 대신 live input 사용)
+      // 현재 입력값으로 ticker→targetPct 맵 구성 (data-ticker 기반, 정렬 순서 무관)
       var liveTargetMap = {};
-      inputs.forEach(function(inp2, idx2) {
-        var itm2 = rbSheetItems[idx2];
-        if (itm2) liveTargetMap[itm2.ticker] = parseFloat(inp2.value) || 0;
+      inputs.forEach(function(inp2) {
+        var tk2 = inp2.dataset.ticker;
+        if (tk2) liveTargetMap[tk2] = parseFloat(inp2.value) || 0;
       });
 
       var totalEstDiv2 = rbSheetItems.reduce(function(s, it) {
