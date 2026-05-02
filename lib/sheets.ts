@@ -86,6 +86,27 @@ export async function updateRow(spreadsheetId: string, sheetName: string, sheetR
 }
 
 /**
+ * 여러 셀을 한 번에 업데이트 (batchUpdate)
+ * @param updates - [{ range: 'SheetName!A2', value: any }, ...]
+ */
+export async function batchUpdateCells(
+  spreadsheetId: string,
+  updates: { range: string; value: any }[],
+): Promise<void> {
+  const sheets = await getSheets();
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: 'USER_ENTERED',
+      data: updates.map(u => ({
+        range: u.range,
+        values: [[u.value]],
+      })),
+    },
+  });
+}
+
+/**
  * 특정 행 삭제 (sheetRowNumber: 1-indexed 시트 행 번호)
  */
 export async function deleteRow(spreadsheetId: string, sheetName: string, sheetRowNumber: number): Promise<void> {
