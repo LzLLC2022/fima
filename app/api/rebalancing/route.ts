@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice, getAnnualDividendPerShare } from '@/lib/stock';
+import { getStockPrice, getAnnualDividendPerShare, get52WeekHighLow } from '@/lib/stock';
 
 const REBALANCING_SHEET_NAME = 'Rebalancing';
 
@@ -64,16 +64,19 @@ export async function POST(req: NextRequest) {
         };
       });
 
-    // 현재가 + 주당연배당금 병렬 조회
-    const [prices, divs] = await Promise.all([
+    // 현재가 + 주당연배당금 + 52주고저가 병렬 조회
+    const [prices, divs, hls] = await Promise.all([
       Promise.all(filtered.map((it: any) => getStockPrice(it.ticker).catch(() => 0))),
       Promise.all(filtered.map((it: any) => getAnnualDividendPerShare(it.ticker).catch(() => 0))),
+      Promise.all(filtered.map((it: any) => get52WeekHighLow(it.ticker).catch(() => ({ high: 0, low: 0 })))),
     ]);
 
     const items = filtered.map((it: any, i: number) => ({
       ...it,
       currentPrice: prices[i] || 0,
-      divPerShare:  divs[i]   || 0,   // 주당 연간 배당금 (해외만, 한국은 0)
+      divPerShare:  divs[i]   || 0,
+      weekHigh52:   hls[i].high || 0,
+      weekLow52:    hls[i].low  || 0,
     }));
 
     return NextResponse.json({ items });
