@@ -4068,9 +4068,16 @@
       var lTds = lastTr.querySelectorAll('td');
       if (lTds[4]) lTds[4].textContent = rbIsUSD ? fmtU(rbAmountBase, 2) + ' USD' : fmtK(rbAmountKRW) + ' KRW';
 
+      // 현재 입력값으로 ticker→targetPct 맵 구성 (rbTargetState 대신 live input 사용)
+      var liveTargetMap = {};
+      inputs.forEach(function(inp2, idx2) {
+        var itm2 = rbSheetItems[idx2];
+        if (itm2) liveTargetMap[itm2.ticker] = parseFloat(inp2.value) || 0;
+      });
+
       var totalEstDiv2 = rbSheetItems.reduce(function(s, it) {
         var p  = portMap[it.ticker] || { quantity: 0, divKRW: 0, divFX: 0, currentPrice: 0, rate: 1 };
-        var tp = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
+        var tp = liveTargetMap[it.ticker] !== undefined ? liveTargetMap[it.ticker] : it.targetPct;
         var lp = p.currentPrice > 0 ? p.currentPrice : (it.currentPrice || 0);
         var lr = p.rate > 0 ? p.rate : 1;
         var aq, dps;
@@ -4082,7 +4089,7 @@
         } else {
           var tK = rbAmountKRW * tp / 100;
           aq  = (lp > 0 && lr > 0) ? Math.floor(tK / (lp * lr)) : 0;
-          dps = (p.quantity > 0 && p.divKRW > 0) ? p.divKRW / p.quantity : 0;
+          dps = (p.quantity > 0 && p.divKRW > 0) ? p.divKRW / p.quantity : (it.divPerShare || 0);
           return s + (dps > 0 && aq > 0 ? Math.round(dps * aq) : 0);
         }
       }, 0);
