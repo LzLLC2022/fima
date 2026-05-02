@@ -1205,7 +1205,7 @@
 
       <!-- 종목 상세 팝업 (position:fixed, JS로 위치 조정) -->
       <div id="rbStockBackdrop" style="display:none;position:fixed;inset:0;z-index:9998;" onclick="closeStockDetail()"></div>
-      <div id="rbStockPopup" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid #e2e8f0;width:640px;max-width:96vw;max-height:82vh;overflow-y:auto;">
+      <div id="rbStockPopup" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid #e2e8f0;width:660px;max-width:96vw;max-height:80vh;overflow-y:scroll;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:#f7fafc;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:1;border-radius:10px 10px 0 0;">
           <span id="rbPopupTitle" style="font-weight:700;font-size:0.92rem;color:#2d3748;">📊 종목 상세</span>
           <button onclick="closeStockDetail()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#a0aec0;line-height:1;">✕</button>
@@ -4163,86 +4163,97 @@
     if (!body) return;
     title.textContent = '📊 ' + d.origTicker + (d.name && d.name !== d.origTicker ? '  (' + d.name + ')' : '');
 
-    var cur = d.currency || 'USD';
+    var cur   = d.currency || 'USD';
     var isKRW = (cur === 'KRW');
-    var fmtP = function(v) { return isKRW ? Math.round(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:4}); };
-    var fmtD = function(v) { return isKRW ? Math.round(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:4}); };
-    var fmtV = function(v) { return Number(v).toLocaleString(); };
+    var fmtP  = function(v) { return isKRW ? Math.round(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}); };
+    var fmtD  = function(v) { return isKRW ? Math.round(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:4}); };
+    var fmtA  = function(v) { return isKRW ? Math.round(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', {minimumFractionDigits:4, maximumFractionDigits:4}); };
+    var fmtV  = function(v) { return Number(v).toLocaleString(); };
 
     var changeColor = d.change >= 0 ? '#276749' : '#c53030';
     var changeSign  = d.change >= 0 ? '+' : '';
 
-    // ── 기본 정보 행 ──
+    // ── 기본 정보 ──
     var basicHtml =
-      '<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:baseline;padding-bottom:12px;border-bottom:1px solid #edf2f7;margin-bottom:14px;">' +
-        '<span style="font-size:1.35rem;font-weight:700;color:#2d3748;">' + fmtP(d.price) + ' <span style="font-size:0.7em;font-weight:400;">' + cur + '</span></span>' +
-        '<span style="color:' + changeColor + ';font-weight:600;">' + changeSign + fmtD(d.change) + '  (' + changeSign + d.changePct + '%)</span>' +
-        '<span style="color:#718096;font-size:0.85em;">거래량 ' + fmtV(d.volume) + '</span>' +
-        '<span style="color:#718096;font-size:0.85em;">52주 최고 <b style="color:#2d3748;">' + fmtP(d.high52) + '</b></span>' +
-        '<span style="color:#718096;font-size:0.85em;">52주 최저 <b style="color:#2d3748;">' + fmtP(d.low52) + '</b></span>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;padding-bottom:10px;border-bottom:1px solid #edf2f7;margin-bottom:12px;">' +
+        '<span style="font-size:1.3rem;font-weight:700;color:#2d3748;">' + fmtP(d.price) + ' <span style="font-size:0.68em;font-weight:400;">' + cur + '</span></span>' +
+        '<span style="color:' + changeColor + ';font-weight:600;">' + changeSign + fmtD(d.change) + ' (' + changeSign + d.changePct + '%)</span>' +
+        '<span style="color:#718096;font-size:0.83em;">거래량 ' + fmtV(d.volume) + '</span>' +
+        '<span style="color:#718096;font-size:0.83em;">52주 최고 <b style="color:#2d3748;">' + fmtP(d.high52) + '</b></span>' +
+        '<span style="color:#718096;font-size:0.83em;">52주 최저 <b style="color:#2d3748;">' + fmtP(d.low52) + '</b></span>' +
       '</div>';
 
-    // ── YTD / MTD 컬럼 ──
+    // ── YTD / MTD ──
     function periodCol(label, pd) {
       var c = pd.changePct >= 0 ? '#276749' : '#c53030';
       var s = pd.changePct >= 0 ? '+' : '';
-      return '<div style="flex:1;min-width:200px;background:#f7fafc;border-radius:8px;padding:10px 14px;">' +
-        '<div style="font-weight:700;color:#2d3748;font-size:0.9em;margin-bottom:6px;">' + label + '</div>' +
-        '<div style="font-size:0.82em;color:#718096;margin-bottom:2px;">최고 <b style="color:#2d3748;">' + fmtP(pd.high) + '</b>  최저 <b style="color:#2d3748;">' + fmtP(pd.low) + '</b></div>' +
-        '<div style="margin:6px 0;">' + miniLineChart(pd.prices, 260, 72) + '</div>' +
-        '<div style="font-size:0.84em;color:' + c + ';font-weight:600;">' + s + fmtD(pd.change) + ' (' + s + pd.changePct + '%)</div>' +
+      return '<div style="background:#f7fafc;border-radius:7px;padding:9px 12px;">' +
+        '<div style="font-weight:700;color:#2d3748;font-size:0.85em;margin-bottom:4px;">' + label + '</div>' +
+        '<div style="font-size:0.8em;color:#718096;margin-bottom:3px;">최고 <b style="color:#2d3748;">' + fmtP(pd.high) + '</b>&nbsp; 최저 <b style="color:#2d3748;">' + fmtP(pd.low) + '</b></div>' +
+        '<div style="margin:4px 0;">' + miniLineChart(pd.prices, 220, 64) + '</div>' +
+        '<div style="font-size:0.82em;color:' + c + ';font-weight:600;">' + s + fmtD(pd.change) + ' (' + s + pd.changePct + '%)</div>' +
       '</div>';
     }
 
-    var periodHtml =
-      '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">' +
+    var leftCol =
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
         periodCol('YTD (연초 이후)', d.ytd) +
         periodCol('MTD (월초 이후)', d.mtd) +
       '</div>';
 
     // ── 배당 영역 ──
-    var divSec = '';
+    var rightCol = '<div style="color:#a0aec0;font-size:0.84em;padding:8px 0;">배당 데이터 없음</div>';
     if (d.dividend && (d.dividend.fwdAmount > 0 || d.dividend.ttmAmount > 0 || d.dividend.history.length > 0)) {
       var dv = d.dividend;
-      var fmtAmt = function(v) { return isKRW ? Math.round(v).toLocaleString('ko-KR') : Number(v).toLocaleString('en-US', {minimumFractionDigits:4,maximumFractionDigits:4}); };
 
-      var divSummary = '<div style="display:flex;gap:24px;flex-wrap:wrap;background:#f0fff4;border-radius:8px;padding:10px 14px;margin-bottom:12px;">' +
-        (dv.fwdAmount > 0
-          ? '<div><div style="font-size:0.78em;color:#718096;margin-bottom:2px;">FWD 연간 배당금</div><div style="font-weight:700;color:#276749;">' + fmtAmt(dv.fwdAmount) + ' ' + cur + '/주</div><div style="font-size:0.82em;color:#718096;">' + dv.fwdYield.toFixed(2) + '%</div></div>'
-          : '') +
-        (dv.ttmAmount > 0
-          ? '<div><div style="font-size:0.78em;color:#718096;margin-bottom:2px;">TTM 연간 배당금</div><div style="font-weight:700;color:#2b6cb0;">' + fmtAmt(dv.ttmAmount) + ' ' + cur + '/주</div><div style="font-size:0.82em;color:#718096;">' + dv.ttmYield.toFixed(2) + '%</div></div>'
-          : '') +
-      '</div>';
+      var divSummary =
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;background:#f0fff4;border-radius:7px;padding:8px 12px;margin-bottom:10px;">' +
+          (dv.fwdAmount > 0
+            ? '<div><div style="font-size:0.75em;color:#718096;margin-bottom:1px;">FWD 연간배당</div>' +
+              '<div style="font-weight:700;color:#276749;font-size:0.9em;">' + fmtA(dv.fwdAmount) + ' ' + cur + '/주</div>' +
+              '<div style="font-size:0.78em;color:#718096;">' + dv.fwdYield.toFixed(2) + '%</div></div>'
+            : '') +
+          (dv.ttmAmount > 0
+            ? '<div><div style="font-size:0.75em;color:#718096;margin-bottom:1px;">TTM 연간배당</div>' +
+              '<div style="font-weight:700;color:#2b6cb0;font-size:0.9em;">' + fmtA(dv.ttmAmount) + ' ' + cur + '/주</div>' +
+              '<div style="font-size:0.78em;color:#718096;">' + dv.ttmYield.toFixed(2) + '%</div></div>'
+            : '') +
+        '</div>';
 
       var histRows = dv.history.map(function(h) {
         return '<tr style="border-bottom:1px solid #f0f4f8;">' +
-          '<td style="padding:5px 10px;color:#4a5568;">' + h.exDate + '</td>' +
-          '<td style="padding:5px 10px;color:#718096;">' + h.payDate + '</td>' +
-          '<td style="padding:5px 10px;text-align:right;font-weight:600;color:#2d3748;">' + fmtAmt(h.amount) + ' ' + cur + '</td>' +
+          '<td style="padding:4px 8px;color:#4a5568;white-space:nowrap;">' + h.exDate + '</td>' +
+          '<td style="padding:4px 8px;text-align:right;font-weight:600;color:#2d3748;">' + fmtA(h.amount) + ' ' + cur + '</td>' +
         '</tr>';
       }).join('');
 
       var histTable = dv.history.length > 0
-        ? '<div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;">' +
-            '<table style="width:100%;border-collapse:collapse;font-size:0.84em;">' +
+        ? '<div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">' +
+            '<table style="width:100%;border-collapse:collapse;font-size:0.82em;">' +
               '<thead><tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">' +
-                '<th style="padding:6px 10px;text-align:left;color:#4a5568;">배당락일</th>' +
-                '<th style="padding:6px 10px;text-align:left;color:#4a5568;">배당일</th>' +
-                '<th style="padding:6px 10px;text-align:right;color:#4a5568;">배당금액</th>' +
+                '<th style="padding:5px 8px;text-align:left;color:#4a5568;font-weight:600;">배당락일</th>' +
+                '<th style="padding:5px 8px;text-align:right;color:#4a5568;font-weight:600;">배당금액</th>' +
               '</tr></thead>' +
               '<tbody>' + histRows + '</tbody>' +
             '</table>' +
           '</div>'
-        : '<div style="color:#a0aec0;font-size:0.85em;">배당 데이터 없음</div>';
+        : '';
 
-      divSec = '<div style="margin-top:4px;">' +
-        '<div style="font-weight:700;color:#2d3748;font-size:0.9em;margin-bottom:8px;">💰 배당 정보</div>' +
-        divSummary + histTable +
-      '</div>';
+      rightCol =
+        '<div>' +
+          '<div style="font-weight:700;color:#2d3748;font-size:0.85em;margin-bottom:7px;">💰 배당 정보</div>' +
+          divSummary + histTable +
+        '</div>';
     }
 
-    body.innerHTML = basicHtml + periodHtml + divSec;
+    // ── 2컬럼 레이아웃 ──
+    var twoCol =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
+        '<div>' + leftCol  + '</div>' +
+        '<div>' + rightCol + '</div>' +
+      '</div>';
+
+    body.innerHTML = basicHtml + twoCol;
   }
 </script>
 </body>
