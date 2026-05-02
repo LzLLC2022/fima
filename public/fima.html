@@ -2706,7 +2706,7 @@
 
     var priceColLabel = currentOvFilters.endDate ? '기준종가' : '현재가';
     // 한 줄 레이아웃: Ticker | Name | 수량 | 매입단가 | 매입금액 | 현재가 | 평가금액 | 손익 | 수익률
-    const cols     = ['Ticker', 'Name', '수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률'];
+    const cols     = ['Name', '수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률'];
     const numCols  = new Set(['수량', '매입단가', '매입금액', priceColLabel, '평가금액', '손익', '수익률', '누적배당금', '만기수령액', '만기손익', '만기수익률']);
     if (showDividend) cols.push('누적배당금');
     if (hasMaturiy) {
@@ -2745,8 +2745,10 @@
       }
 
       let row = `<tr>
-        <td style="font-weight:700;color:#2b6cb0;white-space:nowrap;">${item.ticker}</td>
-        <td style="font-size:0.82em;color:#718096;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="${item.name || ''}">${item.name || ''}</td>
+        <td style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail('${item.ticker.replace(/'/g,\"\\\'\").replace(/\\`/g,\"\\\`\")}',event,'')">
+          <span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="${item.name || ''}">${item.name || item.ticker}</span>
+          <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${item.ticker}</div>
+        </td>
         <td class="num">${fmtN(item.quantity, 0)}</td>
         <td class="num">${avgStr}</td>
         <td class="num" style="color:#4a5568;">${purStr}</td>
