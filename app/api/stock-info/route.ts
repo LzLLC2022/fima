@@ -102,20 +102,14 @@ export async function POST(req: NextRequest) {
     const lows:   (number|null)[]  = q.low    || [];
 
     // 기본 정보
-    // regularMarketPreviousClose = 실제 전일 종가 (meta 제공 시 우선 사용)
-    // fallback: 차트 데이터에서 오늘 이전 마지막 종가를 직접 추출
-    // chartPreviousClose는 사용 안 함 (range=2y 시 2년 전 종가를 반환해 오류 발생)
+    // meta.regularMarketPreviousClose 는 일부 종목(ETN 등)에서 현재가와 동일하게 반환되는 경우가 있어 신뢰하지 않음
+    // 일봉 차트 데이터의 마지막에서 두 번째 종가 = 전일 종가 (가장 신뢰성 높음)
     const price = meta.regularMarketPrice ?? 0;
 
-    const todayStartSec = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime() / 1000; })();
-    let prevCloseFromChart: number | null = null;
-    for (let i = timestamps.length - 1; i >= 0; i--) {
-      if (timestamps[i] < todayStartSec && closes[i] != null) {
-        prevCloseFromChart = closes[i] as number;
-        break;
-      }
-    }
-    const prevClose = meta.regularMarketPreviousClose ?? meta.previousClose ?? prevCloseFromChart ?? price;
+    const validCloses = closes.filter((c): c is number => c != null);
+    // 마지막 종가(오늘) / 마지막에서 두번째(전일)
+    const prevCloseFromChart = validCloses.length >= 2 ? validCloses[validCloses.length - 2] : null;
+    const prevClose = prevCloseFromChart ?? meta.regularMarketPreviousClose ?? meta.previousClose ?? price;
     const change    = Math.round((price - prevClose) * 10000) / 10000;
     const changePct = prevClose > 0 ? Math.round((change / prevClose) * 10000) / 100 : 0;
 
