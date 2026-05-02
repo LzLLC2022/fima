@@ -2788,7 +2788,7 @@
       \uB9E4\uC785\uAE08\uC561 \uD569\uACC4: <strong>${fmtK(totalPurchase)} KRW</strong> &nbsp;\u00B7&nbsp;
       \uD3C9\uAC00\uAE08\uC561 \uD569\uACC4: <strong>${fmtK(totalMarket)} KRW</strong> &nbsp;\u00B7&nbsp;
       \uC190\uC775: <strong class="${pc}">${totalPnl >= 0 ? '+' : ''}${fmtK(totalPnl)} KRW (${fmtPct(totalPnlPct)})</strong>
-      ${showDividend ? `&nbsp;\u00B7&nbsp; \uB204\uC801\uBC30\uB2F9\uAE08: <strong style="color:#2f855a;">${fmtK(totalDiv)} KRW</strong>` : ''}
+      ${showDividend ? `&nbsp;\u00B7&nbsp; \uB204\uC801\uBC30\uB2F9\uAE08: <strong style="color:#2f855a;">${fmtK(totalDiv)} KRW</strong>${totalAnnualDiv > 0 ? ' <span style="color:#718096;font-weight:400;font-size:0.9em;">(\uC608\uC0C1\uC5F0\uBC30\uB2F9: ' + fmtK(totalAnnualDiv) + ' KRW)</span>' : ''}` : ''}
     </div>`;
 
     sec.innerHTML = summary + `<div class="table-wrap"><table>${thead}${tbody}</table></div>`;
