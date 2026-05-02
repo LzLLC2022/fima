@@ -102,10 +102,20 @@ export async function POST(req: NextRequest) {
     const lows:   (number|null)[]  = q.low    || [];
 
     // 기본 정보
-    // regularMarketPreviousClose = 실제 전일 종가
-    // chartPreviousClose = 차트 range 시작 시점의 종가 (2y 요청 시 2년 전 종가 → 오류)
-    const price     = meta.regularMarketPrice ?? 0;
-    const prevClose = meta.regularMarketPreviousClose ?? meta.previousClose ?? meta.chartPreviousClose ?? price;
+    // regularMarketPreviousClose = 실제 전일 종가 (meta 제공 시 우선 사용)
+    // fallback: 차트 데이터에서 오늘 이전 마지막 종가를 직접 추출
+    // chartPreviousClose는 사용 안 함 (range=2y 시 2년 전 종가를 반환해 오류 발생)
+    const price = meta.regularMarketPrice ?? 0;
+
+    const todayStartSec = (() => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime() / 1000; })();
+    let prevCloseFromChart: number | null = null;
+    for (let i = timestamps.length - 1; i >= 0; i--) {
+      if (timestamps[i] < todayStartSec && closes[i] != null) {
+        prevCloseFromChart = closes[i] as number;
+        break;
+      }
+    }
+    const prevClose = meta.regularMarketPreviousClose ?? meta.previousClose ?? prevCloseFromChart ?? price;
     const change    = Math.round((price - prevClose) * 10000) / 10000;
     const changePct = prevClose > 0 ? Math.round((change / prevClose) * 10000) / 100 : 0;
 
@@ -113,9 +123,11 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const ytdStart = new Date(now.getFullYear(), 0, 1).getTime() / 1000;
     const mtdStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+    const w52Start = Date.now() / 1000 - 365 * 24 * 3600;
 
     const ytd = buildPeriodData(timestamps, closes, highs, lows, ytdStart);
     const mtd = buildPeriodData(timestamps, closes, highs, lows, mtdStart);
+    const w52 = buildPeriodData(timestamps, closes, highs, lows, w52Start);
 
     // 배당 이벤트
     const divEvents = chartResult.events?.dividends ?? {};
@@ -162,6 +174,7 @@ export async function POST(req: NextRequest) {
       low52:     meta.fiftyTwoWeekLow  ?? 0,
       ytd,
       mtd,
+      w52,
       dividend:  { fwdAmount, fwdYield, ttmAmount, ttmYield, history },
     });
   } catch (e: any) {
