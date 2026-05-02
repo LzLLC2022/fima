@@ -2749,7 +2749,7 @@
       const safeName = (item.name || item.ticker).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       const safeTicker = item.ticker.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       let row = `<tr>
-        <td data-ticker="${safeTicker}" style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail(this.dataset.ticker,event,'')">
+        <td data-ticker="${safeTicker}" style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail(this.dataset.ticker,event)">
           <span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="${safeName}">${safeName}</span>
           <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${safeTicker}</div>
         </td>
@@ -3144,7 +3144,7 @@
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           return '<tr>'
-            + '<td data-ticker="' + safePfTicker + '" style="cursor:pointer;white-space:nowrap;" onclick="showStockDetail(this.dataset.ticker,event,'')">'
+            + '<td data-ticker="' + safePfTicker + '" style="cursor:pointer;white-space:nowrap;" onclick="showStockDetail(this.dataset.ticker,event)">'
             + '<span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
             + '</td>'
