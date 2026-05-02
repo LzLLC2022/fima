@@ -4095,11 +4095,16 @@
       // 오른쪽 잘림 방지
       if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
       if (left < 4) left = 4;
+      // position:fixed는 뷰포트 기준 — scrollY 더하지 않음
+      var maxPopH = Math.min(window.innerHeight * 0.80, 600);
       var top = rect.bottom + 4;
-      // 아래 공간 부족 시 위쪽으로
-      if (top + 300 > window.innerHeight) top = Math.max(4, rect.top - 4 - Math.min(500, window.innerHeight * 0.75));
-      popup.style.left = left + 'px';
-      popup.style.top  = (top + window.scrollY) + 'px';
+      // 아래 공간 부족 시 클릭 셀 위쪽으로
+      if (top + maxPopH > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - maxPopH - 4);
+      }
+      popup.style.left      = left + 'px';
+      popup.style.top       = top  + 'px';
+      popup.style.maxHeight = maxPopH + 'px';
     }
 
     popup.style.display    = 'block';
