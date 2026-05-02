@@ -4211,17 +4211,22 @@
     if (d.dividend && (d.dividend.fwdAmount > 0 || d.dividend.ttmAmount > 0 || d.dividend.history.length > 0)) {
       var dv = d.dividend;
 
+      var rowStyle = 'display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;';
       var divSummary =
-        '<div style="display:flex;flex-direction:column;gap:6px;background:#f0fff4;border-radius:7px;padding:8px 12px;margin-bottom:10px;">' +
+        '<div style="display:flex;flex-direction:column;gap:5px;background:#f0fff4;border-radius:7px;padding:8px 10px;margin-bottom:10px;font-size:0.82em;">' +
           (dv.fwdAmount > 0
-            ? '<div><div style="font-size:0.75em;color:#718096;margin-bottom:1px;">FWD 연간배당</div>' +
-              '<div style="font-weight:700;color:#276749;font-size:0.9em;">' + fmtA(dv.fwdAmount) + ' ' + cur + '/주</div>' +
-              '<div style="font-size:0.78em;color:#718096;">' + dv.fwdYield.toFixed(2) + '%</div></div>'
+            ? '<div style="' + rowStyle + '">' +
+                '<span style="color:#718096;flex-shrink:0;">FWD</span>' +
+                '<span style="font-weight:700;color:#276749;">' + fmtA(dv.fwdAmount) + ' ' + cur + '/주</span>' +
+                '<span style="color:#718096;">' + dv.fwdYield.toFixed(2) + '%</span>' +
+              '</div>'
             : '') +
           (dv.ttmAmount > 0
-            ? '<div><div style="font-size:0.75em;color:#718096;margin-bottom:1px;">TTM 연간배당</div>' +
-              '<div style="font-weight:700;color:#2b6cb0;font-size:0.9em;">' + fmtA(dv.ttmAmount) + ' ' + cur + '/주</div>' +
-              '<div style="font-size:0.78em;color:#718096;">' + dv.ttmYield.toFixed(2) + '%</div></div>'
+            ? '<div style="' + rowStyle + '">' +
+                '<span style="color:#718096;flex-shrink:0;">TTM</span>' +
+                '<span style="font-weight:700;color:#2b6cb0;">' + fmtA(dv.ttmAmount) + ' ' + cur + '/주</span>' +
+                '<span style="color:#718096;">' + dv.ttmYield.toFixed(2) + '%</span>' +
+              '</div>'
             : '') +
         '</div>';
 
