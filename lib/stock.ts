@@ -333,6 +333,43 @@ export async function getStockInfo(code: string, item?: string): Promise<any> {
 }
 
 /**
+ * 52주 최고가 / 최저가 조회
+ * Yahoo Finance v8 chart meta.fiftyTwoWeekHigh/Low 사용
+ * - 한국 종목: .KS → .KQ 순으로 시도
+ * - 채권 ISIN: {high:0, low:0} 반환
+ */
+export async function get52WeekHighLow(ticker: string): Promise<{ high: number; low: number }> {
+  if (!ticker) return { high: 0, low: 0 };
+  ticker = ticker.toString().trim().toUpperCase();
+  if (isKoreanBondISIN(ticker)) return { high: 0, low: 0 };
+
+  const candidates: string[] = isKoreanCode(ticker)
+    ? [`${ticker.split('.')[0]}.KS`, `${ticker.split('.')[0]}.KQ`]
+    : [ticker];
+
+  for (const yticker of candidates) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1d&range=1d`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Accept': 'application/json',
+          'Referer': 'https://finance.yahoo.com/',
+        },
+      });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const meta = json?.chart?.result?.[0]?.meta;
+      if (!meta) continue;
+      const h = Number(meta.fiftyTwoWeekHigh) || 0;
+      const l = Number(meta.fiftyTwoWeekLow)  || 0;
+      if (h > 0) return { high: h, low: l };
+    } catch { /* 다음 후보 시도 */ }
+  }
+  return { high: 0, low: 0 };
+}
+
+/**
  * 주당 연간 배당금 조회 (trailing 12개월 합산)
  * Yahoo Finance v8 chart API events=dividends 사용 (가격 조회와 동일 엔드포인트)
  * - 한국 종목: 6자리 코드를 .KS → .KQ 순으로 시도
