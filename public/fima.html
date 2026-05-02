@@ -2744,10 +2744,12 @@
         }
       }
 
+      const safeName = (item.name || item.ticker).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const safeTicker = item.ticker.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       let row = `<tr>
-        <td style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail('${item.ticker.replace(/'/g,\"\\\'\").replace(/\\`/g,\"\\\`\")}',event,'')">
-          <span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="${item.name || ''}">${item.name || item.ticker}</span>
-          <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${item.ticker}</div>
+        <td data-ticker="${safeTicker}" style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail(this.dataset.ticker,event,'')">
+          <span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="${safeName}">${safeName}</span>
+          <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${safeTicker}</div>
         </td>
         <td class="num">${fmtN(item.quantity, 0)}</td>
         <td class="num">${avgStr}</td>
