@@ -3566,11 +3566,31 @@
   var rbTargetState   = {};   // { ticker: targetPct } 사용자 수정값 보존
   var rbLoaded        = false;
 
+  var rbPrevRegion = ''; // Region 변경 감지용
+
   // Account, Region 둘 다 선택될 때만 조회 버튼 표시
   function onRbFilterChange() {
     var account = document.getElementById('rbAccount').value;
     var region  = document.getElementById('rbRegion').value;
     var btn     = document.getElementById('rbSearchBtn');
+
+    // Region이 바뀌면 금액·테이블 리셋
+    if (region !== rbPrevRegion) {
+      rbPrevRegion  = region;
+      rbAmountBase  = 0;
+      rbAmountKRW   = 0;
+      rbIsUSD       = (region === 'USA');
+      rbPortfolioData = null;
+      rbSheetItems    = [];
+      rbTargetState   = {};
+      rbLoaded        = false;
+      var inp = document.getElementById('rbAmountInput');
+      if (inp) inp.value = '';
+      var lbl = document.getElementById('rbAmountLabel');
+      if (lbl) lbl.innerHTML = '리밸런싱 금액 (' + (rbIsUSD ? 'USD' : 'KRW') + ') <span style="font-weight:400;color:#a0aec0;font-size:0.8em;">— 조회 시 현재 자산총액으로 자동 설정</span>';
+      document.getElementById('rbTableCard').style.display = 'none';
+    }
+
     if (account && region) {
       btn.style.display = '';
     } else {
