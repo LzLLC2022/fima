@@ -3706,11 +3706,25 @@
         ? fmtN(livePrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur
         : '<span style="color:#a0aec0;">-</span>';
 
-      // 예상 연배당: 보유 실적(divKRW/quantity) × 배분수량
+      // 예상 연배당: Yahoo 주당연배당(해외) → 보유이력(한국 보유중) 순 fallback
       var estDiv = '-';
-      if (pos.quantity > 0 && pos.divKRW > 0 && allocQty > 0) {
-        var divPerShare = pos.divKRW / pos.quantity;
-        estDiv = fmtK(Math.round(divPerShare * allocQty)) + ' KRW';
+      var divPerShareAnnual = 0;
+      var divSrc = '';
+      if (item.divPerShare > 0) {
+        // Yahoo Finance trailing 12M (해외 종목)
+        divPerShareAnnual = item.divPerShare;
+        divSrc = liveCur;
+      } else if (pos.quantity > 0 && pos.divKRW > 0) {
+        // 보유 이력: 누적배당 / 보유수량
+        divPerShareAnnual = pos.divKRW / pos.quantity;
+        divSrc = 'KRW';
+      }
+      if (divPerShareAnnual > 0 && allocQty > 0) {
+        var totalEstDivAmt = Math.round(divPerShareAnnual * allocQty);
+        estDiv = fmtK(totalEstDivAmt) + ' ' + divSrc +
+          '<div style="font-size:0.8em;color:#718096;">' +
+            fmtN(divPerShareAnnual, divPerShareAnnual < 10 ? 4 : divPerShareAnnual < 100 ? 2 : 0) +
+            ' ' + divSrc + '/주</div>';
       }
 
       // 배분금액 셀: 금액 + 수량 (배분금액 > 0일 때만 수량 표시)
@@ -3764,13 +3778,14 @@
     // 예상 연배당 합계
     var totalEstDiv = items.reduce(function(s, it) {
       var pos = portMap[it.ticker] || { quantity: 0, divKRW: 0, currentPrice: 0, rate: 1 };
+      var lp = pos.currentPrice > 0 ? pos.currentPrice : (it.currentPrice || 0);
+      var lr = pos.rate > 0 ? pos.rate : 1;
       var tgtPct = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
       var tgtKRW = rbAmountKRW * tgtPct / 100;
-      var allocQty = (pos.currentPrice > 0 && pos.rate > 0) ? Math.floor(tgtKRW / (pos.currentPrice * pos.rate)) : 0;
-      if (pos.quantity > 0 && pos.divKRW > 0 && allocQty > 0) {
-        return s + Math.round(pos.divKRW / pos.quantity * allocQty);
-      }
-      return s;
+      var aq = (lp > 0 && lr > 0) ? Math.floor(tgtKRW / (lp * lr)) : 0;
+      var dpa = it.divPerShare > 0 ? it.divPerShare
+              : (pos.quantity > 0 && pos.divKRW > 0 ? pos.divKRW / pos.quantity : 0);
+      return s + (dpa > 0 && aq > 0 ? Math.round(dpa * aq) : 0);
     }, 0);
 
     rows.push(
