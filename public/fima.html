@@ -3838,8 +3838,8 @@
         var estDivTotal = divPerShareAnnual * allocQty;
         var estDivFmt   = rbIsUSD ? fmtU(estDivTotal, 2) : fmtK(Math.round(estDivTotal));
         estDiv = estDivFmt + ' ' + divSrc + divSubLine;
-      } else if (divSubLine) {
-        estDiv = '-' + divSubLine;
+      } else {
+        estDiv = (divSubLine ? '-' + divSubLine : '-');
       }
 
       // 배분금액 셀
@@ -3981,7 +3981,7 @@
       if (estTd) {
         var divPerShareCalc = rbIsUSD
           ? ((pos.quantity > 0 && pos.divFX  > 0) ? pos.divFX  / pos.quantity : (item.divPerShare || 0))
-          : ((pos.quantity > 0 && pos.divKRW > 0) ? pos.divKRW / pos.quantity : 0);
+          : ((pos.quantity > 0 && pos.divKRW > 0) ? pos.divKRW / pos.quantity : (item.divPerShare || 0));
         var rCur      = rbIsUSD ? 'USD' : 'KRW';
         var rLivePriceForYield = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
         // 주당배당금 + 배당율 서브라인
@@ -3995,10 +3995,8 @@
         if (divPerShareCalc > 0 && allocQty > 0) {
           var estDivAmt = rbIsUSD ? fmtU(divPerShareCalc * allocQty, 2) : fmtK(Math.round(divPerShareCalc * allocQty));
           estTd.innerHTML = estDivAmt + ' ' + rCur + rSubLine;
-        } else if (rSubLine) {
-          estTd.innerHTML = '-' + rSubLine;
         } else {
-          estTd.textContent = '-';
+          estTd.innerHTML = rSubLine ? '-' + rSubLine : '-';
         }
       }
 
