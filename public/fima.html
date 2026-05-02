@@ -3800,19 +3800,18 @@
         allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
       }
 
-      // 매수/매도
-      var diffBase = tgtBase - currentBase;
+      // 매수/매도: allocQty - 현보유수량으로 계산 (금액나눗셈 오차 방지)
       var actHtml = '<span style="color:#a0aec0;">-</span>';
       if (livePrice > 0) {
-        var diffQty = rbIsUSD ? diffBase / livePrice : diffBase / (livePrice * liveRate);
-        var absQty  = Math.abs(diffQty);
-        var dispQty = Math.floor(absQty);
-        if (dispQty > 0) {
-          var c = diffQty > 0 ? '#276749' : '#c53030';
-          var l = diffQty > 0 ? '매수' : '매도';
-          var diffAmtFmt = rbIsUSD ? fmtU(Math.abs(diffBase), 2) : fmtK(Math.abs(diffBase));
+        var diffShares = allocQty - (pos.quantity || 0);
+        var absShares  = Math.abs(diffShares);
+        if (absShares > 0) {
+          var c = diffShares > 0 ? '#276749' : '#c53030';
+          var l = diffShares > 0 ? '매수' : '매도';
+          var diffAmt = rbIsUSD ? absShares * livePrice : absShares * livePrice * liveRate;
+          var diffAmtFmt = rbIsUSD ? fmtU(diffAmt, 2) : fmtK(diffAmt);
           actHtml = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' +
-            fmtN(dispQty, 0) + '주</span>' +
+            fmtN(absShares, 0) + '주</span>' +
             '<div style="font-size:0.78em;color:' + c + ';">' + diffAmtFmt + ' ' + baseCur + '</div>';
         }
       }
@@ -3949,19 +3948,16 @@
         }
       }
 
-      // 매수/매도 갱신
+      // 매수/매도 갱신: allocQty - 현보유수량으로 계산 (금액나눗셈 오차 방지)
       if (actTd && rLivePrice > 0) {
-        var rawShares = rbIsUSD
-          ? diffBase / rLivePrice
-          : (rLiveRate > 0 ? diffBase / (rLivePrice * rLiveRate) : 0);
-        var absShares = Math.abs(rawShares);
-        var dispShares = Math.floor(absShares);
-        if (dispShares > 0) {
-          var c = rawShares > 0 ? '#276749' : '#c53030';
-          var l = rawShares > 0 ? '매수' : '매도';
-          var absDiffAmt = Math.abs(diffBase);
-          actTd.innerHTML = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' + fmtN(dispShares, 0) + '주</span>' +
-            '<div style="font-size:0.78em;color:' + c + ';">' + (rbIsUSD ? fmtU(absDiffAmt, 2) + ' USD' : fmtK(absDiffAmt) + ' KRW') + '</div>';
+        var rDiffShares = allocQty - (pos.quantity || 0);
+        var rAbsShares  = Math.abs(rDiffShares);
+        if (rAbsShares > 0) {
+          var c = rDiffShares > 0 ? '#276749' : '#c53030';
+          var l = rDiffShares > 0 ? '매수' : '매도';
+          var rDiffAmt = rbIsUSD ? rAbsShares * rLivePrice : rAbsShares * rLivePrice * rLiveRate;
+          actTd.innerHTML = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' + fmtN(rAbsShares, 0) + '주</span>' +
+            '<div style="font-size:0.78em;color:' + c + ';">' + (rbIsUSD ? fmtU(rDiffAmt, 2) + ' USD' : fmtK(rDiffAmt) + ' KRW') + '</div>';
         } else {
           actTd.innerHTML = '<span style="color:#a0aec0;">-</span>';
         }
