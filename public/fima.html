@@ -1190,8 +1190,8 @@
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">매입단가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재비중</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#553c9a;">목표비중</th>
-                <th style="padding:8px 10px;text-align:right;white-space:nowrap;">목표금액(KRW)</th>
-                <th style="padding:8px 10px;text-align:right;white-space:nowrap;">차이(KRW)</th>
+                <th style="padding:8px 10px;text-align:right;white-space:nowrap;">배분금액</th>
+                <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;">예상 연배당</th>
                 <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#2b6cb0;">매수/매도</th>
               </tr>
             </thead>
@@ -3669,7 +3669,7 @@
         var rate = (s.marketValueFX && s.marketValueFX > 0) ? s.marketValue / s.marketValueFX : 1;
         map[s.ticker] = { currentPrice: s.currentPrice || 0, currency: s.currency || 'KRW',
           marketValueKRW: s.marketValue || 0, quantity: s.quantity || 0, rate: rate,
-          avgPrice: s.avgPrice || 0 };
+          avgPrice: s.avgPrice || 0, divKRW: s.divKRW || 0 };
       });
     }
     add(portData.stocks);
@@ -3688,21 +3688,35 @@
     }, 0);
 
     var rows = items.map(function(item) {
-      var pos      = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, quantity: 0, rate: 1 };
+      var pos      = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, quantity: 0, rate: 1, avgPrice: 0, divKRW: 0 };
       var currPct  = totalCurrentKRW > 0 ? pos.marketValueKRW / totalCurrentKRW * 100 : 0;
       var tgtPct   = (rbTargetState[item.ticker] !== undefined) ? rbTargetState[item.ticker] : item.targetPct;
       var tgtKRW   = rbAmountKRW * tgtPct / 100;
-      var diffKRW  = tgtKRW - pos.marketValueKRW;
-      var diffClr  = diffKRW > 500 ? '#276749' : diffKRW < -500 ? '#c53030' : '#718096';
+
+      // 배분수량: 목표금액 / (현재가 × 환율), 소수점 버림
+      var allocQty = (pos.currentPrice > 0 && pos.rate > 0)
+        ? Math.floor(tgtKRW / (pos.currentPrice * pos.rate))
+        : 0;
 
       var priceStr = pos.currentPrice > 0
         ? fmtN(pos.currentPrice, pos.currency === 'KRW' ? 0 : 4) + ' ' + pos.currency
         : (pos.marketValueKRW > 0 ? '-' : '<span style="color:#a0aec0;">미보유</span>');
 
-      var divStr = item.divCycle
-        ? '<span style="font-size:0.8em;color:#718096;">' + item.divCycle + '\xd7' + item.divCount + '</span>'
-        : '-';
+      // 예상 연배당: 보유 실적(divKRW/quantity) × 배분수량
+      var estDiv = '-';
+      if (pos.quantity > 0 && pos.divKRW > 0 && allocQty > 0) {
+        var divPerShare = pos.divKRW / pos.quantity;
+        estDiv = fmtK(Math.round(divPerShare * allocQty)) + ' KRW';
+      }
 
+      // 배분금액 셀: 금액 + 수량
+      var allocHtml = fmtK(tgtKRW);
+      if (allocQty > 0) {
+        allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty, 0) + '주</div>';
+      }
+
+      // 매수/매도
+      var diffKRW = tgtKRW - pos.marketValueKRW;
       var actHtml = '<span style="color:#a0aec0;">-</span>';
       if (pos.currentPrice > 0 && pos.rate > 0) {
         var pKRW  = pos.currentPrice * pos.rate;
@@ -3729,10 +3743,8 @@
           ' oninput="onRbTargetInput()"' +
           ' style="width:68px;text-align:right;padding:4px 5px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.9em;color:#553c9a;font-weight:600;">%' +
         '</td>' +
-        '<td class="rb-tgt-amt" style="padding:8px 10px;text-align:right;white-space:nowrap;">' + fmtK(tgtKRW) + '</td>' +
-        '<td class="rb-diff-amt" style="padding:8px 10px;text-align:right;white-space:nowrap;color:' + diffClr + ';">' +
-          (diffKRW >= 0 ? '+' : '') + fmtK(diffKRW) +
-        '</td>' +
+        '<td class="rb-tgt-amt" style="padding:8px 10px;text-align:right;white-space:nowrap;">' + allocHtml + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;">' + estDiv + '</td>' +
         '<td style="padding:8px 10px;text-align:center;">' + actHtml + '</td>' +
       '</tr>';
     });
@@ -3742,6 +3754,18 @@
     }, 0);
     var tgtClr = Math.abs(totalTgtPct - 100) < 0.05 ? '#276749' : '#c53030';
 
+    // 예상 연배당 합계
+    var totalEstDiv = items.reduce(function(s, it) {
+      var pos = portMap[it.ticker] || { quantity: 0, divKRW: 0, currentPrice: 0, rate: 1 };
+      var tgtPct = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
+      var tgtKRW = rbAmountKRW * tgtPct / 100;
+      var allocQty = (pos.currentPrice > 0 && pos.rate > 0) ? Math.floor(tgtKRW / (pos.currentPrice * pos.rate)) : 0;
+      if (pos.quantity > 0 && pos.divKRW > 0 && allocQty > 0) {
+        return s + Math.round(pos.divKRW / pos.quantity * allocQty);
+      }
+      return s;
+    }, 0);
+
     rows.push(
       '<tr style="background:#f7fafc;font-weight:700;border-top:2px solid #cbd5e0;">' +
       '<td colspan="2" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
@@ -3749,9 +3773,8 @@
       '<td style="padding:9px 10px;text-align:right;">100.00%</td>' +
       '<td id="rbSumPct" style="padding:9px 10px;text-align:right;color:' + tgtClr + ';">' + totalTgtPct.toFixed(2) + '%</td>' +
       '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtK(rbAmountKRW) + '</td>' +
-      '<td style="padding:9px 10px;text-align:right;white-space:nowrap;color:#553c9a;">' +
-        (rbAmountKRW - totalCurrentKRW >= 0 ? '+' : '') + fmtK(rbAmountKRW - totalCurrentKRW) +
-      '</td><td></td>' +
+      '<td style="padding:9px 10px;text-align:right;white-space:nowrap;color:#276749;">' + (totalEstDiv > 0 ? fmtK(totalEstDiv) + ' KRW' : '-') + '</td>' +
+      '<td></td>' +
       '</tr>'
     );
 
@@ -3777,19 +3800,31 @@
       var tr   = trs[idx];
       if (!item || !tr) return;
 
-      var pos      = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, rate: 1 };
+      var pos      = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, rate: 1, quantity: 0, divKRW: 0 };
       var tgtPct   = parseFloat(inp.value) || 0;
       var tgtKRW   = rbAmountKRW * tgtPct / 100;
       var diffKRW  = tgtKRW - pos.marketValueKRW;
-      var diffClr  = diffKRW > 500 ? '#276749' : diffKRW < -500 ? '#c53030' : '#718096';
+      var allocQty = (pos.currentPrice > 0 && pos.rate > 0) ? Math.floor(tgtKRW / (pos.currentPrice * pos.rate)) : 0;
 
-      var amtTd  = tr.querySelector('.rb-tgt-amt');
-      var diffTd = tr.querySelector('.rb-diff-amt');
-      var tds    = tr.querySelectorAll('td');
-      var actTd  = tds[tds.length - 1];
+      var amtTd = tr.querySelector('.rb-tgt-amt');
+      var tds   = tr.querySelectorAll('td');
+      var estTd = tds[tds.length - 2];
+      var actTd = tds[tds.length - 1];
 
-      if (amtTd)  amtTd.textContent = fmtK(tgtKRW);
-      if (diffTd) { diffTd.textContent = (diffKRW >= 0 ? '+' : '') + fmtK(diffKRW); diffTd.style.color = diffClr; }
+      if (amtTd) {
+        var allocHtml = fmtK(tgtKRW);
+        if (allocQty > 0) allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
+        amtTd.innerHTML = allocHtml;
+      }
+
+      // 예상 연배당 갱신
+      if (estTd) {
+        if (pos.quantity > 0 && pos.divKRW > 0 && allocQty > 0) {
+          estTd.textContent = fmtK(Math.round(pos.divKRW / pos.quantity * allocQty)) + ' KRW';
+        } else {
+          estTd.textContent = '-';
+        }
+      }
 
       if (actTd && pos.currentPrice > 0 && pos.rate > 0) {
         var pKRW = pos.currentPrice * pos.rate;
@@ -3811,14 +3846,19 @@
     var sumEl = document.getElementById('rbSumPct');
     if (sumEl) { sumEl.textContent = totalTgtPct.toFixed(2) + '%'; sumEl.style.color = Math.abs(totalTgtPct-100)<0.05?'#276749':'#c53030'; }
 
+    // 합계행 배분금액·예상연배당 갱신
     var lastTr = trs[trs.length - 1];
     if (lastTr) {
       var lTds = lastTr.querySelectorAll('td');
-      var totCurr = rbSheetItems.reduce(function(s, it) {
-        var p = portMap[it.ticker]; return s + (p ? Math.max(0, p.marketValueKRW) : 0);
-      }, 0);
       if (lTds[4]) lTds[4].textContent = fmtK(rbAmountKRW);
-      if (lTds[5]) { var d2 = rbAmountKRW - totCurr; lTds[5].textContent = (d2>=0?'+':'') + fmtK(d2); }
+      var totalEstDiv2 = rbSheetItems.reduce(function(s, it) {
+        var p = portMap[it.ticker] || { quantity: 0, divKRW: 0, currentPrice: 0, rate: 1 };
+        var tp = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
+        var tKRW = rbAmountKRW * tp / 100;
+        var aq = (p.currentPrice > 0 && p.rate > 0) ? Math.floor(tKRW / (p.currentPrice * p.rate)) : 0;
+        return s + (p.quantity > 0 && p.divKRW > 0 && aq > 0 ? Math.round(p.divKRW / p.quantity * aq) : 0);
+      }, 0);
+      if (lTds[5]) lTds[5].textContent = totalEstDiv2 > 0 ? fmtK(totalEstDiv2) + ' KRW' : '-';
     }
 
     updateRbWeightBadge(totalTgtPct);
