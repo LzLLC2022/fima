@@ -3938,7 +3938,7 @@
   }
 
   async function saveRbTargets() {
-    var owner = currentOwner;
+    var owner = currentAccountOwner;
     if (!owner) { alert('계정을 먼저 선택해주세요.'); return; }
     var inputs = document.querySelectorAll('.rb-tgt');
     if (!inputs.length || !rbSheetItems.length) { alert('저장할 데이터가 없습니다.'); return; }
