@@ -1178,6 +1178,7 @@
           <div style="display:flex;align-items:center;gap:12px;">
             <span id="rbWeightBadge" style="font-size:0.85rem;"></span>
             <button class="btn btn-reset-filter" style="padding:5px 12px;font-size:0.82rem;" onclick="resetRbTargets()">비중 초기화</button>
+            <button id="rbSaveBtn" class="btn" style="display:none;padding:5px 14px;font-size:0.82rem;background:#2b6cb0;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="saveRbTargets()">💾 저장</button>
           </div>
         </div>
         <div style="overflow-x:auto;margin-top:4px;">
@@ -3722,6 +3723,8 @@
 
   function resetRbTargets() {
     rbTargetState = {};
+    var btn = document.getElementById('rbSaveBtn');
+    if (btn) btn.style.display = 'none';
     if (rbPortfolioData) renderRebalanceTable();
   }
 
@@ -3756,6 +3759,10 @@
   }
 
   function renderRebalanceTable() {
+    // 새 데이터 렌더 시 저장 버튼 숨김 (초기화 초기 상태)
+    var _saveBtn = document.getElementById('rbSaveBtn');
+    if (_saveBtn) _saveBtn.style.display = 'none';
+
     var portMap = buildPortfolioMap(rbPortfolioData);
     var items   = rbSheetItems;
     var baseCur = rbIsUSD ? 'USD' : 'KRW';
@@ -3924,7 +3931,43 @@
     updateRbWeightBadge(totalTgtPct);
   }
 
-  function onRbTargetInput() { recalcRebalance(); }
+  function onRbTargetInput() {
+    recalcRebalance();
+    var btn = document.getElementById('rbSaveBtn');
+    if (btn) btn.style.display = 'inline-block';
+  }
+
+  async function saveRbTargets() {
+    var owner = document.getElementById('rbAccount')?.value?.trim();
+    if (!owner) { alert('계정을 먼저 선택해주세요.'); return; }
+    var inputs = document.querySelectorAll('.rb-tgt');
+    if (!inputs.length || !rbSheetItems.length) { alert('저장할 데이터가 없습니다.'); return; }
+
+    var items = [];
+    inputs.forEach(function(inp, idx) {
+      var item = rbSheetItems[idx];
+      if (!item) return;
+      items.push({ ticker: item.ticker, targetPct: parseFloat(inp.value) || 0 });
+    });
+
+    var btn = document.getElementById('rbSaveBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+
+    try {
+      var res = await fetch('/api/rebalancing/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: owner, items: items }),
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || '저장 실패');
+      if (btn) { btn.style.display = 'none'; btn.disabled = false; btn.textContent = '💾 저장'; }
+      alert('저장 완료 (' + (data.updated || 0) + '개 항목)');
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
+      alert('저장 오류: ' + e.message);
+    }
+  }
 
   function recalcRebalance() {
     if (!rbPortfolioData || !rbSheetItems.length) return;
