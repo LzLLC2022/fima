@@ -102,8 +102,10 @@ export async function POST(req: NextRequest) {
     const lows:   (number|null)[]  = q.low    || [];
 
     // 기본 정보
+    // regularMarketPreviousClose = 실제 전일 종가
+    // chartPreviousClose = 차트 range 시작 시점의 종가 (2y 요청 시 2년 전 종가 → 오류)
     const price     = meta.regularMarketPrice ?? 0;
-    const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? price;
+    const prevClose = meta.regularMarketPreviousClose ?? meta.previousClose ?? meta.chartPreviousClose ?? price;
     const change    = Math.round((price - prevClose) * 10000) / 10000;
     const changePct = prevClose > 0 ? Math.round((change / prevClose) * 10000) / 100 : 0;
 
