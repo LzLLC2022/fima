@@ -3694,13 +3694,17 @@
       var tgtKRW   = rbAmountKRW * tgtPct / 100;
 
       // 배분수량: 목표금액 / (현재가 × 환율), 소수점 버림
-      var allocQty = (pos.currentPrice > 0 && pos.rate > 0)
-        ? Math.floor(tgtKRW / (pos.currentPrice * pos.rate))
+      var allocQty = (livePrice > 0 && liveRate > 0)
+        ? Math.floor(tgtKRW / (livePrice * liveRate))
         : 0;
 
-      var priceStr = pos.currentPrice > 0
-        ? fmtN(pos.currentPrice, pos.currency === 'KRW' ? 0 : 4) + ' ' + pos.currency
-        : (pos.marketValueKRW > 0 ? '-' : '<span style="color:#a0aec0;">미보유</span>');
+      // 현재가: 포트폴리오 > rebalancing API 순으로 fallback
+      var livePrice = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
+      var liveCur   = pos.currency || 'KRW';
+      var liveRate  = pos.rate > 0 ? pos.rate : 1;
+      var priceStr  = livePrice > 0
+        ? fmtN(livePrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur
+        : '<span style="color:#a0aec0;">-</span>';
 
       // 예상 연배당: 보유 실적(divKRW/quantity) × 배분수량
       var estDiv = '-';
@@ -3709,18 +3713,18 @@
         estDiv = fmtK(Math.round(divPerShare * allocQty)) + ' KRW';
       }
 
-      // 배분금액 셀: 금액 + 수량
+      // 배분금액 셀: 금액 + 수량 (항상 표시)
       var allocHtml = fmtK(tgtKRW);
-      if (allocQty > 0) {
+      if (livePrice > 0) {
         allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty, 0) + '주</div>';
       }
 
       // 매수/매도
       var diffKRW = tgtKRW - pos.marketValueKRW;
       var actHtml = '<span style="color:#a0aec0;">-</span>';
-      if (pos.currentPrice > 0 && pos.rate > 0) {
-        var pKRW  = pos.currentPrice * pos.rate;
-        var isK   = (pos.currency === 'KRW');
+      if (livePrice > 0 && liveRate > 0) {
+        var pKRW  = livePrice * liveRate;
+        var isK   = (liveCur === 'KRW');
         var raw   = diffKRW / pKRW;
         var abs   = Math.abs(raw);
         var disp  = isK ? Math.floor(abs) : Math.round(abs * 100) / 100;
@@ -3735,7 +3739,10 @@
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
         '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' + item.name + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
-        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + (pos.avgPrice > 0 ? fmtN(pos.avgPrice, pos.currency === 'KRW' ? 0 : 4) + ' ' + pos.currency : '<span style="color:#a0aec0;">-</span>') + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' +
+          (pos.avgPrice > 0 ? fmtN(pos.avgPrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur : '<span style="color:#a0aec0;">-</span>') +
+          (pos.quantity > 0 ? '<div style="font-size:0.8em;color:#a0aec0;">' + fmtN(pos.quantity, 0) + '주 보유</div>' : '') +
+        '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#718096;">' + currPct.toFixed(2) + '%</td>' +
         '<td style="padding:6px 8px;text-align:right;white-space:nowrap;">' +
           '<input class="rb-tgt" type="number" step="0.01" min="0" max="100"' +
@@ -3804,7 +3811,10 @@
       var tgtPct   = parseFloat(inp.value) || 0;
       var tgtKRW   = rbAmountKRW * tgtPct / 100;
       var diffKRW  = tgtKRW - pos.marketValueKRW;
-      var allocQty = (pos.currentPrice > 0 && pos.rate > 0) ? Math.floor(tgtKRW / (pos.currentPrice * pos.rate)) : 0;
+      var rLivePrice = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
+      var rLiveRate  = pos.rate > 0 ? pos.rate : 1;
+      var rLiveCur   = pos.currency || 'KRW';
+      var allocQty = (rLivePrice > 0 && rLiveRate > 0) ? Math.floor(tgtKRW / (rLivePrice * rLiveRate)) : 0;
 
       var amtTd = tr.querySelector('.rb-tgt-amt');
       var tds   = tr.querySelectorAll('td');
@@ -3812,9 +3822,9 @@
       var actTd = tds[tds.length - 1];
 
       if (amtTd) {
-        var allocHtml = fmtK(tgtKRW);
-        if (allocQty > 0) allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
-        amtTd.innerHTML = allocHtml;
+        var rAllocHtml = fmtK(tgtKRW);
+        if (rLivePrice > 0) rAllocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
+        amtTd.innerHTML = rAllocHtml;
       }
 
       // 예상 연배당 갱신
@@ -3826,9 +3836,9 @@
         }
       }
 
-      if (actTd && pos.currentPrice > 0 && pos.rate > 0) {
-        var pKRW = pos.currentPrice * pos.rate;
-        var isK  = (pos.currency === 'KRW');
+      if (actTd && rLivePrice > 0 && rLiveRate > 0) {
+        var pKRW = rLivePrice * rLiveRate;
+        var isK  = (rLiveCur === 'KRW');
         var raw  = diffKRW / pKRW;
         var abs  = Math.abs(raw);
         var disp = isK ? Math.floor(abs) : Math.round(abs * 100) / 100;
