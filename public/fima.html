@@ -1187,7 +1187,7 @@
                 <th style="padding:8px 10px;text-align:left;">종목명</th>
 
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재가</th>
-                <th style="padding:8px 10px;text-align:right;white-space:nowrap;">평가금액(KRW)</th>
+                <th style="padding:8px 10px;text-align:right;white-space:nowrap;">매입단가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재비중</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#553c9a;">목표비중</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">목표금액(KRW)</th>
@@ -3668,7 +3668,8 @@
       (arr || []).forEach(function(s) {
         var rate = (s.marketValueFX && s.marketValueFX > 0) ? s.marketValue / s.marketValueFX : 1;
         map[s.ticker] = { currentPrice: s.currentPrice || 0, currency: s.currency || 'KRW',
-          marketValueKRW: s.marketValue || 0, quantity: s.quantity || 0, rate: rate };
+          marketValueKRW: s.marketValue || 0, quantity: s.quantity || 0, rate: rate,
+          avgPrice: s.avgPrice || 0 };
       });
     }
     add(portData.stocks);
@@ -3720,7 +3721,7 @@
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
         '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' + item.name + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
-        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + fmtK(pos.marketValueKRW) + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + (pos.avgPrice > 0 ? fmtN(pos.avgPrice, pos.currency === 'KRW' ? 0 : 4) + ' ' + pos.currency : '<span style="color:#a0aec0;">-</span>') + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#718096;">' + currPct.toFixed(2) + '%</td>' +
         '<td style="padding:6px 8px;text-align:right;white-space:nowrap;">' +
           '<input class="rb-tgt" type="number" step="0.01" min="0" max="100"' +
@@ -3744,7 +3745,7 @@
     rows.push(
       '<tr style="background:#f7fafc;font-weight:700;border-top:2px solid #cbd5e0;">' +
       '<td colspan="2" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
-      '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtK(totalCurrentKRW) + '</td>' +
+      '<td style="padding:9px 10px;"></td>' +
       '<td style="padding:9px 10px;text-align:right;">100.00%</td>' +
       '<td id="rbSumPct" style="padding:9px 10px;text-align:right;color:' + tgtClr + ';">' + totalTgtPct.toFixed(2) + '%</td>' +
       '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtK(rbAmountKRW) + '</td>' +
