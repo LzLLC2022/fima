@@ -333,10 +333,11 @@ export async function getStockInfo(code: string, item?: string): Promise<any> {
 }
 
 /**
- * 주당 연간 배당금 조회 (trailing 12개월 기준)
- * Yahoo Finance quoteSummary → trailingAnnualDividendRate (모든 종목 우선)
+ * 주당 연간 배당금 조회 (trailing 12개월 합산)
+ * Yahoo Finance v8 chart API events=dividends 사용 (가격 조회와 동일 엔드포인트)
  * - 한국 종목: 6자리 코드를 .KS → .KQ 순으로 시도
  * - 채권 ISIN: 0 반환
+ * - 실패 시: 0 반환 (포트폴리오 보유 이력 fallback)
  */
 export async function getAnnualDividendPerShare(ticker: string): Promise<number> {
   if (!ticker) return 0;
@@ -344,25 +345,29 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
 
   if (isKoreanBondISIN(ticker)) return 0;
 
-  // 야후 티커 후보 목록: 한국 코드는 .KS, .KQ 순 시도
+  // 야후 티커 후보: 한국 6자리는 .KS → .KQ 순 시도
   const candidates: string[] = isKoreanCode(ticker)
     ? [`${ticker.split('.')[0]}.KS`, `${ticker.split('.')[0]}.KQ`]
     : [ticker];
 
   const fetchDiv = async (yticker: string): Promise<number> => {
-    const url = `https://query1.finance.yahoo.com/v11/finance/quoteSummary/${encodeURIComponent(yticker)}?modules=summaryDetail`;
+    // v8 chart API에 events=dividends 추가, 1년치 월봉 요청
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1mo&range=1y&events=dividends`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com/',
       },
     });
     if (!res.ok) return 0;
     const json = await res.json();
-    const detail = json?.quoteSummary?.result?.[0]?.summaryDetail;
-    return detail?.trailingAnnualDividendRate?.raw
-        || detail?.dividendRate?.raw
-        || 0;
+    const events = json?.chart?.result?.[0]?.events?.dividends;
+    if (!events) return 0;
+    // 지난 1년간 배당 이벤트 합산
+    const total = Object.values(events as Record<string, { amount: number }>)
+      .reduce((s, d) => s + (d.amount || 0), 0);
+    return Math.round(total * 10000) / 10000;
   };
 
   for (const yticker of candidates) {
