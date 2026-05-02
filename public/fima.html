@@ -3806,13 +3806,13 @@
       if (livePrice > 0) {
         var diffQty = rbIsUSD ? diffBase / livePrice : diffBase / (livePrice * liveRate);
         var absQty  = Math.abs(diffQty);
-        var dispQty = liveCur === 'KRW' ? Math.floor(absQty) : Math.round(absQty * 100) / 100;
+        var dispQty = Math.floor(absQty);
         if (dispQty > 0) {
           var c = diffQty > 0 ? '#276749' : '#c53030';
           var l = diffQty > 0 ? '매수' : '매도';
           var diffAmtFmt = rbIsUSD ? fmtU(Math.abs(diffBase), 2) : fmtK(Math.abs(diffBase));
           actHtml = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' +
-            (liveCur === 'KRW' ? fmtN(dispQty,0) : fmtN(dispQty,2)) + '주</span>' +
+            fmtN(dispQty, 0) + '주</span>' +
             '<div style="font-size:0.78em;color:' + c + ';">' + diffAmtFmt + ' ' + baseCur + '</div>';
         }
       }
