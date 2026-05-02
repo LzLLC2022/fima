@@ -2699,7 +2699,8 @@
     const totalMarket   = items.reduce((s,i) => s + i.marketValue, 0);
     const totalPnl      = totalMarket - totalPurchase;
     const totalPnlPct   = totalPurchase > 0 ? totalPnl / totalPurchase * 100 : 0;
-    const totalDiv      = items.reduce((s,i) => s + (i.divKRW || 0), 0);
+    const totalDiv       = items.reduce((s,i) => s + (i.divKRW || 0), 0);
+    const totalAnnualDiv = items.reduce((s,i) => s + (i.annualDivKRW || 0), 0);
 
     const fmtAmt = (v, isK) => isK ? fmtK(v) : fmtN(v, 2);
 
