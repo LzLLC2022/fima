@@ -3128,8 +3128,8 @@
           var cpStr = st.currentPrice > 0
             ? fmtPrice(st.currentPrice) + ' ' + cur
             : '-';
-          var acStr = (st.avgCostFX > 0)
-            ? fmtPrice(st.avgCostFX) + ' ' + cur
+          var acStr = (st.buyCostFX > 0)
+            ? fmtFX(st.buyCostFX) + ' ' + cur
             : '-';
           var mvStr = (st.marketValueFX > 0)
             ? fmtFX(st.marketValueFX) + ' ' + cur
