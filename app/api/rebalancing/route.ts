@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice } from '@/lib/stock';
+import { getStockPrice, getAnnualDividendPerShare } from '@/lib/stock';
 
 const REBALANCING_SHEET_NAME = 'Rebalancing';
 
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
         return true;
       })
       .map((r: any[]) => {
-        // UNFORMATTED_VALUE: 20% 셀 → 0.2, 텍스트 "20.00%" → "20.00%"
         const rawW = wgtIdx !== -1 ? r[wgtIdx] : 0;
         let numW: number;
         if (typeof rawW === 'number') {
@@ -65,14 +64,16 @@ export async function POST(req: NextRequest) {
         };
       });
 
-    // 현재가 병렬 조회
-    const prices = await Promise.all(
-      filtered.map((it: any) => getStockPrice(it.ticker).catch(() => 0))
-    );
+    // 현재가 + 주당연배당금 병렬 조회
+    const [prices, divs] = await Promise.all([
+      Promise.all(filtered.map((it: any) => getStockPrice(it.ticker).catch(() => 0))),
+      Promise.all(filtered.map((it: any) => getAnnualDividendPerShare(it.ticker).catch(() => 0))),
+    ]);
 
     const items = filtered.map((it: any, i: number) => ({
       ...it,
       currentPrice: prices[i] || 0,
+      divPerShare:  divs[i]   || 0,   // 주당 연간 배당금 (해외만, 한국은 0)
     }));
 
     return NextResponse.json({ items });
