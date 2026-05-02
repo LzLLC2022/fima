@@ -1185,7 +1185,7 @@
             <thead>
               <tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">
                 <th style="padding:8px 10px;text-align:left;">종목명</th>
-                <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#718096;">연배당</th>
+
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">평가금액(KRW)</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재비중</th>
@@ -3719,7 +3719,6 @@
 
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
         '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.name + '">' + item.name + '</td>' +
-        '<td style="padding:8px 10px;text-align:center;">' + divStr + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + fmtK(pos.marketValueKRW) + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#718096;">' + currPct.toFixed(2) + '%</td>' +
@@ -3744,7 +3743,7 @@
 
     rows.push(
       '<tr style="background:#f7fafc;font-weight:700;border-top:2px solid #cbd5e0;">' +
-      '<td colspan="3" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
+      '<td colspan="2" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
       '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtK(totalCurrentKRW) + '</td>' +
       '<td style="padding:9px 10px;text-align:right;">100.00%</td>' +
       '<td id="rbSumPct" style="padding:9px 10px;text-align:right;color:' + tgtClr + ';">' + totalTgtPct.toFixed(2) + '%</td>' +
