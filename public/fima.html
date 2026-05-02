@@ -1154,7 +1154,7 @@
             </select>
           </div>
           <div class="field">
-            <label>리밸런싱 금액 (KRW) <span style="font-weight:400;color:#a0aec0;font-size:0.8em;">— 조회 시 현재 자산총액으로 자동 설정</span></label>
+            <label id="rbAmountLabel">리밸런싱 금액 (KRW) <span style="font-weight:400;color:#a0aec0;font-size:0.8em;">— 조회 시 현재 자산총액으로 자동 설정</span></label>
             <input type="text" id="rbAmountInput" placeholder="조회 후 자동 설정" style="text-align:right;font-weight:700;"
               oninput="onRbAmountInput(this)" onblur="onRbAmountBlur(this)" onfocus="onRbAmountFocus(this)" />
           </div>
@@ -3559,7 +3559,10 @@
   // ================================================================
   var rbSheetItems    = [];   // Rebalancing 시트에서 읽어온 종목+목표비중
   var rbPortfolioData = null; // 현재 포트폴리오 데이터
-  var rbAmountKRW     = 0;    // 리밸런싱 기준 금액
+  var rbAmountKRW     = 0;    // 리밸런싱 기준 금액 (KRW 또는 USD×환율)
+  var rbAmountBase    = 0;    // 기준 통화 금액 (KOREA=KRW, USA=USD)
+  var rbIsUSD         = false; // USA 리전 여부
+  var rbExRate        = 1;    // KRW/USD 환율
   var rbTargetState   = {};   // { ticker: targetPct } 사용자 수정값 보존
   var rbLoaded        = false;
 
@@ -3616,12 +3619,46 @@
       rbTargetState   = {};
       rbLoaded        = true;
 
+      // Region에 따라 USD/KRW 모드 결정
+      rbIsUSD = (region === 'USA');
+
+      // 환율: USD 현금 또는 주식에서 추출
+      rbExRate = 1;
+      if (rbIsUSD) {
+        var usdCash = (pd.cash || []).find(function(c) { return c.currency === 'USD'; });
+        if (usdCash && usdCash.rate > 1) rbExRate = usdCash.rate;
+        else {
+          var usdStock = (pd.stocks || []).concat(pd.funds || []).find(function(s) { return s.currency === 'USD'; });
+          if (usdStock && usdStock.marketValueFX > 0) rbExRate = (usdStock.marketValue || 1) / usdStock.marketValueFX;
+        }
+      }
+
+      // 라벨 업데이트
+      var lbl = document.getElementById('rbAmountLabel');
+      if (lbl) lbl.innerHTML = '리밸런싱 금액 (' + (rbIsUSD ? 'USD' : 'KRW') + ') ' +
+        '<span style="font-weight:400;color:#a0aec0;font-size:0.8em;">— 조회 시 현재 자산총액으로 자동 설정</span>';
+
       // 수동 입력값이 있으면 유지, 없으면 총평가자산으로 초기화
       var inp = document.getElementById('rbAmountInput');
-      var hasManual = inp && inp.value.replace(/[^0-9]/g, '').length > 0;
+      var hasManual = inp && inp.value.replace(/[^0-9.]/g, '').length > 0;
       if (!hasManual) {
-        rbAmountKRW = pd.totalKRW || 0;
-        if (inp) inp.value = Math.round(rbAmountKRW).toLocaleString('ko-KR');
+        if (rbIsUSD) {
+          // USD 총액: USD 주식 평가액(FX) + USD 현금
+          var usdStockTotal = (pd.stocks || []).concat(pd.funds || [])
+            .filter(function(s) { return s.currency === 'USD'; })
+            .reduce(function(s, st) { return s + (st.marketValueFX || 0); }, 0);
+          var usdCashAmt = (pd.cash || [])
+            .filter(function(c) { return c.currency === 'USD'; })
+            .reduce(function(s, c) { return s + (c.amount || 0); }, 0);
+          rbAmountBase = Math.round((usdStockTotal + usdCashAmt) * 100) / 100;
+          rbAmountKRW  = rbAmountBase * rbExRate;
+        } else {
+          rbAmountBase = pd.totalKRW || 0;
+          rbAmountKRW  = rbAmountBase;
+        }
+        if (inp) inp.value = rbIsUSD
+          ? rbAmountBase.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})
+          : Math.round(rbAmountBase).toLocaleString('ko-KR');
       }
 
       renderRebalanceTable();
@@ -3634,17 +3671,21 @@
   }
 
   function onRbAmountInput(el) {
-    var raw = el.value.replace(/[^0-9]/g, '');
-    rbAmountKRW = parseFloat(raw) || 0;
+    var raw = el.value.replace(/[^0-9.]/g, '');
+    rbAmountBase = parseFloat(raw) || 0;
+    rbAmountKRW  = rbIsUSD ? rbAmountBase * rbExRate : rbAmountBase;
     if (rbPortfolioData) recalcRebalance();
   }
   function onRbAmountBlur(el) {
-    var raw = el.value.replace(/[^0-9]/g, '');
-    rbAmountKRW = parseFloat(raw) || 0;
-    el.value = Math.round(rbAmountKRW).toLocaleString('ko-KR');
+    var raw = el.value.replace(/[^0-9.]/g, '');
+    rbAmountBase = parseFloat(raw) || 0;
+    rbAmountKRW  = rbIsUSD ? rbAmountBase * rbExRate : rbAmountBase;
+    el.value = rbIsUSD
+      ? rbAmountBase.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})
+      : Math.round(rbAmountBase).toLocaleString('ko-KR');
   }
   function onRbAmountFocus(el) {
-    el.value = Math.round(rbAmountKRW) || '';
+    el.value = rbAmountBase || '';
   }
 
   function resetRbTargets() {
@@ -3672,8 +3713,9 @@
       (arr || []).forEach(function(s) {
         var rate = (s.marketValueFX && s.marketValueFX > 0) ? s.marketValue / s.marketValueFX : 1;
         map[s.ticker] = { currentPrice: s.currentPrice || 0, currency: s.currency || 'KRW',
-          marketValueKRW: s.marketValue || 0, quantity: s.quantity || 0, rate: rate,
-          avgPrice: s.avgPrice || 0, divKRW: s.divKRW || 0 };
+          marketValueKRW: s.marketValue || 0, marketValueFX: s.marketValueFX || 0,
+          quantity: s.quantity || 0, rate: rate,
+          avgPrice: s.avgPrice || 0, divKRW: s.divKRW || 0, divFX: s.divFX || 0 };
       });
     }
     add(portData.stocks);
@@ -3684,83 +3726,101 @@
   function renderRebalanceTable() {
     var portMap = buildPortfolioMap(rbPortfolioData);
     var items   = rbSheetItems;
+    var baseCur = rbIsUSD ? 'USD' : 'KRW';
     var fmtK = function(v) { return Math.round(v).toLocaleString('ko-KR'); };
+    var fmtU = function(v, d) { return Number(v).toLocaleString('en-US', {minimumFractionDigits: d !== undefined ? d : 2, maximumFractionDigits: d !== undefined ? d : 2}); };
     var fmtN = function(v, d) { return Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d !== undefined ? d : 4}); };
+    var fmtAmt = function(v) { return rbIsUSD ? fmtU(v, 2) : fmtK(v); };
 
-    var totalCurrentKRW = items.reduce(function(s, it) {
-      var p = portMap[it.ticker]; return s + (p ? Math.max(0, p.marketValueKRW) : 0);
+    // 현재비중 기준: USD 모드는 USD 평가액 합산
+    var totalCurrentBase = items.reduce(function(s, it) {
+      var p = portMap[it.ticker];
+      if (!p) return s;
+      return s + Math.max(0, rbIsUSD ? (p.marketValueFX || p.marketValueKRW / rbExRate) : p.marketValueKRW);
     }, 0);
 
     var rows = items.map(function(item) {
-      var pos      = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, quantity: 0, rate: 1, avgPrice: 0, divKRW: 0 };
-      var currPct  = totalCurrentKRW > 0 ? pos.marketValueKRW / totalCurrentKRW * 100 : 0;
-      var tgtPct   = (rbTargetState[item.ticker] !== undefined) ? rbTargetState[item.ticker] : item.targetPct;
-      var tgtKRW   = rbAmountKRW * tgtPct / 100;
+      var pos = portMap[item.ticker] || { currentPrice: 0, currency: rbIsUSD ? 'USD' : 'KRW',
+        marketValueKRW: 0, marketValueFX: 0, quantity: 0, rate: rbExRate || 1, avgPrice: 0, divKRW: 0, divFX: 0 };
 
-      // 현재가: 포트폴리오 > rebalancing API 순으로 fallback
+      // 현재 평가액 (기준통화)
+      var currentBase = rbIsUSD
+        ? (pos.marketValueFX || pos.marketValueKRW / rbExRate)
+        : pos.marketValueKRW;
+
+      var currPct = totalCurrentBase > 0 ? currentBase / totalCurrentBase * 100 : 0;
+      var tgtPct  = (rbTargetState[item.ticker] !== undefined) ? rbTargetState[item.ticker] : item.targetPct;
+      var tgtBase = rbAmountBase * tgtPct / 100;  // 기준통화 목표금액
+
+      // 현재가
       var livePrice = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
-      var liveCur   = pos.currency || 'KRW';
-      var liveRate  = pos.rate > 0 ? pos.rate : 1;
+      var liveCur   = pos.currency || baseCur;
+      var liveRate  = pos.rate > 0 ? pos.rate : (rbExRate || 1);
 
-      // 배분수량: 목표금액 / (현재가 × 환율), 소수점 버림
-      var allocQty = (livePrice > 0 && liveRate > 0)
-        ? Math.floor(tgtKRW / (livePrice * liveRate))
+      // 배분수량: USD모드=tgtBase/livePrice, KRW모드=tgtBase/(livePrice*rate)
+      var allocQty = livePrice > 0
+        ? (rbIsUSD
+            ? Math.floor(tgtBase / livePrice)
+            : Math.floor(tgtBase / (livePrice * liveRate)))
         : 0;
-      var priceStr  = livePrice > 0
+
+      var priceStr = livePrice > 0
         ? fmtN(livePrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur
         : '<span style="color:#a0aec0;">-</span>';
 
-      // 예상 연배당: Yahoo 주당연배당(해외) → 보유이력(한국 보유중) 순 fallback
+      // 매입단가 (기준통화)
+      var avgStr = pos.avgPrice > 0
+        ? fmtN(pos.avgPrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur : '';
+      var avgHtml = avgStr
+        ? avgStr + (pos.quantity > 0 ? '<div style="font-size:0.8em;color:#a0aec0;">' + fmtN(pos.quantity,0) + '주 보유</div>' : '')
+        : (pos.quantity > 0 ? '<span style="color:#a0aec0;">-</span><div style="font-size:0.8em;color:#a0aec0;">' + fmtN(pos.quantity,0) + '주 보유</div>' : '<span style="color:#a0aec0;">-</span>');
+
+      // 예상 연배당 (기준통화)
       var estDiv = '-';
       var divPerShareAnnual = 0;
-      var divSrc = '';
+      var divSrc = baseCur;
       if (item.divPerShare > 0) {
-        // Yahoo Finance trailing 12M (해외 종목)
         divPerShareAnnual = item.divPerShare;
         divSrc = liveCur;
-      } else if (pos.quantity > 0 && pos.divKRW > 0) {
-        // 보유 이력: 누적배당 / 보유수량
-        divPerShareAnnual = pos.divKRW / pos.quantity;
-        divSrc = 'KRW';
+      } else if (pos.quantity > 0) {
+        var histDiv = rbIsUSD ? (pos.divFX || 0) : (pos.divKRW || 0);
+        if (histDiv > 0) { divPerShareAnnual = histDiv / pos.quantity; divSrc = baseCur; }
       }
       if (divPerShareAnnual > 0 && allocQty > 0) {
-        var totalEstDivAmt = Math.round(divPerShareAnnual * allocQty);
-        estDiv = fmtK(totalEstDivAmt) + ' ' + divSrc +
-          '<div style="font-size:0.8em;color:#718096;">' +
-            fmtN(divPerShareAnnual, divPerShareAnnual < 10 ? 4 : divPerShareAnnual < 100 ? 2 : 0) +
-            ' ' + divSrc + '/주</div>';
+        var estDivTotal = divPerShareAnnual * allocQty;
+        var estDivFmt   = rbIsUSD ? fmtU(estDivTotal, 2) : fmtK(Math.round(estDivTotal));
+        var dpaFmt      = fmtN(divPerShareAnnual, divPerShareAnnual < 10 ? 4 : divPerShareAnnual < 100 ? 2 : 0);
+        estDiv = estDivFmt + ' ' + divSrc +
+          '<div style="font-size:0.8em;color:#718096;">' + dpaFmt + ' ' + divSrc + '/주</div>';
       }
 
-      // 배분금액 셀: 금액 + 수량 (배분금액 > 0일 때만 수량 표시)
-      var allocHtml = fmtK(tgtKRW);
-      if (livePrice > 0 && tgtKRW > 0) {
-        allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty, 0) + '주</div>';
+      // 배분금액 셀
+      var allocHtml = (rbIsUSD ? fmtU(tgtBase, 2) : fmtK(tgtBase));
+      if (livePrice > 0 && tgtBase > 0) {
+        allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
       }
 
       // 매수/매도
-      var diffKRW = tgtKRW - pos.marketValueKRW;
+      var diffBase = tgtBase - currentBase;
       var actHtml = '<span style="color:#a0aec0;">-</span>';
-      if (livePrice > 0 && liveRate > 0) {
-        var pKRW  = livePrice * liveRate;
-        var isK   = (liveCur === 'KRW');
-        var raw   = diffKRW / pKRW;
-        var abs   = Math.abs(raw);
-        var disp  = isK ? Math.floor(abs) : Math.round(abs * 100) / 100;
-        if (disp > 0) {
-          var c = raw > 0 ? '#276749' : '#c53030';
-          var l = raw > 0 ? '매수' : '매도';
-          actHtml = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' + (isK ? fmtN(disp,0) : fmtN(disp,2)) + '주</span>' +
-            '<div style="font-size:0.78em;color:' + c + ';">' + fmtK(Math.abs(diffKRW)) + ' KRW</div>';
+      if (livePrice > 0) {
+        var diffQty = rbIsUSD ? diffBase / livePrice : diffBase / (livePrice * liveRate);
+        var absQty  = Math.abs(diffQty);
+        var dispQty = liveCur === 'KRW' ? Math.floor(absQty) : Math.round(absQty * 100) / 100;
+        if (dispQty > 0) {
+          var c = diffQty > 0 ? '#276749' : '#c53030';
+          var l = diffQty > 0 ? '매수' : '매도';
+          var diffAmtFmt = rbIsUSD ? fmtU(Math.abs(diffBase), 2) : fmtK(Math.abs(diffBase));
+          actHtml = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' +
+            (liveCur === 'KRW' ? fmtN(dispQty,0) : fmtN(dispQty,2)) + '주</span>' +
+            '<div style="font-size:0.78em;color:' + c + ';">' + diffAmtFmt + ' ' + baseCur + '</div>';
         }
       }
 
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
         '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' + item.name + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
-        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' +
-          (pos.avgPrice > 0 ? fmtN(pos.avgPrice, liveCur === 'KRW' ? 0 : 4) + ' ' + liveCur : '<span style="color:#a0aec0;">-</span>') +
-          (pos.quantity > 0 ? '<div style="font-size:0.8em;color:#a0aec0;">' + fmtN(pos.quantity, 0) + '주 보유</div>' : '') +
-        '</td>' +
+        '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + avgHtml + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#718096;">' + currPct.toFixed(2) + '%</td>' +
         '<td style="padding:6px 8px;text-align:right;white-space:nowrap;">' +
           '<input class="rb-tgt" type="number" step="0.01" min="0" max="100"' +
@@ -3779,18 +3839,24 @@
     }, 0);
     var tgtClr = Math.abs(totalTgtPct - 100) < 0.05 ? '#276749' : '#c53030';
 
-    // 예상 연배당 합계
+    // 예상 연배당 합계 (기준통화)
     var totalEstDiv = items.reduce(function(s, it) {
-      var pos = portMap[it.ticker] || { quantity: 0, divKRW: 0, currentPrice: 0, rate: 1 };
+      var pos = portMap[it.ticker] || { quantity:0, divKRW:0, divFX:0, currentPrice:0, rate:rbExRate||1, marketValueFX:0, marketValueKRW:0 };
       var lp = pos.currentPrice > 0 ? pos.currentPrice : (it.currentPrice || 0);
-      var lr = pos.rate > 0 ? pos.rate : 1;
-      var tgtPct = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
-      var tgtKRW = rbAmountKRW * tgtPct / 100;
-      var aq = (lp > 0 && lr > 0) ? Math.floor(tgtKRW / (lp * lr)) : 0;
+      var lr = pos.rate > 0 ? pos.rate : (rbExRate||1);
+      var tp = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
+      var tb = rbAmountBase * tp / 100;
+      var aq = lp > 0 ? (rbIsUSD ? Math.floor(tb/lp) : Math.floor(tb/(lp*lr))) : 0;
       var dpa = it.divPerShare > 0 ? it.divPerShare
-              : (pos.quantity > 0 && pos.divKRW > 0 ? pos.divKRW / pos.quantity : 0);
-      return s + (dpa > 0 && aq > 0 ? Math.round(dpa * aq) : 0);
+              : (pos.quantity > 0 ? (rbIsUSD ? pos.divFX : pos.divKRW) / pos.quantity : 0);
+      return s + (dpa > 0 && aq > 0 ? dpa * aq : 0);
     }, 0);
+
+    var totalEstDivFmt = totalEstDiv > 0
+      ? (rbIsUSD ? fmtU(totalEstDiv,2) : fmtK(Math.round(totalEstDiv))) + ' ' + baseCur +
+        (rbAmountBase > 0 ? '<div style="font-size:0.82em;color:#718096;font-weight:400;">' +
+          (totalEstDiv / rbAmountBase * 100).toFixed(2) + '%</div>' : '')
+      : '-';
 
     rows.push(
       '<tr style="background:#f7fafc;font-weight:700;border-top:2px solid #cbd5e0;">' +
@@ -3798,16 +3864,8 @@
       '<td style="padding:9px 10px;"></td>' +
       '<td style="padding:9px 10px;text-align:right;">100.00%</td>' +
       '<td id="rbSumPct" style="padding:9px 10px;text-align:right;color:' + tgtClr + ';">' + totalTgtPct.toFixed(2) + '%</td>' +
-      '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtK(rbAmountKRW) + '</td>' +
-      '<td style="padding:9px 10px;text-align:right;white-space:nowrap;color:#276749;">' +
-        (totalEstDiv > 0
-          ? fmtK(totalEstDiv) + ' KRW' +
-            (rbAmountKRW > 0
-              ? '<div style="font-size:0.82em;color:#718096;font-weight:400;">' +
-                  (totalEstDiv / rbAmountKRW * 100).toFixed(2) + '%</div>'
-              : '')
-          : '-') +
-      '</td>' +
+      '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtAmt(rbAmountBase) + ' ' + baseCur + '</td>' +
+      '<td id="rbSumDiv" style="padding:9px 10px;text-align:right;white-space:nowrap;color:#276749;">' + totalEstDivFmt + '</td>' +
       '<td></td>' +
       '</tr>'
     );
@@ -3820,9 +3878,12 @@
 
   function recalcRebalance() {
     if (!rbPortfolioData || !rbSheetItems.length) return;
-    var portMap = buildPortfolioMap(rbPortfolioData);
-    var fmtK = function(v) { return Math.round(v).toLocaleString('ko-KR'); };
-    var fmtN = function(v, d) { return Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d !== undefined ? d : 4}); };
+    var portMap  = buildPortfolioMap(rbPortfolioData);
+    var baseCur  = rbIsUSD ? 'USD' : 'KRW';
+    var fmtK  = function(v) { return Math.round(v).toLocaleString('ko-KR'); };
+    var fmtN  = function(v, d) { return Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d !== undefined ? d : 4}); };
+    var fmtU  = function(v, d) { return Number(v).toLocaleString('en-US', {minimumFractionDigits: d !== undefined ? d : 2, maximumFractionDigits: d !== undefined ? d : 2}); };
+    var fmtAmt = rbIsUSD ? function(v) { return fmtU(v, 2) + ' USD'; } : function(v) { return fmtK(v) + ' KRW'; };
 
     var inputs = document.querySelectorAll('.rb-tgt');
     var trs    = document.querySelectorAll('#rbTbody tr');
@@ -3834,14 +3895,24 @@
       var tr   = trs[idx];
       if (!item || !tr) return;
 
-      var pos      = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, rate: 1, quantity: 0, divKRW: 0 };
-      var tgtPct   = parseFloat(inp.value) || 0;
-      var tgtKRW   = rbAmountKRW * tgtPct / 100;
-      var diffKRW  = tgtKRW - pos.marketValueKRW;
+      var pos       = portMap[item.ticker] || { currentPrice: 0, currency: 'KRW', marketValueKRW: 0, marketValueFX: 0, rate: 1, quantity: 0, divKRW: 0, divFX: 0 };
+      var tgtPct    = parseFloat(inp.value) || 0;
       var rLivePrice = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
       var rLiveRate  = pos.rate > 0 ? pos.rate : 1;
-      var rLiveCur   = pos.currency || 'KRW';
-      var allocQty = (rLivePrice > 0 && rLiveRate > 0) ? Math.floor(tgtKRW / (rLivePrice * rLiveRate)) : 0;
+
+      // 기준 통화 목표금액 및 현재 평가액
+      var tgtBase, currentBase, diffBase, allocQty;
+      if (rbIsUSD) {
+        tgtBase     = rbAmountBase * tgtPct / 100;
+        currentBase = pos.marketValueFX || 0;
+        diffBase    = tgtBase - currentBase;
+        allocQty    = rLivePrice > 0 ? Math.floor(tgtBase / rLivePrice) : 0;
+      } else {
+        tgtBase     = rbAmountKRW * tgtPct / 100;
+        currentBase = pos.marketValueKRW || 0;
+        diffBase    = tgtBase - currentBase;
+        allocQty    = (rLivePrice > 0 && rLiveRate > 0) ? Math.floor(tgtBase / (rLivePrice * rLiveRate)) : 0;
+      }
 
       var amtTd = tr.querySelector('.rb-tgt-amt');
       var tds   = tr.querySelectorAll('td');
@@ -3849,31 +3920,48 @@
       var actTd = tds[tds.length - 1];
 
       if (amtTd) {
-        var rAllocHtml = fmtK(tgtKRW);
-        if (rLivePrice > 0 && tgtKRW > 0) rAllocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
+        var rAllocHtml = rbIsUSD ? fmtU(tgtBase, 2) : fmtK(tgtBase);
+        if (rLivePrice > 0 && tgtBase > 0 && allocQty > 0) {
+          rAllocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty, 0) + '주</div>';
+        }
         amtTd.innerHTML = rAllocHtml;
       }
 
       // 예상 연배당 갱신
       if (estTd) {
-        if (pos.quantity > 0 && pos.divKRW > 0 && allocQty > 0) {
-          estTd.textContent = fmtK(Math.round(pos.divKRW / pos.quantity * allocQty)) + ' KRW';
+        var divPerShareCalc = 0;
+        if (rbIsUSD) {
+          divPerShareCalc = (pos.quantity > 0 && pos.divFX > 0) ? pos.divFX / pos.quantity : (item.divPerShare || 0);
+          if (divPerShareCalc > 0 && allocQty > 0) {
+            var estDivU = divPerShareCalc * allocQty;
+            estTd.innerHTML = fmtU(estDivU, 2) + ' USD' +
+              (divPerShareCalc > 0 ? '<div style="font-size:0.8em;color:#718096;">주당 ' + fmtU(divPerShareCalc, 4) + ' USD</div>' : '');
+          } else {
+            estTd.textContent = '-';
+          }
         } else {
-          estTd.textContent = '-';
+          divPerShareCalc = (pos.quantity > 0 && pos.divKRW > 0) ? pos.divKRW / pos.quantity : 0;
+          if (divPerShareCalc > 0 && allocQty > 0) {
+            estTd.textContent = fmtK(Math.round(divPerShareCalc * allocQty)) + ' KRW';
+          } else {
+            estTd.textContent = '-';
+          }
         }
       }
 
-      if (actTd && rLivePrice > 0 && rLiveRate > 0) {
-        var pKRW = rLivePrice * rLiveRate;
-        var isK  = (rLiveCur === 'KRW');
-        var raw  = diffKRW / pKRW;
-        var abs  = Math.abs(raw);
-        var disp = isK ? Math.floor(abs) : Math.round(abs * 100) / 100;
-        if (disp > 0) {
-          var c = raw > 0 ? '#276749' : '#c53030';
-          var l = raw > 0 ? '매수' : '매도';
-          actTd.innerHTML = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' + (isK ? fmtN(disp,0) : fmtN(disp,2)) + '주</span>' +
-            '<div style="font-size:0.78em;color:' + c + ';">' + fmtK(Math.abs(diffKRW)) + ' KRW</div>';
+      // 매수/매도 갱신
+      if (actTd && rLivePrice > 0) {
+        var rawShares = rbIsUSD
+          ? diffBase / rLivePrice
+          : (rLiveRate > 0 ? diffBase / (rLivePrice * rLiveRate) : 0);
+        var absShares = Math.abs(rawShares);
+        var dispShares = Math.floor(absShares);
+        if (dispShares > 0) {
+          var c = rawShares > 0 ? '#276749' : '#c53030';
+          var l = rawShares > 0 ? '매수' : '매도';
+          var absDiffAmt = Math.abs(diffBase);
+          actTd.innerHTML = '<span style="color:' + c + ';font-weight:700;">' + l + ' ' + fmtN(dispShares, 0) + '주</span>' +
+            '<div style="font-size:0.78em;color:' + c + ';">' + (rbIsUSD ? fmtU(absDiffAmt, 2) + ' USD' : fmtK(absDiffAmt) + ' KRW') + '</div>';
         } else {
           actTd.innerHTML = '<span style="color:#a0aec0;">-</span>';
         }
@@ -3887,18 +3975,32 @@
     var lastTr = trs[trs.length - 1];
     if (lastTr) {
       var lTds = lastTr.querySelectorAll('td');
-      if (lTds[4]) lTds[4].textContent = fmtK(rbAmountKRW);
+      if (lTds[4]) lTds[4].textContent = rbIsUSD ? fmtU(rbAmountBase, 2) + ' USD' : fmtK(rbAmountKRW) + ' KRW';
+
       var totalEstDiv2 = rbSheetItems.reduce(function(s, it) {
-        var p = portMap[it.ticker] || { quantity: 0, divKRW: 0, currentPrice: 0, rate: 1 };
+        var p  = portMap[it.ticker] || { quantity: 0, divKRW: 0, divFX: 0, currentPrice: 0, rate: 1 };
         var tp = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
-        var tKRW = rbAmountKRW * tp / 100;
-        var aq = (p.currentPrice > 0 && p.rate > 0) ? Math.floor(tKRW / (p.currentPrice * p.rate)) : 0;
-        return s + (p.quantity > 0 && p.divKRW > 0 && aq > 0 ? Math.round(p.divKRW / p.quantity * aq) : 0);
+        var lp = p.currentPrice > 0 ? p.currentPrice : (it.currentPrice || 0);
+        var lr = p.rate > 0 ? p.rate : 1;
+        var aq, dps;
+        if (rbIsUSD) {
+          var tB = rbAmountBase * tp / 100;
+          aq  = lp > 0 ? Math.floor(tB / lp) : 0;
+          dps = (p.quantity > 0 && p.divFX > 0) ? p.divFX / p.quantity : (it.divPerShare || 0);
+          return s + (dps > 0 && aq > 0 ? dps * aq : 0);
+        } else {
+          var tK = rbAmountKRW * tp / 100;
+          aq  = (lp > 0 && lr > 0) ? Math.floor(tK / (lp * lr)) : 0;
+          dps = (p.quantity > 0 && p.divKRW > 0) ? p.divKRW / p.quantity : 0;
+          return s + (dps > 0 && aq > 0 ? Math.round(dps * aq) : 0);
+        }
       }, 0);
+
       if (lTds[5]) {
         if (totalEstDiv2 > 0) {
-          var yieldPct = rbAmountKRW > 0 ? (totalEstDiv2 / rbAmountKRW * 100).toFixed(2) + '%' : '';
-          lTds[5].innerHTML = fmtK(totalEstDiv2) + ' KRW' +
+          var yieldBase = rbIsUSD ? rbAmountBase : rbAmountKRW;
+          var yieldPct  = yieldBase > 0 ? (totalEstDiv2 / yieldBase * 100).toFixed(2) + '%' : '';
+          lTds[5].innerHTML = (rbIsUSD ? fmtU(totalEstDiv2, 2) + ' USD' : fmtK(totalEstDiv2) + ' KRW') +
             (yieldPct ? '<div style="font-size:0.82em;color:#718096;font-weight:400;">' + yieldPct + '</div>' : '');
         } else {
           lTds[5].textContent = '-';
