@@ -3713,9 +3713,9 @@
         estDiv = fmtK(Math.round(divPerShare * allocQty)) + ' KRW';
       }
 
-      // 배분금액 셀: 금액 + 수량 (항상 표시)
+      // 배분금액 셀: 금액 + 수량 (배분금액 > 0일 때만 수량 표시)
       var allocHtml = fmtK(tgtKRW);
-      if (livePrice > 0) {
+      if (livePrice > 0 && tgtKRW > 0) {
         allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty, 0) + '주</div>';
       }
 
@@ -3823,7 +3823,7 @@
 
       if (amtTd) {
         var rAllocHtml = fmtK(tgtKRW);
-        if (rLivePrice > 0) rAllocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
+        if (rLivePrice > 0 && tgtKRW > 0) rAllocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
         amtTd.innerHTML = rAllocHtml;
       }
 
