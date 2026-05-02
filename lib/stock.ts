@@ -332,6 +332,37 @@ export async function getStockInfo(code: string, item?: string): Promise<any> {
   }
 }
 
+/**
+ * 주당 연간 배당금 조회 (trailing 12개월 기준)
+ * - 해외 종목: Yahoo Finance quoteSummary → trailingAnnualDividendRate
+ * - 한국 종목: 0 반환 (포트폴리오 보유 이력 fallback 사용)
+ */
+export async function getAnnualDividendPerShare(ticker: string): Promise<number> {
+  if (!ticker) return 0;
+  ticker = ticker.toString().trim().toUpperCase();
+
+  // 한국 종목 / 채권은 Yahoo에 배당 데이터 없음
+  if (isKoreanCode(ticker) || isKoreanBondISIN(ticker)) return 0;
+
+  try {
+    const url = `https://query1.finance.yahoo.com/v11/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=summaryDetail`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'application/json',
+      },
+    });
+    if (!res.ok) return 0;
+    const json = await res.json();
+    const detail = json?.quoteSummary?.result?.[0]?.summaryDetail;
+    return detail?.trailingAnnualDividendRate?.raw
+        || detail?.dividendRate?.raw
+        || 0;
+  } catch {
+    return 0;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // 역사적 시세 / 환율 조회
 // ─────────────────────────────────────────────────────────────────
