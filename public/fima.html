@@ -1184,7 +1184,6 @@
           <table style="width:100%;border-collapse:collapse;font-size:0.88rem;" id="rbTable">
             <thead>
               <tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">
-                <th style="padding:8px 10px;text-align:left;white-space:nowrap;">Ticker</th>
                 <th style="padding:8px 10px;text-align:left;">종목명</th>
                 <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#718096;">연배당</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재가</th>
@@ -3719,8 +3718,7 @@
       }
 
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
-        '<td style="padding:8px 10px;font-weight:700;color:#2b6cb0;white-space:nowrap;">' + item.ticker + '</td>' +
-        '<td style="padding:8px 10px;font-size:0.82em;color:#4a5568;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.name + '">' + item.name + '</td>' +
+        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + item.name + '">' + item.name + '</td>' +
         '<td style="padding:8px 10px;text-align:center;">' + divStr + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + fmtK(pos.marketValueKRW) + '</td>' +
@@ -3746,7 +3744,7 @@
 
     rows.push(
       '<tr style="background:#f7fafc;font-weight:700;border-top:2px solid #cbd5e0;">' +
-      '<td colspan="4" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
+      '<td colspan="3" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
       '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtK(totalCurrentKRW) + '</td>' +
       '<td style="padding:9px 10px;text-align:right;">100.00%</td>' +
       '<td id="rbSumPct" style="padding:9px 10px;text-align:right;color:' + tgtClr + ';">' + totalTgtPct.toFixed(2) + '%</td>' +
