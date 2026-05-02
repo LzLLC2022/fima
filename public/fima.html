@@ -3806,12 +3806,20 @@
         var histDiv = rbIsUSD ? (pos.divFX || 0) : (pos.divKRW || 0);
         if (histDiv > 0) { divPerShareAnnual = histDiv / pos.quantity; divSrc = baseCur; }
       }
+      // 주당배당금 + 배당율 서브라인 (공통)
+      var divSubLine = '';
+      if (divPerShareAnnual > 0) {
+        var dpaFmt    = fmtN(divPerShareAnnual, divPerShareAnnual < 10 ? 4 : divPerShareAnnual < 100 ? 2 : 0);
+        var divYield  = livePrice > 0 ? (divPerShareAnnual / livePrice * 100) : 0;
+        var yieldStr  = divYield > 0 ? ' (' + divYield.toFixed(2) + '%)' : '';
+        divSubLine = '<div style="font-size:0.8em;color:#718096;">' + dpaFmt + ' ' + divSrc + '/주' + yieldStr + '</div>';
+      }
       if (divPerShareAnnual > 0 && allocQty > 0) {
         var estDivTotal = divPerShareAnnual * allocQty;
         var estDivFmt   = rbIsUSD ? fmtU(estDivTotal, 2) : fmtK(Math.round(estDivTotal));
-        var dpaFmt      = fmtN(divPerShareAnnual, divPerShareAnnual < 10 ? 4 : divPerShareAnnual < 100 ? 2 : 0);
-        estDiv = estDivFmt + ' ' + divSrc +
-          '<div style="font-size:0.8em;color:#718096;">' + dpaFmt + ' ' + divSrc + '/주</div>';
+        estDiv = estDivFmt + ' ' + divSrc + divSubLine;
+      } else if (divSubLine) {
+        estDiv = '-' + divSubLine;
       }
 
       // 배분금액 셀
@@ -3948,23 +3956,26 @@
 
       // 예상 연배당 갱신
       if (estTd) {
-        var divPerShareCalc = 0;
-        if (rbIsUSD) {
-          divPerShareCalc = (pos.quantity > 0 && pos.divFX > 0) ? pos.divFX / pos.quantity : (item.divPerShare || 0);
-          if (divPerShareCalc > 0 && allocQty > 0) {
-            var estDivU = divPerShareCalc * allocQty;
-            estTd.innerHTML = fmtU(estDivU, 2) + ' USD' +
-              (divPerShareCalc > 0 ? '<div style="font-size:0.8em;color:#718096;">주당 ' + fmtU(divPerShareCalc, 4) + ' USD</div>' : '');
-          } else {
-            estTd.textContent = '-';
-          }
+        var divPerShareCalc = rbIsUSD
+          ? ((pos.quantity > 0 && pos.divFX  > 0) ? pos.divFX  / pos.quantity : (item.divPerShare || 0))
+          : ((pos.quantity > 0 && pos.divKRW > 0) ? pos.divKRW / pos.quantity : 0);
+        var rCur      = rbIsUSD ? 'USD' : 'KRW';
+        var rLivePriceForYield = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
+        // 주당배당금 + 배당율 서브라인
+        var rSubLine = '';
+        if (divPerShareCalc > 0) {
+          var rDpaFmt   = fmtN(divPerShareCalc, divPerShareCalc < 10 ? 4 : divPerShareCalc < 100 ? 2 : 0);
+          var rYield    = rLivePriceForYield > 0 ? (divPerShareCalc / rLivePriceForYield * 100) : 0;
+          var rYieldStr = rYield > 0 ? ' (' + rYield.toFixed(2) + '%)' : '';
+          rSubLine = '<div style="font-size:0.8em;color:#718096;">' + rDpaFmt + ' ' + rCur + '/주' + rYieldStr + '</div>';
+        }
+        if (divPerShareCalc > 0 && allocQty > 0) {
+          var estDivAmt = rbIsUSD ? fmtU(divPerShareCalc * allocQty, 2) : fmtK(Math.round(divPerShareCalc * allocQty));
+          estTd.innerHTML = estDivAmt + ' ' + rCur + rSubLine;
+        } else if (rSubLine) {
+          estTd.innerHTML = '-' + rSubLine;
         } else {
-          divPerShareCalc = (pos.quantity > 0 && pos.divKRW > 0) ? pos.divKRW / pos.quantity : 0;
-          if (divPerShareCalc > 0 && allocQty > 0) {
-            estTd.textContent = fmtK(Math.round(divPerShareCalc * allocQty)) + ' KRW';
-          } else {
-            estTd.textContent = '-';
-          }
+          estTd.textContent = '-';
         }
       }
 
