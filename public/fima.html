@@ -753,9 +753,75 @@
       transition: background 0.15s; white-space: nowrap;
     }
     .nav-logout-btn:hover { background: rgba(255,255,255,0.25); }
+    .nav-pin-btn {
+      background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.8); border-radius: 7px; padding: 5px 13px;
+      font-size: 0.76rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .nav-pin-btn:hover { background: rgba(255,255,255,0.2); }
+    /* PIN 변경 모달 */
+    .pin-modal-backdrop {
+      display: none; position: fixed; inset: 0; z-index: 10000;
+      background: rgba(0,0,0,0.45); align-items: center; justify-content: center;
+    }
+    .pin-modal-backdrop.open { display: flex; }
+    .pin-modal {
+      background: #fff; border-radius: 14px; padding: 28px 28px 22px;
+      width: 340px; max-width: 95vw;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+    }
+    .pin-modal h3 { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 18px; }
+    .pin-modal .pin-field { margin-bottom: 14px; }
+    .pin-modal .pin-field label { display: block; font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
+    .pin-modal .pin-field input {
+      width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0;
+      border-radius: 7px; font-size: 0.9rem; font-family: inherit; outline: none;
+      transition: border-color 0.15s;
+    }
+    .pin-modal .pin-field input:focus { border-color: #63b3ed; }
+    .pin-modal .pin-error { color: #e53e3e; font-size: 0.8rem; min-height: 18px; margin-bottom: 10px; }
+    .pin-modal .pin-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .pin-modal .pin-btn-cancel {
+      padding: 8px 18px; border: 1px solid #e2e8f0; border-radius: 7px;
+      background: #f7fafc; color: #4a5568; font-size: 0.87rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .pin-modal .pin-btn-ok {
+      padding: 8px 18px; border: none; border-radius: 7px;
+      background: #2b6cb0; color: #fff; font-size: 0.87rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+    }
+    .pin-modal .pin-btn-ok:hover { background: #2c5282; }
+    .pin-modal .pin-btn-ok:disabled { background: #a0aec0; cursor: not-allowed; }
   </style>
 </head>
 <body>
+
+<!-- ===================== PIN 변경 모달 ===================== -->
+<div id="pinModalBackdrop" class="pin-modal-backdrop" onclick="if(event.target===this)closePinModal()">
+  <div class="pin-modal">
+    <h3>🔐 PIN 변경</h3>
+    <div class="pin-field">
+      <label>기존 PIN</label>
+      <input type="password" id="pinOld" placeholder="현재 PIN 입력" maxlength="20" />
+    </div>
+    <div class="pin-field">
+      <label>변경 PIN <span style="font-weight:400;color:#a0aec0;font-size:0.9em;">(4자리 이상)</span></label>
+      <input type="password" id="pinNew" placeholder="새 PIN 입력" maxlength="20" />
+    </div>
+    <div class="pin-field">
+      <label>PIN 확인</label>
+      <input type="password" id="pinConfirm" placeholder="새 PIN 재입력" maxlength="20"
+             onkeydown="if(event.key==='Enter')submitPinChange()" />
+    </div>
+    <p id="pinModalError" class="pin-error"></p>
+    <div class="pin-btns">
+      <button class="pin-btn-cancel" onclick="closePinModal()">취소</button>
+      <button class="pin-btn-ok" id="pinOkBtn" onclick="submitPinChange()">변경</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===================== 종목 상세 팝업 (body 최상단 — 어느 탭에서도 표시) ===================== -->
 <div id="rbStockBackdrop" style="display:none;position:fixed;inset:0;z-index:9998;" onclick="closeStockDetail()"></div>
@@ -808,6 +874,7 @@
       <select id="navOwnerSelect" class="nav-owner-select" onchange="onNavOwnerChange()">
         <option value="">-- 선택 --</option>
       </select>
+      <button class="nav-pin-btn" onclick="openPinModal()">🔐 PIN 변경</button>
       <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -1468,6 +1535,60 @@
       errEl.textContent = '서버 오류: ' + e.message;
       btn.disabled = false;
       btn.textContent = '입장';
+    }
+  }
+
+  // ── PIN 변경 모달 ──────────────────────────────────────
+  function openPinModal() {
+    document.getElementById('pinOld').value     = '';
+    document.getElementById('pinNew').value     = '';
+    document.getElementById('pinConfirm').value = '';
+    document.getElementById('pinModalError').textContent = '';
+    document.getElementById('pinOkBtn').disabled = false;
+    document.getElementById('pinModalBackdrop').classList.add('open');
+    setTimeout(function() { document.getElementById('pinOld').focus(); }, 80);
+  }
+
+  function closePinModal() {
+    document.getElementById('pinModalBackdrop').classList.remove('open');
+  }
+
+  async function submitPinChange() {
+    var oldPin  = document.getElementById('pinOld').value;
+    var newPin  = document.getElementById('pinNew').value.trim();
+    var confirm = document.getElementById('pinConfirm').value.trim();
+    var errEl   = document.getElementById('pinModalError');
+    var okBtn   = document.getElementById('pinOkBtn');
+
+    errEl.textContent = '';
+
+    if (newPin.length < 4) {
+      errEl.textContent = 'PIN은 4자리 이상이어야 합니다.'; return;
+    }
+    if (newPin !== confirm) {
+      errEl.textContent = '변경 PIN과 PIN 확인이 일치하지 않습니다.'; return;
+    }
+
+    okBtn.disabled = true;
+    okBtn.textContent = '변경 중...';
+    try {
+      var res  = await fetch('/api/auth/change-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: currentOwner, currentPin: oldPin, newPin: newPin }),
+      });
+      var data = await res.json();
+      if (data.success) {
+        closePinModal();
+        alert('PIN이 성공적으로 변경되었습니다.');
+      } else {
+        errEl.textContent = data.error || 'PIN 변경에 실패했습니다.';
+      }
+    } catch (e) {
+      errEl.textContent = '서버 오류: ' + e.message;
+    } finally {
+      okBtn.disabled = false;
+      okBtn.textContent = '변경';
     }
   }
 
