@@ -1203,16 +1203,15 @@
         </div>
       </div>
 
-      <!-- 종목 상세 패널 -->
-      <div id="rbStockDetail" style="display:none;margin-top:14px;">
-        <div class="card" style="padding:0;overflow:hidden;">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f7fafc;border-bottom:1px solid #e2e8f0;">
-            <span id="rbDetailTitle" style="font-weight:700;font-size:1rem;color:#2d3748;">📊 종목 상세</span>
-            <button onclick="closeStockDetail()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#a0aec0;padding:0 4px;">✕</button>
-          </div>
-          <div id="rbDetailBody" style="padding:14px 16px;">
-            <div style="text-align:center;color:#a0aec0;padding:20px;">로딩 중...</div>
-          </div>
+      <!-- 종목 상세 팝업 (position:fixed, JS로 위치 조정) -->
+      <div id="rbStockBackdrop" style="display:none;position:fixed;inset:0;z-index:9998;" onclick="closeStockDetail()"></div>
+      <div id="rbStockPopup" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid #e2e8f0;width:640px;max-width:96vw;max-height:82vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:#f7fafc;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:1;border-radius:10px 10px 0 0;">
+          <span id="rbPopupTitle" style="font-weight:700;font-size:0.92rem;color:#2d3748;">📊 종목 상세</span>
+          <button onclick="closeStockDetail()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#a0aec0;line-height:1;">✕</button>
+        </div>
+        <div id="rbPopupBody" style="padding:12px 14px;">
+          <div style="text-align:center;color:#a0aec0;padding:20px;">로딩 중...</div>
         </div>
       </div>
 
@@ -3866,7 +3865,7 @@
       }
 
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
-        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;cursor:pointer;" onclick="showStockDetail(\'' + item.ticker.replace(/'/g,"\\'") + '\')">' +
+        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;cursor:pointer;" onclick="showStockDetail(\'' + item.ticker.replace(/'/g,"\\'") + '\',event)">' +
           '<span style="color:#2b6cb0;text-decoration:underline dotted;">' + item.name + '</span>' +
           '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + '</div>' +
         '</td>' +
@@ -4072,20 +4071,39 @@
   }
 
   // ================================================================
-  //  종목 상세 패널
+  //  종목 상세 팝업
   // ================================================================
   var rbDetailTicker = '';
 
-  function showStockDetail(ticker) {
-    var panel = document.getElementById('rbStockDetail');
-    var body  = document.getElementById('rbDetailBody');
-    var title = document.getElementById('rbDetailTitle');
-    if (!panel) return;
+  function showStockDetail(ticker, evt) {
+    var popup    = document.getElementById('rbStockPopup');
+    var backdrop = document.getElementById('rbStockBackdrop');
+    var body     = document.getElementById('rbPopupBody');
+    var title    = document.getElementById('rbPopupTitle');
+    if (!popup) return;
+
     rbDetailTicker = ticker;
     title.textContent = '📊 ' + ticker + ' 상세';
     body.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:24px;">데이터 로딩 중...</div>';
-    panel.style.display = 'block';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // 위치: 클릭한 td 바로 아래
+    var td = evt ? (evt.currentTarget || evt.target) : null;
+    if (td) {
+      var rect = td.getBoundingClientRect();
+      var popW = Math.min(640, window.innerWidth * 0.96);
+      var left = rect.left;
+      // 오른쪽 잘림 방지
+      if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+      if (left < 4) left = 4;
+      var top = rect.bottom + 4;
+      // 아래 공간 부족 시 위쪽으로
+      if (top + 300 > window.innerHeight) top = Math.max(4, rect.top - 4 - Math.min(500, window.innerHeight * 0.75));
+      popup.style.left = left + 'px';
+      popup.style.top  = (top + window.scrollY) + 'px';
+    }
+
+    popup.style.display    = 'block';
+    backdrop.style.display = 'block';
 
     fetch('/api/stock-info', {
       method: 'POST',
@@ -4101,8 +4119,10 @@
   }
 
   function closeStockDetail() {
-    var p = document.getElementById('rbStockDetail');
+    var p = document.getElementById('rbStockPopup');
+    var b = document.getElementById('rbStockBackdrop');
     if (p) p.style.display = 'none';
+    if (b) b.style.display = 'none';
     rbDetailTicker = '';
   }
 
@@ -4138,8 +4158,8 @@
   }
 
   function renderStockDetail(d) {
-    var body = document.getElementById('rbDetailBody');
-    var title = document.getElementById('rbDetailTitle');
+    var body  = document.getElementById('rbPopupBody');
+    var title = document.getElementById('rbPopupTitle');
     if (!body) return;
     title.textContent = '📊 ' + d.origTicker + (d.name && d.name !== d.origTicker ? '  (' + d.name + ')' : '');
 
