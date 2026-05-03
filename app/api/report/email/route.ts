@@ -524,9 +524,13 @@ async function getOwnerEmail(sheetId: string): Promise<string> {
 }
 
 // ── Resend HTTP API로 이메일 발송 ─────────────────────────────────
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+async function sendEmail(to: string, subject: string, html: string, owner: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY 환경변수가 없습니다.');
+
+  // Gmail이 여러 Owner의 메일을 하나의 대화(thread)로 묶지 않도록
+  // Owner별 고유 Message-ID를 설정
+  const uniqueId = `fima-${owner.toLowerCase()}-${Date.now()}@lim.kr`;
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -539,6 +543,10 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
       to     : [to],
       subject: subject,
       html   : html,
+      headers: {
+        'Message-ID'     : `<${uniqueId}>`,
+        'X-Entity-Ref-ID': uniqueId,
+      },
     }),
   });
 
@@ -598,7 +606,7 @@ export async function POST(req: NextRequest) {
 
       const subject = `[${owner}] ${dateStr} 포트폴리오`;
       const html    = buildEmailHtml(owner, pfData, dateStr);
-      await sendEmail(email, subject, html);
+      await sendEmail(email, subject, html, owner);
 
       results.push({ owner, status: 'sent', email });
     } catch (e: any) {
