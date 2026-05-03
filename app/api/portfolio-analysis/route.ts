@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
-import { getExchangeRate, getStockPrice } from '@/lib/stock';
+import { getExchangeRate, getStockPrice, getStockInfo } from '@/lib/stock';
 
 // ── 한국 채권 ISIN 판별 (KR + 10자리) ────────────────────────────────────
 function isKoreanBondISIN(ticker: string): boolean {
@@ -317,7 +317,7 @@ export async function POST(req: NextRequest) {
       .map(([t]) => t);
 
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
-    const [tickerHistory, currentPriceList, indexHistory, exchangeRates] = await Promise.all([
+    const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates] = await Promise.all([
       // 종목 월별 역사적 종가 (Yahoo Finance — 한국 종목은 .KS / 채권 ISIN은 조회 불가)
       Promise.all(heldTickers.map(async t => {
         if (isKoreanBondISIN(t)) {
@@ -333,6 +333,8 @@ export async function POST(req: NextRequest) {
       })),
       // 종목 현재가 (getStockPrice — portfolio 탭과 동일 방식)
       Promise.allSettled(heldTickers.map(t => getStockPrice(t))),
+      // 종목 전일 종가 (Daily PnL용) — getStockInfo 'yesterday' 필드 사용
+      Promise.allSettled(heldTickers.map(t => getStockInfo(t, 'yesterday'))),
       // 지수 월별 종가
       Promise.all([
         fetchMonthlyCloses('^KS11', 15).then(d => ({ name: 'KOSPI',  data: d })).catch(() => ({ name: 'KOSPI',  data: [] })),
@@ -380,6 +382,15 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // 전일 종가 맵 (Daily PnL 계산용)
+    const yesterdayPrice: Record<string, number> = {};
+    heldTickers.forEach((t, i) => {
+      const r = yesterdayPriceList[i];
+      const v = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
+      // 전일가 없으면(채권·조회실패) 현재가로 대체 (해당 종목 Daily PnL = 0)
+      yesterdayPrice[t] = v > 0 ? v : currentPrice[t] || 0;
+    });
+
     // ── 요약 ──────────────────────────────────────────────────────
     const resolveRate = (region: string) => {
       const cur = currencyMap[region] || 'KRW';
@@ -397,6 +408,18 @@ export async function POST(req: NextRequest) {
     });
 
     const netInvKRW = currentState.netDepositKRW;
+
+    // 전일 평가액 (Daily PnL 기준값) — 현금은 동일, 보유 종목만 전일가 적용
+    let yesterdayValueKRW = 0;
+    Object.entries(currentState.cashFX).forEach(([region, amt]) => {
+      yesterdayValueKRW += amt * resolveRate(region);
+    });
+    heldTickers.forEach(t => {
+      const p = currentState.positions[t];
+      if (p.qty < 0.0001) return;
+      yesterdayValueKRW += (yesterdayPrice[t] || 0) * p.qty * resolveRate(p.region);
+    });
+
     const summary = {
       netInvestmentKRW: Math.round(netInvKRW),
       marketValueKRW:   Math.round(marketValueKRW),
@@ -502,6 +525,12 @@ export async function POST(req: NextRequest) {
       pnlPct       : (curVal - prevMonthEntry.marketValueKRW) / prevMonthEntry.marketValueKRW * 100,
     } : null;
 
+    const daily = yesterdayValueKRW > 0 ? {
+      startValueKRW: Math.round(yesterdayValueKRW),
+      pnlKRW       : Math.round(curVal - yesterdayValueKRW),
+      pnlPct       : (curVal - yesterdayValueKRW) / yesterdayValueKRW * 100,
+    } : null;
+
     // ── 월별 수익금액 차트용 기준월 누적손익 ─────────────────────────
     let basePnl = 0;
     const baseState = monthlyStates[baseMM];
@@ -518,7 +547,7 @@ export async function POST(req: NextRequest) {
       basePnl = Math.round(baseVal - baseState.netDepositKRW);
     }
 
-    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd }, monthly, indices, stocks, dividends, basePnl });
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, basePnl });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
