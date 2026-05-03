@@ -24,133 +24,151 @@ function signPrefix(v: number): string {
   return v >= 0 ? '+' : '';
 }
 
-// ── SVG 월별 누적 수익률 라인 차트 ──────────────────────────────────
-function buildReturnChart(monthly: any[], indices: any): string {
+// ── QuickChart.io 이미지 URL 생성 (Gmail 호환 PNG) ──────────────────
+
+/** 월별 누적 수익률 비교 — 라인 차트 */
+function buildReturnChartUrl(monthly: any[], indices: any): string {
   if (!monthly || monthly.length < 2) return '';
 
-  const W = 540, H = 200, PL = 48, PR = 16, PT = 20, PB = 36;
-  const cW = W - PL - PR, cH = H - PT - PB;
+  const n      = monthly.length;
+  const labels = monthly.map((m: any) => String(m.month || '').slice(5));
 
-  // 데이터 추출
-  const labels  = monthly.map((m: any) => String(m.month || '').slice(5)); // MM
-  const pfVals  = monthly.map((m: any) => m.portfolioReturnPct ?? 0);
-  const koVals  = (indices?.KOSPI  || []).map((d: any) => d.pct ?? 0);
-  const spVals  = (indices?.sp500  || []).map((d: any) => d.pct ?? 0);
-  const nqVals  = (indices?.nasdaq || []).map((d: any) => d.pct ?? 0);
+  // 월별 누적 수익률: 첫 월 기준 (returnPct는 전체 누적이므로 그대로 사용)
+  const pfVals = monthly.map((m: any) => parseFloat((m.returnPct ?? 0).toFixed(2)));
 
-  const n = monthly.length;
-  const allVals = [...pfVals, ...koVals.slice(0, n), ...spVals.slice(0, n), ...nqVals.slice(0, n)];
-  const minV = Math.min(...allVals, 0);
-  const maxV = Math.max(...allVals, 0);
-  const range = maxV - minV || 1;
+  // 지수 수익률 (API가 returnPct 필드로 반환)
+  const toArr = (key: string) =>
+    ((indices?.[key] || []) as any[]).slice(0, n).map((d: any) =>
+      parseFloat((d.returnPct ?? d.pct ?? 0).toFixed(2)));
 
-  const xOf = (i: number) => PL + (i / (n - 1)) * cW;
-  const yOf = (v: number) => PT + cH - ((v - minV) / range) * cH;
+  const koVals = toArr('KOSPI');
+  const spVals = toArr('SP500');
+  const nqVals = toArr('NASDAQ');
 
-  const polyline = (vals: number[], color: string, dash = '') => {
-    if (!vals.length) return '';
-    const pts = vals.slice(0, n).map((v, i) => `${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(' ');
-    return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+  const cfg = {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '포트폴리오', data: pfVals, borderColor: '#2b6cb0', backgroundColor: 'transparent', pointRadius: 3, borderWidth: 2.5 },
+        { label: 'KOSPI',      data: koVals, borderColor: '#e53e3e', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
+        { label: 'S&P500',     data: spVals, borderColor: '#38a169', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
+        { label: 'NASDAQ',     data: nqVals, borderColor: '#805ad5', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
+      ],
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        y: {
+          ticks: {
+            callback: "function(v){return (v>=0?'+':'')+v.toFixed(1)+'%'}",
+            font: { size: 10 },
+          },
+          grid: { color: '#e2e8f0' },
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+      },
+    },
   };
 
-  // y축 눈금 (3개)
-  const ticks = [minV, (minV + maxV) / 2, maxV];
-  const yTicks = ticks.map(v => {
-    const y = yOf(v).toFixed(1);
-    const lbl = (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
-    return `<line x1="${PL}" y1="${y}" x2="${W - PR}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/>
-            <text x="${PL - 4}" y="${(+y + 4).toFixed(1)}" text-anchor="end" font-size="9" fill="#718096">${lbl}</text>`;
-  }).join('');
-
-  // 0 기준선
-  const y0 = yOf(0).toFixed(1);
-  const zeroLine = `<line x1="${PL}" y1="${y0}" x2="${W - PR}" y2="${y0}" stroke="#a0aec0" stroke-width="1" stroke-dasharray="4,3"/>`;
-
-  // x축 레이블
-  const xLabels = labels.map((lb, i) => {
-    if (n > 8 && i % 2 !== 0) return '';
-    return `<text x="${xOf(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="#718096">${lb}</text>`;
-  }).join('');
-
-  // 범례
-  const legend = [
-    { label: '포트폴리오', color: '#2b6cb0' },
-    { label: 'KOSPI',      color: '#e53e3e' },
-    { label: 'S&P500',     color: '#38a169' },
-    { label: 'NASDAQ',     color: '#805ad5' },
-  ].map((l, i) => `<rect x="${PL + i * 90}" y="4" width="14" height="3" fill="${l.color}" rx="1"/><text x="${PL + i * 90 + 17}" y="9" font-size="9" fill="#4a5568">${l.label}</text>`).join('');
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="display:block;max-width:100%;">
-  ${yTicks}
-  ${zeroLine}
-  ${polyline(koVals, '#e53e3e', '5,3')}
-  ${polyline(spVals, '#38a169', '5,3')}
-  ${polyline(nqVals, '#805ad5', '5,3')}
-  ${polyline(pfVals, '#2b6cb0')}
-  ${xLabels}
-  ${legend}
-</svg>`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=220&backgroundColor=white`;
 }
 
-// ── SVG 월별 수익금액 바 차트 ─────────────────────────────────────
-function buildPnlBarChart(monthly: any[]): string {
+/** 월별 수익금액 — 바 차트 */
+function buildPnlBarChartUrl(monthly: any[]): string {
   if (!monthly || monthly.length < 2) return '';
 
-  const W = 540, H = 160, PL = 54, PR = 16, PT = 16, PB = 32;
-  const cW = W - PL - PR, cH = H - PT - PB;
-  const n = monthly.length;
+  const labels = monthly.map((m: any) => String(m.month || '').slice(5));
 
-  const vals = monthly.map((m: any) => {
-    const cur  = m.marketValueKRW ?? 0;
-    const prev = m.prevMarketValueKRW ?? (m.marketValueKRW - (m.pnlKRW ?? 0));
-    return (m.pnlKRW ?? 0);
+  // 월간 P&L = 당월 평가액 - 전월 평가액 (월별 변동분)
+  const vals = monthly.map((m: any, i: number) => {
+    if (i === 0) return 0;
+    const cur  = monthly[i].marketValueKRW   ?? 0;
+    const prev = monthly[i - 1].marketValueKRW ?? 0;
+    // 순투자액 변동을 제거하여 순수 수익금액 추정
+    const netChg = (monthly[i].netInvestmentKRW ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0);
+    return Math.round(cur - prev - netChg);
   });
 
-  const maxAbs = Math.max(...vals.map(Math.abs), 1);
-  const barW   = Math.max(4, Math.floor(cW / n) - 3);
-  const xOf    = (i: number) => PL + (i + 0.5) * (cW / n);
-  const y0     = PT + cH / 2;
+  const colors = vals.map((v: number) => v >= 0 ? '#3182ce' : '#fc8181');
 
-  const bars = vals.map((v, i) => {
-    const bh   = Math.abs(v) / maxAbs * (cH / 2 - 2);
-    const x    = (xOf(i) - barW / 2).toFixed(1);
-    const y    = v >= 0 ? (y0 - bh).toFixed(1) : y0.toFixed(1);
-    const col  = v >= 0 ? '#3182ce' : '#fc8181';
-    const lbl  = monthly[i].month?.slice(5) ?? '';
-    return `<rect x="${x}" y="${y}" width="${barW}" height="${bh.toFixed(1)}" fill="${col}" rx="1"/>
-            <text x="${xOf(i).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="#718096">${lbl}</text>`;
-  }).join('');
-
-  // 0 기준선
-  const zeroLine = `<line x1="${PL}" y1="${y0}" x2="${W - PR}" y2="${y0}" stroke="#a0aec0" stroke-width="1"/>`;
-
-  // y축 눈금 (상단/하단)
-  const fmtShort = (v: number) => {
-    const abs = Math.abs(v);
-    const sign = v >= 0 ? '+' : '-';
-    if (abs >= 100_000_000) return sign + (abs / 100_000_000).toFixed(1) + '억';
-    if (abs >= 10_000)      return sign + Math.round(abs / 10_000) + '만';
-    return sign + abs.toLocaleString('ko-KR');
+  const cfg = {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: vals,
+        backgroundColor: colors,
+        borderColor: colors,
+        borderWidth: 1,
+        borderRadius: 2,
+      }],
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          ticks: {
+            callback: "function(v){const a=Math.abs(v);const s=v>=0?'+':'-';if(a>=100000000)return s+(a/100000000).toFixed(1)+'억';if(a>=10000)return s+Math.round(a/10000)+'만';return (v>=0?'+':'')+v}",
+            font: { size: 10 },
+          },
+          grid: { color: '#e2e8f0' },
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+      },
+    },
   };
-  const yTicks = [maxAbs, 0, -maxAbs].map(v => {
-    const y = (PT + cH / 2 - (v / maxAbs) * (cH / 2)).toFixed(1);
-    return `<line x1="${PL - 3}" y1="${y}" x2="${PL}" y2="${y}" stroke="#cbd5e0" stroke-width="1"/>
-            <text x="${PL - 5}" y="${(+y + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#718096">${fmtShort(v)}</text>`;
-  }).join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" style="display:block;max-width:100%;">
-  ${yTicks}
-  ${zeroLine}
-  ${bars}
-</svg>`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=180&backgroundColor=white`;
+}
+
+/** 월별 배당금 — 연도별 그룹 바 차트 */
+function buildDivChartUrl(dividends: any[]): string {
+  if (!dividends || dividends.length === 0) return '';
+
+  // 전체 월 레이블 01~12
+  const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const colors = ['#3182ce','#38a169','#e53e3e','#805ad5','#dd6b20'];
+
+  const datasets = dividends.map((yr: any, i: number) => ({
+    label: String(yr.year),
+    data: monthLabels.map(mo => yr.months?.[mo] ?? 0),
+    backgroundColor: colors[i % colors.length],
+    borderRadius: 2,
+  }));
+
+  // 데이터가 전부 0이면 차트 생략
+  const hasData = datasets.some(ds => ds.data.some((v: number) => v > 0));
+  if (!hasData) return '';
+
+  const cfg = {
+    type: 'bar',
+    data: { labels: monthLabels, datasets },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        y: {
+          ticks: {
+            callback: "function(v){const a=Math.abs(v);if(a>=100000000)return (v/100000000).toFixed(1)+'억';if(a>=10000)return Math.round(v/10000)+'만';return v}",
+            font: { size: 10 },
+          },
+          grid: { color: '#e2e8f0' },
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+      },
+    },
+  };
+
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=200&backgroundColor=white`;
 }
 
 // ── HTML 이메일 생성 ────────────────────────────────────────────
 function buildEmailHtml(owner: string, data: any, dateStr: string): string {
-  const s       = data.summary  || {};
-  const stocks  = (data.stocks  || []).filter((st: any) => st);
-  const monthly = data.monthly  || [];
-  const indices = data.indices  || {};
+  const s         = data.summary  || {};
+  const stocks    = (data.stocks  || []).filter((st: any) => st);
+  const monthly   = data.monthly  || [];
+  const indices   = data.indices  || {};
+  const dividends = data.dividends || [];
 
   const netInv   = s.netInvestmentKRW  ?? 0;
   const mktVal   = s.marketValueKRW    ?? 0;
@@ -160,9 +178,13 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const mtd      = s.mtd;
   const daily    = s.daily;
 
-  // 차트 SVG
-  const returnChartSvg = buildReturnChart(monthly, indices);
-  const pnlBarSvg      = buildPnlBarChart(monthly);
+  // 차트 이미지 URL (QuickChart.io → PNG)
+  const returnChartUrl = buildReturnChartUrl(monthly, indices);
+  const pnlBarUrl      = buildPnlBarChartUrl(monthly);
+  const divChartUrl    = buildDivChartUrl(dividends);
+
+  const chartImg = (url: string) =>
+    `<img src="${url}" width="520" style="display:block;max-width:100%;border-radius:6px;" alt="chart">`;
 
   // 요약 카드
   const cardHtml = (label: string, val: string, sub: string, col: string) => `
@@ -248,17 +270,24 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
         </table>
 
         <!-- 월별 누적 수익률 차트 -->
-        ${returnChartSvg ? `
+        ${returnChartUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:8px;">📈 월별 누적 수익률 비교</div>
-        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;overflow:hidden;">
-          ${returnChartSvg}
+        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
+          ${chartImg(returnChartUrl)}
         </div>` : ''}
 
         <!-- 월별 수익금액 바 차트 -->
-        ${pnlBarSvg ? `
+        ${pnlBarUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:8px;">💰 월별 수익금액 (KRW)</div>
-        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;overflow:hidden;">
-          ${pnlBarSvg}
+        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
+          ${chartImg(pnlBarUrl)}
+        </div>` : ''}
+
+        <!-- 월별 배당금 차트 -->
+        ${divChartUrl ? `
+        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:8px;">🎁 월별 배당금 (KRW)</div>
+        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
+          ${chartImg(divChartUrl)}
         </div>` : ''}
 
         <!-- 종목 테이블 -->
