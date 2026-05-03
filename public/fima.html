@@ -848,6 +848,10 @@
     <div class="pin-field">
       <input type="email" id="emailNew" placeholder="이메일 주소 입력" maxlength="100" />
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;">
+      <input type="checkbox" id="emailRecvCheck" style="width:16px;height:16px;cursor:pointer;accent-color:#3182ce;" />
+      <label for="emailRecvCheck" style="font-size:13px;color:#4a5568;cursor:pointer;user-select:none;">메일 수신</label>
+    </div>
     <p id="emailModalMsg" class="pin-error"></p>
     <div class="pin-btns">
       <button class="pin-btn-ok" id="emailOkBtn" onclick="submitEmailChange()">E-Mail 변경</button>
@@ -1608,12 +1612,14 @@
     document.getElementById('emailOkBtn').textContent = 'E-Mail 변경';
     document.getElementById('pinModalBackdrop').classList.add('open');
     setTimeout(function() { document.getElementById('pinOld').focus(); }, 80);
-    // 현재 이메일 비동기 로딩
+    // 현재 이메일 + 수신여부 비동기 로딩
+    document.getElementById('emailRecvCheck').checked = false;
     fetch('/api/auth/change-email?owner=' + encodeURIComponent(currentOwner))
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        if (d.success && d.email) {
-          document.getElementById('emailNew').value = d.email;
+        if (d.success) {
+          if (d.email) document.getElementById('emailNew').value = d.email;
+          document.getElementById('emailRecvCheck').checked = !!d.emailRecv;
         }
       })
       .catch(function() {});
@@ -1668,9 +1674,10 @@
   }
 
   async function submitEmailChange() {
-    var newEmail = document.getElementById('emailNew').value.trim();
-    var msgEl    = document.getElementById('emailModalMsg');
-    var okBtn    = document.getElementById('emailOkBtn');
+    var newEmail  = document.getElementById('emailNew').value.trim();
+    var emailRecv = document.getElementById('emailRecvCheck').checked;
+    var msgEl     = document.getElementById('emailModalMsg');
+    var okBtn     = document.getElementById('emailOkBtn');
 
     msgEl.textContent = '';
     msgEl.style.color = '#e53e3e';
@@ -1680,19 +1687,19 @@
     }
 
     okBtn.disabled = true;
-    okBtn.textContent = '변경 중...';
+    okBtn.textContent = '저장 중...';
     try {
       var res  = await fetch('/api/auth/change-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: currentOwner, newEmail: newEmail }),
+        body: JSON.stringify({ owner: currentOwner, newEmail: newEmail, emailRecv: emailRecv }),
       });
       var data = await res.json();
       if (data.success) {
         msgEl.style.color = '#38a169';
-        msgEl.textContent = '✅ E-Mail이 성공적으로 변경되었습니다.';
+        msgEl.textContent = '✅ 저장되었습니다. (수신: ' + (emailRecv ? '예' : '아니오') + ')';
       } else {
-        msgEl.textContent = data.error || 'E-Mail 변경에 실패했습니다.';
+        msgEl.textContent = data.error || '저장에 실패했습니다.';
       }
     } catch (e) {
       msgEl.textContent = '서버 오류: ' + e.message;
