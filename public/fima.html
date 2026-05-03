@@ -546,6 +546,13 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 12px;
+      margin-bottom: 12px;
+    }
+    /* 포트폴리오 YTD/MTD 카드 그리드 */
+    .pf-period-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
       margin-bottom: 20px;
     }
 
@@ -628,6 +635,9 @@
       .pf-summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
       .pf-summary-grid .card { padding: 12px 10px; }
       .pf-summary-grid .card [style*="font-size:1.3rem"] { font-size: 1rem !important; }
+      /* 포트폴리오 YTD/MTD: 모바일 동일 스타일 */
+      .pf-period-grid { gap: 8px; }
+      .pf-period-grid .card { padding: 12px 10px; }
 
 
       /* 수정 모달 */
@@ -1197,6 +1207,20 @@
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">수익률</div>
             <div id="pfPnlPct" style="font-size:1.3rem;font-weight:700;">-</div>
+          </div>
+        </div>
+
+        <!-- YTD / MTD 손익 카드 -->
+        <div class="pf-period-grid">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">YTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(연초 이후)</span></div>
+            <div id="pfYtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
+            <div id="pfYtdPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">MTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(월초 이후)</span></div>
+            <div id="pfMtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
+            <div id="pfMtdPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
           </div>
         </div>
 
@@ -3250,6 +3274,25 @@
       var pctEl = document.getElementById('pfPnlPct');
       pctEl.textContent = fmtPct(s.pnlPct);
       pctEl.style.color = pnlCol(s.pnlPct);
+
+      // ── YTD / MTD 손익 카드 ───────────────────────────────
+      function setPeriodCard(pnlId, pctId, d) {
+        var pe = document.getElementById(pnlId);
+        var ce = document.getElementById(pctId);
+        if (d) {
+          pe.textContent = (d.pnlKRW >= 0 ? '+' : '') + fmtK(d.pnlKRW) + ' KRW';
+          pe.style.color = pnlCol(d.pnlKRW);
+          ce.textContent = fmtPct(d.pnlPct);
+          ce.style.color = pnlCol(d.pnlPct);
+        } else {
+          pe.textContent = 'N/A';
+          pe.style.color = '#a0aec0';
+          ce.textContent = '';
+          ce.style.color = '';
+        }
+      }
+      setPeriodCard('pfYtdPnl', 'pfYtdPct', s.ytd);
+      setPeriodCard('pfMtdPnl', 'pfMtdPct', s.mtd);
 
       // ── 차트 ─────────────────────────────────────────────
       pfChartMonthly = data.monthly;
