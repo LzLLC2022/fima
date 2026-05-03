@@ -130,9 +130,9 @@ function buildPnlBarChartUrl(monthly: any[], basePnl: number): string {
         datalabels:{
           anchor:'end',
           align:'top',
-          fontSize:5,
-          fontStyle:'bold',
-          fontColor:'#374151',
+          fontSize:7,
+          fontStyle:'normal',
+          fontColor:'#4a5568',
           formatter:function(v){
             if(Math.abs(v)<10)return '';
             var s=v>=0?'+':'-';
