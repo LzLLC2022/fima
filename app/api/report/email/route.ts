@@ -495,7 +495,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
 </html>`;
 }
 
-// ── Master 시트에서 이메일 조회 ────────────────────────────────────
+// ── Master 시트에서 이메일 조회 (EmailRecv = N 이면 빈 문자열 반환) ──
 async function getOwnerEmail(sheetId: string): Promise<string> {
   try {
     const masterData = await getSheetValues(sheetId, MASTER_SHEET_NAME);
@@ -503,9 +503,22 @@ async function getOwnerEmail(sheetId: string): Promise<string> {
     const headers     = masterData[0].map((h: any) => String(h ?? '').trim().toLowerCase());
     const emailColIdx = headers.findIndex((h: string) => h === 'email');
     if (emailColIdx === -1) return '';
+    const recvColIdx  = headers.findIndex((h: string) => h === 'emailrecv');
+
     for (let i = 1; i < masterData.length; i++) {
-      const val = String(masterData[i]?.[emailColIdx] ?? '').trim();
-      if (val) return val;
+      const email = String(masterData[i]?.[emailColIdx] ?? '').trim();
+      if (!email) continue;
+
+      // EmailRecv 컬럼이 있으면 수신 여부 확인 (없으면 수신 안 함 처리)
+      if (recvColIdx !== -1) {
+        const recv = String(masterData[i]?.[recvColIdx] ?? '').trim().toLowerCase();
+        const isRecv = recv === 'y' || recv === '1' || recv === 'true';
+        if (!isRecv) return ''; // 수신 거부
+      } else {
+        return ''; // EmailRecv 컬럼 자체가 없으면 수신 안 함
+      }
+
+      return email;
     }
   } catch { /* 조회 실패 시 빈 문자열 */ }
   return '';
