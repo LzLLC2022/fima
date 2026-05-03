@@ -3,11 +3,10 @@ import { OWNER_CONFIG } from '@/lib/config';
 import { getSheetValues, MASTER_SHEET_NAME } from '@/lib/sheets';
 
 // ── 숫자 포맷 헬퍼 ────────────────────────────────────────────────
+
+/** 3자리 콤마 구분 정수 (예: 42,840,000) */
 function fmtKRW(v: number): string {
-  const abs = Math.abs(v);
-  if (abs >= 100_000_000) return (v / 100_000_000).toFixed(2) + '억';
-  if (abs >= 10_000)      return Math.round(v / 10_000) + '만';
-  return v.toLocaleString('ko-KR');
+  return Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 function fmtPct(v: number | null | undefined): string {
@@ -24,19 +23,26 @@ function signPrefix(v: number): string {
   return v >= 0 ? '+' : '';
 }
 
+// ── 차트 x축 레이블: "2025-05" → "25-05" ───────────────────────────
+function toYYMM(month: string): string {
+  const s = String(month || '');
+  // "2025-05" → "25-05"
+  if (s.length >= 7) return s.slice(2, 7);
+  // "2025-5" → "25-05"
+  if (s.length >= 6) return s.slice(2, 4) + '-' + s.slice(5).padStart(2, '0');
+  return s;
+}
+
 // ── QuickChart.io 이미지 URL 생성 (Gmail 호환 PNG) ──────────────────
 
-/** 월별 누적 수익률 비교 — 라인 차트 */
+/** 월별 누적 수익률 비교 — 라인 차트 (앱 리포트와 동일 구성) */
 function buildReturnChartUrl(monthly: any[], indices: any): string {
   if (!monthly || monthly.length < 2) return '';
 
   const n      = monthly.length;
-  const labels = monthly.map((m: any) => String(m.month || '').slice(5));
-
-  // 월별 누적 수익률: 첫 월 기준 (returnPct는 전체 누적이므로 그대로 사용)
+  const labels = monthly.map((m: any) => toYYMM(m.month));
   const pfVals = monthly.map((m: any) => parseFloat((m.returnPct ?? 0).toFixed(2)));
 
-  // 지수 수익률 (API가 returnPct 필드로 반환)
   const toArr = (key: string) =>
     ((indices?.[key] || []) as any[]).slice(0, n).map((d: any) =>
       parseFloat((d.returnPct ?? d.pct ?? 0).toFixed(2)));
@@ -50,18 +56,20 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
     data: {
       labels,
       datasets: [
-        { label: '포트폴리오', data: pfVals, borderColor: '#2b6cb0', backgroundColor: 'transparent', pointRadius: 3, borderWidth: 2.5 },
-        { label: 'KOSPI',      data: koVals, borderColor: '#e53e3e', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
-        { label: 'S&P500',     data: spVals, borderColor: '#38a169', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
-        { label: 'NASDAQ',     data: nqVals, borderColor: '#805ad5', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
+        { label: '포트폴리오', data: pfVals, borderColor: '#3b82f6', backgroundColor: 'transparent', pointRadius: 3, borderWidth: 2.5 },
+        { label: 'KOSPI',      data: koVals, borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
+        { label: 'S&P500',     data: spVals, borderColor: '#10b981', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
+        { label: 'NASDAQ',     data: nqVals, borderColor: '#8b5cf6', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
       ],
     },
     options: {
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 11 } } },
+      },
       scales: {
         y: {
           ticks: {
-            callback: "function(v){return (v>=0?'+':'')+v.toFixed(1)+'%'}",
+            callback: "function(v){return (v>=0?'+':'')+v.toFixed(0)+'%'}",
             font: { size: 10 },
           },
           grid: { color: '#e2e8f0' },
@@ -71,32 +79,32 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
     },
   };
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=220&backgroundColor=white`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=230&backgroundColor=white`;
 }
 
-/** 월별 수익금액 — 바 차트 */
+/** 월별 수익금액 — 바 차트 (앱 리포트와 동일 구성) */
 function buildPnlBarChartUrl(monthly: any[]): string {
   if (!monthly || monthly.length < 2) return '';
 
-  const labels = monthly.map((m: any) => String(m.month || '').slice(5));
+  const labels = monthly.map((m: any) => toYYMM(m.month));
 
-  // 월간 P&L = 당월 평가액 - 전월 평가액 (월별 변동분)
+  // 월간 순수 수익금액 = (평가액 변화) - (순투자 변화)
   const vals = monthly.map((m: any, i: number) => {
     if (i === 0) return 0;
-    const cur  = monthly[i].marketValueKRW   ?? 0;
-    const prev = monthly[i - 1].marketValueKRW ?? 0;
-    // 순투자액 변동을 제거하여 순수 수익금액 추정
-    const netChg = (monthly[i].netInvestmentKRW ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0);
+    const cur    = monthly[i].marketValueKRW     ?? 0;
+    const prev   = monthly[i - 1].marketValueKRW ?? 0;
+    const netChg = (monthly[i].netInvestmentKRW  ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0);
     return Math.round(cur - prev - netChg);
   });
 
-  const colors = vals.map((v: number) => v >= 0 ? '#3182ce' : '#fc8181');
+  const colors = vals.map((v: number) => v >= 0 ? '#3b82f6' : '#f87171');
 
   const cfg = {
     type: 'bar',
     data: {
       labels,
       datasets: [{
+        label: '',
         data: vals,
         backgroundColor: colors,
         borderColor: colors,
@@ -105,51 +113,21 @@ function buildPnlBarChartUrl(monthly: any[]): string {
       }],
     },
     options: {
-      plugins: { legend: { display: false } },
-      scales: {
-        y: {
-          ticks: {
-            callback: "function(v){const a=Math.abs(v);const s=v>=0?'+':'-';if(a>=100000000)return s+(a/100000000).toFixed(1)+'억';if(a>=10000)return s+Math.round(a/10000)+'만';return (v>=0?'+':'')+v}",
-            font: { size: 10 },
-          },
-          grid: { color: '#e2e8f0' },
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: 'end',
+          align: 'top',
+          font: { size: 9, weight: 'bold' },
+          color: '#374151',
+          formatter: "function(v){if(Math.abs(v)<50000)return'';const a=Math.abs(v);const s=v>=0?'+':'-';if(a>=100000000)return s+(a/100000000).toFixed(1)+'억';return s+Math.round(a/10000)+'만'}",
         },
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
       },
-    },
-  };
-
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=180&backgroundColor=white`;
-}
-
-/** 월별 배당금 — 연도별 그룹 바 차트 */
-function buildDivChartUrl(dividends: any[]): string {
-  if (!dividends || dividends.length === 0) return '';
-
-  // 전체 월 레이블 01~12
-  const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const colors = ['#3182ce','#38a169','#e53e3e','#805ad5','#dd6b20'];
-
-  const datasets = dividends.map((yr: any, i: number) => ({
-    label: String(yr.year),
-    data: monthLabels.map(mo => yr.months?.[mo] ?? 0),
-    backgroundColor: colors[i % colors.length],
-    borderRadius: 2,
-  }));
-
-  // 데이터가 전부 0이면 차트 생략
-  const hasData = datasets.some(ds => ds.data.some((v: number) => v > 0));
-  if (!hasData) return '';
-
-  const cfg = {
-    type: 'bar',
-    data: { labels: monthLabels, datasets },
-    options: {
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      layout: { padding: { top: 20 } },
       scales: {
         y: {
           ticks: {
-            callback: "function(v){const a=Math.abs(v);if(a>=100000000)return (v/100000000).toFixed(1)+'억';if(a>=10000)return Math.round(v/10000)+'만';return v}",
+            callback: "function(v){const a=Math.abs(v);if(a>=100000000)return(v/100000000).toFixed(1)+'억';if(a>=10000)return Math.round(v/10000)+'만';return v}",
             font: { size: 10 },
           },
           grid: { color: '#e2e8f0' },
@@ -162,6 +140,49 @@ function buildDivChartUrl(dividends: any[]): string {
   return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=200&backgroundColor=white`;
 }
 
+/** 월별 배당금 — 연도별 그룹 바 차트 (앱 리포트와 동일 구성) */
+function buildDivChartUrl(dividends: any[]): string {
+  if (!dividends || dividends.length === 0) return '';
+
+  const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const colors = ['#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4'];
+
+  const datasets = dividends.map((yr: any, i: number) => ({
+    label: String(yr.year),
+    data: monthLabels.map((mo: string) => yr.months?.[mo] ?? 0),
+    backgroundColor: colors[i % colors.length],
+    borderRadius: 2,
+  }));
+
+  const hasData = datasets.some((ds: any) => ds.data.some((v: number) => v > 0));
+  if (!hasData) return '';
+
+  const cfg = {
+    type: 'bar',
+    data: {
+      labels: monthLabels.map((m: string) => m + '월'),
+      datasets,
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: "function(v){const a=Math.abs(v);if(a>=100000000)return(a/100000000).toFixed(1)+'억';if(a>=10000)return Math.round(a/10000)+'만';return v}",
+            font: { size: 10 },
+          },
+          grid: { color: '#e2e8f0' },
+        },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+      },
+    },
+  };
+
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=220&backgroundColor=white`;
+}
+
 // ── HTML 이메일 생성 ────────────────────────────────────────────
 function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const s         = data.summary  || {};
@@ -170,13 +191,13 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const indices   = data.indices  || {};
   const dividends = data.dividends || [];
 
-  const netInv   = s.netInvestmentKRW  ?? 0;
-  const mktVal   = s.marketValueKRW    ?? 0;
-  const pnlKRW   = s.pnlKRW            ?? 0;
-  const pnlPct   = s.pnlPct            ?? 0;
-  const ytd      = s.ytd;
-  const mtd      = s.mtd;
-  const daily    = s.daily;
+  const netInv = s.netInvestmentKRW ?? 0;
+  const mktVal = s.marketValueKRW   ?? 0;
+  const pnlKRW = s.pnlKRW           ?? 0;
+  const pnlPct = s.pnlPct           ?? 0;
+  const ytd    = s.ytd;
+  const mtd    = s.mtd;
+  const daily  = s.daily;
 
   // 차트 이미지 URL (QuickChart.io → PNG)
   const returnChartUrl = buildReturnChartUrl(monthly, indices);
@@ -186,22 +207,23 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const chartImg = (url: string) =>
     `<img src="${url}" width="520" style="display:block;max-width:100%;border-radius:6px;" alt="chart">`;
 
-  // 요약 카드
+  // ── 요약 카드 (4개) ───────────────────────────────────────────────
   const cardHtml = (label: string, val: string, sub: string, col: string) => `
     <td style="width:25%;padding:0 5px;">
       <div style="background:#f7fafc;border-radius:8px;padding:12px 8px;text-align:center;">
         <div style="font-size:11px;color:#718096;margin-bottom:4px;">${label}</div>
-        <div style="font-size:14px;font-weight:700;color:#2d3748;">${val}</div>
+        <div style="font-size:13px;font-weight:700;color:#2d3748;">${val}</div>
         ${sub ? `<div style="font-size:11px;color:${col};margin-top:2px;">${sub}</div>` : ''}
       </div>
     </td>`;
 
+  // ── 기간별 손익 카드 (YTD/MTD/Daily) ────────────────────────────
   const periodCardHtml = (label: string, d: any) => {
     if (!d) return `
     <td style="width:33%;padding:0 5px;">
       <div style="background:#f7fafc;border-radius:8px;padding:12px 8px;text-align:center;">
         <div style="font-size:11px;color:#718096;margin-bottom:4px;">${label}</div>
-        <div style="font-size:14px;font-weight:700;color:#a0aec0;">-</div>
+        <div style="font-size:13px;font-weight:700;color:#a0aec0;">-</div>
       </div>
     </td>`;
     const col = signColor(d.pnlKRW);
@@ -209,13 +231,13 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
     <td style="width:33%;padding:0 5px;">
       <div style="background:#f7fafc;border-radius:8px;padding:12px 8px;text-align:center;">
         <div style="font-size:11px;color:#718096;margin-bottom:4px;">${label}</div>
-        <div style="font-size:14px;font-weight:700;color:${col};">${signPrefix(d.pnlKRW)}${fmtKRW(d.pnlKRW)} KRW</div>
+        <div style="font-size:13px;font-weight:700;color:${col};">${signPrefix(d.pnlKRW)}${fmtKRW(d.pnlKRW)} KRW</div>
         <div style="font-size:11px;color:${col};margin-top:2px;">${fmtPct(d.pnlPct)}</div>
       </div>
     </td>`;
   };
 
-  // 종목 테이블 행
+  // ── 종목 테이블 행 ────────────────────────────────────────────────
   const stockRows = stocks.map((st: any) => {
     const ytdCol = signColor(st.annualReturnPct);
     const mtdCol = signColor(st.monthlyReturnPct);
@@ -248,18 +270,18 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
       <!-- 본문 -->
       <tr><td style="background:#fff;border-radius:0 0 12px 12px;padding:24px 28px;">
 
-        <!-- 요약 카드 -->
+        <!-- 포트폴리오 요약 카드 4개 -->
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:10px;">📊 포트폴리오 요약</div>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
           <tr>
             ${cardHtml('순 투자액', fmtKRW(netInv) + ' KRW', '', '#4a5568')}
             ${cardHtml('평가액', fmtKRW(mktVal) + ' KRW', '', '#4a5568')}
-            ${cardHtml('평가 손익', signPrefix(pnlKRW) + fmtKRW(pnlKRW) + ' KRW', fmtPct(pnlPct), signColor(pnlKRW))}
+            ${cardHtml('평가 손익', signPrefix(pnlKRW) + fmtKRW(pnlKRW) + ' KRW', '', '#4a5568')}
             ${cardHtml('수익률', fmtPct(pnlPct), '', signColor(pnlPct))}
           </tr>
         </table>
 
-        <!-- YTD / MTD / Daily -->
+        <!-- 기간별 손익 (YTD / MTD / Daily) -->
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:10px;">📅 기간별 손익</div>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
           <tr>
@@ -269,28 +291,31 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
           </tr>
         </table>
 
-        <!-- 월별 누적 수익률 차트 -->
+        <!-- 월별 누적 수익률 비교 -->
         ${returnChartUrl ? `
-        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:8px;">📈 월별 누적 수익률 비교</div>
+        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">📈 월별 누적 수익률 비교</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">포트폴리오: 순투자액 대비 평가손익률 / 지수: 동기간 누적 등락률</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
           ${chartImg(returnChartUrl)}
         </div>` : ''}
 
-        <!-- 월별 수익금액 바 차트 -->
+        <!-- 월별 수익금액 -->
         ${pnlBarUrl ? `
-        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:8px;">💰 월별 수익금액 (KRW)</div>
+        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">💰 월별 수익금액</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">각 월말 기준 (평가액 – 순투자액) 변동분</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
           ${chartImg(pnlBarUrl)}
         </div>` : ''}
 
-        <!-- 월별 배당금 차트 -->
+        <!-- 월별 배당금 -->
         ${divChartUrl ? `
-        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:8px;">🎁 월별 배당금 (KRW)</div>
+        <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">🎁 월별 배당금</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">세금·수수료 차감 후 KRW 환산 기준</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
           ${chartImg(divChartUrl)}
         </div>` : ''}
 
-        <!-- 종목 테이블 -->
+        <!-- 보유 종목별 수익률 테이블 -->
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:10px;">📋 보유 종목별 수익률</div>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
           <thead>
@@ -364,7 +389,6 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
 // ── 메인 핸들러 ────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  // Bearer 토큰 인증
   const auth   = req.headers.get('authorization') || '';
   const secret = process.env.REPORT_SECRET;
   if (!secret || auth !== `Bearer ${secret}`) {
@@ -373,8 +397,6 @@ export async function POST(req: NextRequest) {
 
   const body        = await req.json().catch(() => ({}));
   const targetOwner: string | undefined = body.owner;
-
-  // 대상 owner 목록 결정
   const owners = targetOwner
     ? [targetOwner]
     : Object.keys(OWNER_CONFIG).filter(o => o !== 'Sample');
@@ -392,7 +414,6 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // 이메일 주소 조회
     const email = await getOwnerEmail(cfg.sheetId);
     if (!email) {
       results.push({ owner, status: 'skip', error: 'EMail 없음' });
@@ -400,9 +421,8 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      // 포트폴리오 데이터 조회 (내부 API 호출)
       const baseUrl = process.env.REPORT_BASE_URL || 'https://fima.lim.kr';
-      const pfRes  = await fetch(`${baseUrl}/api/portfolio-analysis`, {
+      const pfRes   = await fetch(`${baseUrl}/api/portfolio-analysis`, {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({ owner }),
@@ -414,11 +434,8 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // owner별 제목: [Lz] 2026.05.03 포트폴리오
       const subject = `[${owner}] ${dateStr} 포트폴리오`;
-
-      // HTML 이메일 생성 및 발송
-      const html = buildEmailHtml(owner, pfData, dateStr);
+      const html    = buildEmailHtml(owner, pfData, dateStr);
       await sendEmail(email, subject, html);
 
       results.push({ owner, status: 'sent', email });
