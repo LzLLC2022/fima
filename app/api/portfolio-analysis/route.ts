@@ -333,8 +333,8 @@ export async function POST(req: NextRequest) {
       })),
       // 종목 현재가 (getStockPrice — portfolio 탭과 동일 방식)
       Promise.allSettled(heldTickers.map(t => getStockPrice(t))),
-      // 종목 전일 종가 (Daily PnL용) — getStockInfo 'yesterday' 필드 사용
-      Promise.allSettled(heldTickers.map(t => getStockInfo(t, 'yesterday'))),
+      // 종목 전일 종가 (Daily PnL용) — 오늘 거래일 여부 판별을 위해 'all' 조회
+      Promise.allSettled(heldTickers.map(t => getStockInfo(t, 'all'))),
       // 지수 월별 종가
       Promise.all([
         fetchMonthlyCloses('^KS11', 15).then(d => ({ name: 'KOSPI',  data: d })).catch(() => ({ name: 'KOSPI',  data: [] })),
@@ -383,12 +383,29 @@ export async function POST(req: NextRequest) {
     });
 
     // 전일 종가 맵 (Daily PnL 계산용)
+    // 오늘 날짜 KST 기준 (UTC+9)
+    const todayKST = (() => {
+      const d = new Date(Date.now() + 9 * 3600 * 1000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    })();
+
     const yesterdayPrice: Record<string, number> = {};
     heldTickers.forEach((t, i) => {
       const r = yesterdayPriceList[i];
-      const v = r.status === 'fulfilled' ? (Number(r.value) || 0) : 0;
-      // 전일가 없으면(채권·조회실패) 현재가로 대체 (해당 종목 Daily PnL = 0)
-      yesterdayPrice[t] = v > 0 ? v : currentPrice[t] || 0;
+      if (r.status !== 'fulfilled' || !r.value) {
+        // 조회 실패 → 현재가로 대체 (Daily PnL = 0)
+        yesterdayPrice[t] = currentPrice[t] || 0;
+        return;
+      }
+      const data = r.value as Record<string, any>;
+      // 마지막 거래일이 오늘이 아니면 (휴장·주말) → Daily PnL = 0
+      const lastTradeDate = String(data.baseDate || '').slice(0, 10);
+      if (lastTradeDate !== todayKST) {
+        yesterdayPrice[t] = currentPrice[t] || 0;
+        return;
+      }
+      const yp = Number(data.yesterday) || 0;
+      yesterdayPrice[t] = yp > 0 ? yp : currentPrice[t] || 0;
     });
 
     // ── 요약 ──────────────────────────────────────────────────────
