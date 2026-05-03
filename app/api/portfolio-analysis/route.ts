@@ -204,6 +204,15 @@ export async function POST(req: NextRequest) {
       analyzeMonths = analyzeMonths.slice(0, -1);
     }
 
+    // ── 월별 수익금액 차트 기준월 (analyzeMonths[0]의 직전 월) ────────
+    const firstMM = analyzeMonths[0];
+    const [bfy, bfm] = firstMM.split('-').map(Number);
+    const baseMM = bfm === 1
+      ? `${bfy - 1}-12`
+      : `${bfy}-${String(bfm - 1).padStart(2, '0')}`;
+    // 직전 월이 allMonths 범위 안이면 상태 계산을 위해 포함
+    const computeMonths = allMonths.includes(baseMM) ? [baseMM, ...analyzeMonths] : analyzeMonths;
+
     // ── 월별 누적 상태 계산 (단일 패스) ──────────────────────────────
     type Pos = { qty: number; buyCostFX: number; buyCostKRW: number; region: string; assetType: string; name: string; lastRate: number };
 
@@ -225,7 +234,7 @@ export async function POST(req: NextRequest) {
     const monthlyStates: Record<string, State> = {};
 
     let txIdx = 0;
-    for (const mm of analyzeMonths) {
+    for (const mm of computeMonths) {
       const endDt = monthEndDate(mm);
       // 이 월말까지의 모든 거래 처리
       while (txIdx < sorted.length && sorted[txIdx].date! <= endDt) {
@@ -493,7 +502,23 @@ export async function POST(req: NextRequest) {
       pnlPct       : (curVal - prevMonthEntry.marketValueKRW) / prevMonthEntry.marketValueKRW * 100,
     } : null;
 
-    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd }, monthly, indices, stocks, dividends });
+    // ── 월별 수익금액 차트용 기준월 누적손익 ─────────────────────────
+    let basePnl = 0;
+    const baseState = monthlyStates[baseMM];
+    if (baseState && allMonths.includes(baseMM)) {
+      let baseVal = 0;
+      Object.entries(baseState.cashFX).forEach(([region, amt]) => {
+        baseVal += amt * resolveRate(region);
+      });
+      Object.entries(baseState.positions).forEach(([t, p]) => {
+        if (p.qty < 0.0001) return;
+        const price = (priceMap[t]?.[baseMM]) || currentPrice[t] || 0;
+        if (price > 0) baseVal += price * p.qty * resolveRate(p.region);
+      });
+      basePnl = Math.round(baseVal - baseState.netDepositKRW);
+    }
+
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd }, monthly, indices, stocks, dividends, basePnl });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
