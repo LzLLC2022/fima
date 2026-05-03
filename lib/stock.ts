@@ -6,7 +6,7 @@
  * - 해외 종목 (영문 티커): 야후 파이낸스 v8 API
  */
 
-function isKoreanCode(code: string): boolean {
+export function isKoreanCode(code: string): boolean {
   const c = code.toString().trim().toUpperCase().split('.')[0];
   // ISIN (12자, KR로 시작)은 제외
   if (c.length === 12 && c.startsWith('KR')) return false;
