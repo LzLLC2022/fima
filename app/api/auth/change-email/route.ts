@@ -25,11 +25,14 @@ async function getMasterInfo(sheetId: string) {
 
   const currentEmail = String(masterData[dataRowIdx]?.[emailColIdx] ?? '').trim();
 
-  // EmailRecv: 'Y' / '1' / 'true' → true, 그 외 → false, 컬럼 없으면 false
-  let emailRecv = false;
+  // EmailRecv: 컬럼 없거나 값 미설정이면 true (기본 수신)
+  // 명시적으로 'N' / '0' / 'false' 인 경우만 false (수신 거부)
+  // → 이메일 발송 로직(getOwnerEmail)과 동일한 기준
+  let emailRecv = true;
   if (recvColIdx !== -1) {
     const v = String(masterData[dataRowIdx]?.[recvColIdx] ?? '').trim().toLowerCase();
-    emailRecv = v === 'y' || v === '1' || v === 'true';
+    const isOptOut = v === 'n' || v === '0' || v === 'false';
+    emailRecv = !isOptOut;
   }
 
   const emailRange = `${MASTER_SHEET_NAME}!${colToLetter(emailColIdx)}${dataRowIdx + 1}`;
