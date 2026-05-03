@@ -1220,6 +1220,25 @@
       <div id="pfError" style="color:#e53e3e;padding:16px;display:none;"></div>
       <div id="pfContent" style="display:none;">
 
+        <!-- 기준값 디버그 패널 -->
+        <div class="card" style="margin-bottom:14px;padding:10px 16px;background:#f7fafc;border:1px dashed #bee3f8;">
+          <div style="font-size:0.72rem;font-weight:700;color:#90cdf4;margin-bottom:8px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
+            <div>
+              <div style="font-size:0.7rem;color:#a0aec0;margin-bottom:4px;">전년 12월 말 <span style="font-size:0.67rem;">(YTD 기준)</span></div>
+              <div id="pfDbgYtd" style="font-size:0.92rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:#a0aec0;margin-bottom:4px;">전월 말 <span style="font-size:0.67rem;">(MTD 기준)</span></div>
+              <div id="pfDbgMtd" style="font-size:0.92rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:#a0aec0;margin-bottom:4px;">전일 <span style="font-size:0.67rem;">(Daily 기준)</span></div>
+              <div id="pfDbgDaily" style="font-size:0.92rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+            </div>
+          </div>
+        </div>
+
         <!-- 요약 카드 -->
         <div class="pf-summary-grid">
           <div class="card" style="text-align:center;">
@@ -3387,6 +3406,15 @@
       setPeriodCard('pfYtdPnl', 'pfYtdPct', s.ytd);
       setPeriodCard('pfMtdPnl', 'pfMtdPct', s.mtd);
       setPeriodCard('pfDailyPnl', 'pfDailyPct', s.daily);
+
+      // ── 기준값 디버그 패널 ─────────────────────────────────
+      function fmtDbg(v) {
+        if (v == null) return '-';
+        return Math.round(v).toLocaleString() + ' KRW';
+      }
+      document.getElementById('pfDbgYtd').textContent   = s.ytd   ? fmtDbg(s.ytd.startValueKRW)   : '-';
+      document.getElementById('pfDbgMtd').textContent   = s.mtd   ? fmtDbg(s.mtd.startValueKRW)   : '-';
+      document.getElementById('pfDbgDaily').textContent = s.daily ? fmtDbg(s.daily.startValueKRW) : '-';
 
       // ── 차트 ─────────────────────────────────────────────
       pfChartMonthly = data.monthly;
