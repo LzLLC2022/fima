@@ -409,9 +409,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 해외 주식 / 채권: 항상 최근 거래일 기준 Daily 표시 (Yahoo chartPreviousClose)
-      const yp = Number(data.yesterday) || 0;
-      yesterdayPrice[t] = yp > 0 ? yp : currentPrice[t] || 0;
+      // 해외 주식 / 채권: 주가는 현재가 고정 (Daily = FX 변동만), yesterdayPrice는 사용 안 함
+      yesterdayPrice[t] = currentPrice[t] || 0;
     });
 
     // ── 요약 ──────────────────────────────────────────────────────
@@ -432,15 +431,50 @@ export async function POST(req: NextRequest) {
 
     const netInvKRW = currentState.netDepositKRW;
 
-    // 전일 평가액 (Daily PnL 기준값) — 현금은 동일, 보유 종목만 전일가 적용
+    // ── 어제 환율 조회 (Daily FX 변동분 계산용) ────────────────────
+    // 해외 주식 및 외화 예수금: 주가 변동은 0으로 처리하고 환율 변동만 Daily에 반영
+    const yesterdayDateUTC = (() => {
+      const d = new Date(Date.now() - 86400 * 1000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    })();
+
+    const allFXRegions = Array.from(new Set([
+      ...Object.keys(currentState.cashFX),
+      ...heldTickers.map(t => currentState.positions[t].region),
+    ]));
+
+    const yesterdayFXRates: Record<string, number> = { KRW: 1 };
+    await Promise.allSettled(allFXRegions.map(async region => {
+      const currency = currencyMap[region] || 'KRW';
+      if (currency === 'KRW') { yesterdayFXRates[region] = 1; return; }
+      const r = await getExchangeRate(currency, yesterdayDateUTC).catch(() => 0);
+      yesterdayFXRates[region] = r > 0 ? r : resolveRate(region); // 조회 실패 시 현재 환율로 폴백 (FX Daily = 0)
+    }));
+
+    const resolveYesterdayRate = (region: string) =>
+      yesterdayFXRates[region] ?? resolveRate(region);
+
+    // 전일 평가액 계산:
+    // - 외화 예수금: 어제 환율 적용 (FX 변동 반영)
+    // - 한국 주식: 전일가 × 현재 환율 (오늘 미거래 시 yesterdayPrice = currentPrice → Daily = 0)
+    // - 해외 주식/채권: 현재가 × 어제 환율 (주가 변동 없음, FX 변동만 반영)
     let yesterdayValueKRW = 0;
     Object.entries(currentState.cashFX).forEach(([region, amt]) => {
-      yesterdayValueKRW += amt * resolveRate(region);
+      yesterdayValueKRW += amt * resolveYesterdayRate(region);
     });
     heldTickers.forEach(t => {
       const p = currentState.positions[t];
       if (p.qty < 0.0001) return;
-      yesterdayValueKRW += (yesterdayPrice[t] || 0) * p.qty * resolveRate(p.region);
+      const isTk = t.split('.')[0];
+      const isKRStock = !isKoreanBondISIN(isTk) && isKoreanCode(isTk);
+      const cp = currentPrice[t] || 0;
+      if (isKRStock) {
+        // 한국 주식: 전일가 × 현재 환율 (= ×1)
+        yesterdayValueKRW += (yesterdayPrice[t] || cp) * p.qty * resolveRate(p.region);
+      } else {
+        // 해외 주식/채권: 현재가 × 어제 환율 → FX 변동만 Daily에 기여
+        yesterdayValueKRW += cp * p.qty * resolveYesterdayRate(p.region);
+      }
     });
 
     const summary = {
