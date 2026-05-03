@@ -316,15 +316,29 @@ export async function POST(req: NextRequest) {
       .filter(([_, p]) => p.qty > 0.0001)
       .map(([t]) => t);
 
+    // ── 역사적 종가 조회 대상 확장 (YTD/MTD 기준선 정확도 개선) ──────
+    // YTD 기준(전년 12월) 등 과거 월 state에 보유했다가 현재는 매도된 종목도
+    // 역사적 종가가 필요. heldTickers에서 누락되면 해당 월 평가액이 0으로
+    // 처리되어 기준선이 낮아지고 YTD가 과대 계산됨.
+    const allStateTickers = new Set<string>(heldTickers);
+    Object.values(monthlyStates).forEach(st => {
+      Object.entries(st.positions).forEach(([t, p]) => {
+        if (p.qty > 0.0001) allStateTickers.add(t);
+      });
+    });
+    const allHistoryTickers = Array.from(allStateTickers);
+
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
     const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates] = await Promise.all([
-      // 종목 월별 역사적 종가 (Yahoo Finance — 한국 종목은 .KS / 채권 ISIN은 조회 불가)
-      Promise.all(heldTickers.map(async t => {
+      // 종목 월별 역사적 종가: allHistoryTickers (현재 보유 + 과거 보유 매도 종목 포함)
+      Promise.all(allHistoryTickers.map(async t => {
         if (isKoreanBondISIN(t)) {
           // 채권은 Yahoo 역사적 종가 미지원 → 빈 배열
           return { ticker: t, data: [] as { month: string; close: number }[] };
         }
-        const currency = currencyMap[currentState.positions[t].region] || 'KRW';
+        // 매도된 종목도 positions에 남아 있으므로 region 조회 가능
+        const region   = currentState.positions[t]?.region || '';
+        const currency = currencyMap[region] || 'KRW';
         const yahooTk  = toYahooTicker(t, currency);
         return {
           ticker: t,
