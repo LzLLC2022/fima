@@ -87,7 +87,7 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
     }
   }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=230&backgroundColor=white&version=2`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=580&height=240&backgroundColor=white&version=2`;
 }
 
 /** 월별 수익금액 — 바 차트 (만원 단위, 레이블 없음) */
@@ -141,7 +141,7 @@ function buildPnlBarChartUrl(monthly: any[], basePnl: number): string {
     }
   }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=190&backgroundColor=white&version=2`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=580&height=200&backgroundColor=white&version=2`;
 }
 
 /** 월별 수익금액 테이블 HTML (만원 단위, 월별 컬럼) */
@@ -253,7 +253,7 @@ function buildDivChartUrl(dividends: any[]): string {
     }
   }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=220&backgroundColor=white&version=2`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=580&height=230&backgroundColor=white&version=2`;
 }
 
 /** 월별 배당금 테이블 HTML (행=연도, 열=월, 만원 단위) — 인앱 현황>리포트 레이아웃과 동일 */
@@ -356,7 +356,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const divTableHtml   = buildDivTable(dividends);
 
   const chartImg = (url: string) =>
-    `<img src="${url}" width="520" style="display:block;max-width:100%;border-radius:6px;" alt="chart">`;
+    `<img src="${url}" width="580" style="display:block;margin:0 auto;max-width:100%;border-radius:6px;" alt="chart">`;
 
   const cardHtml = (label: string, val: string, sub: string, col: string) => `
     <td style="width:25%;padding:0 5px;">
