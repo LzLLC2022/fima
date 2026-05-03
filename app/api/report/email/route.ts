@@ -509,14 +509,13 @@ async function getOwnerEmail(sheetId: string): Promise<string> {
       const email = String(masterData[i]?.[emailColIdx] ?? '').trim();
       if (!email) continue;
 
-      // EmailRecv 컬럼이 있으면 수신 여부 확인 (없으면 수신 안 함 처리)
+      // EmailRecv 컬럼이 있고 명시적으로 N인 경우만 수신 거부 (기본값: 수신함)
       if (recvColIdx !== -1) {
         const recv = String(masterData[i]?.[recvColIdx] ?? '').trim().toLowerCase();
-        const isRecv = recv === 'y' || recv === '1' || recv === 'true';
-        if (!isRecv) return ''; // 수신 거부
-      } else {
-        return ''; // EmailRecv 컬럼 자체가 없으면 수신 안 함
+        const isOptOut = recv === 'n' || recv === '0' || recv === 'false';
+        if (isOptOut) return ''; // 명시적 수신 거부
       }
+      // EmailRecv 컬럼 없거나 값이 Y/N 미설정이면 수신함으로 처리
 
       return email;
     }
@@ -536,7 +535,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
       'Content-Type' : 'application/json',
     },
     body: JSON.stringify({
-      from   : 'FiMa-Inv <company@lim.kr>',
+      from   : 'Finance Manager <company@lim.kr>',
       to     : [to],
       subject: subject,
       html   : html,
