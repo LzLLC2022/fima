@@ -1237,7 +1237,7 @@
 
         <!-- 월별 수익금액 차트 -->
         <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">💰 월별 누적 수익금액</div>
+          <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">💰 월별 수익금액</div>
           <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 (평가액 − 순투자액)</div>
           <div id="pfAmtChart"></div>
         </div>
@@ -3533,9 +3533,11 @@
       return;
     }
 
-    // 수익금액 = 평가액 - 순투자액
-    var data = monthly.map(function(m) {
-      return { month: m.month, pnl: m.marketValueKRW - m.netInvestmentKRW };
+    // 월별 수익금액 = 이번달 누적손익 - 전달 누적손익
+    var data = monthly.map(function(m, i) {
+      var curPnl  = m.marketValueKRW - m.netInvestmentKRW;
+      var prevPnl = i > 0 ? (monthly[i-1].marketValueKRW - monthly[i-1].netInvestmentKRW) : 0;
+      return { month: m.month, pnl: curPnl - prevPnl };
     });
 
     // Y축 단위 결정 (억 or 만)
