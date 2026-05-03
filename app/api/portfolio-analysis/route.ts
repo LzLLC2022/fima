@@ -36,8 +36,8 @@ async function fetchMonthlyCloses(
 
       const timestamps: number[] = result.timestamp || [];
       const closes: number[] =
-        result.indicators?.adjclose?.[0]?.adjclose ||
-        result.indicators?.quote?.[0]?.close || [];
+        result.indicators?.quote?.[0]?.close ||
+        result.indicators?.adjclose?.[0]?.adjclose || [];
 
       const data = timestamps
         .map((ts, i) => {
