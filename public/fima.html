@@ -3658,8 +3658,9 @@
     var pad  = Math.max(0.5, (maxV - minV) * 0.12);
     minV -= pad; maxV += pad;
 
+    var hPad = Math.max(barW, 20); // 양쪽 여백: 첫/마지막 바가 축과 겹치지 않도록
     function xPos(i) {
-      return n <= 1 ? ml + cw / 2 : ml + i / (n - 1) * cw;
+      return n <= 1 ? ml + cw / 2 : ml + hPad + i / (n - 1) * (cw - hPad * 2);
     }
     function yPos(v) { return mt + ch - (v - minV) / (maxV - minV) * ch; }
 
