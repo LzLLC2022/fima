@@ -1230,6 +1230,7 @@
                 <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e2e8f0;">전년 12월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(YTD 기준)</span></th>
                 <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e2e8f0;">전월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(MTD 기준)</span></th>
                 <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e2e8f0;">전일<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(Daily 기준)</span></th>
+                <th style="text-align:right;color:#4a5568;font-weight:700;padding:3px 8px 6px;border-bottom:2px solid #4a5568;border-left:2px solid #e2e8f0;">현재일</th>
               </tr>
             </thead>
             <tbody>
@@ -1238,18 +1239,21 @@
                 <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;" id="pfDbgYtdVal">-</td>
                 <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;" id="pfDbgMtdVal">-</td>
                 <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;" id="pfDbgDailyVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;font-weight:700;border-left:2px solid #e2e8f0;" id="pfDbgCurVal">-</td>
               </tr>
               <tr>
                 <td style="color:#a0aec0;padding:3px 8px 3px 0;font-size:0.72rem;">순투자액</td>
                 <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d3748;" id="pfDbgYtdNetInv">-</td>
                 <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d3748;" id="pfDbgMtdNetInv">-</td>
                 <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#718096;" id="pfDbgDailyNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d3748;font-weight:700;border-left:2px solid #e2e8f0;" id="pfDbgCurNetInv">-</td>
               </tr>
               <tr>
                 <td style="color:#a0aec0;padding:3px 8px 4px 0;font-size:0.72rem;border-top:1px solid #edf2f7;">평가손익</td>
                 <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;" id="pfDbgYtdPnl">-</td>
                 <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;" id="pfDbgMtdPnl">-</td>
                 <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;" id="pfDbgDailyPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;border-left:2px solid #e2e8f0;" id="pfDbgCurPnl">-</td>
               </tr>
             </tbody>
           </table>
@@ -3460,6 +3464,12 @@
         document.getElementById('pfDbgDailyNetInv').textContent = fmtDbgAmt(dailyNetInv);
         setDbgPnl('pfDbgDailyPnl', s.daily.startValueKRW - dailyNetInv);
       }
+      // 현재일
+      var curNetInv = s.netInvestmentKRW || 0;
+      var curMktVal = s.marketValueKRW || 0;
+      document.getElementById('pfDbgCurVal').textContent    = fmtDbgAmt(curMktVal);
+      document.getElementById('pfDbgCurNetInv').textContent = fmtDbgAmt(curNetInv);
+      setDbgPnl('pfDbgCurPnl', curMktVal - curNetInv);
 
       // ── 차트 ─────────────────────────────────────────────
       pfChartMonthly = data.monthly;
