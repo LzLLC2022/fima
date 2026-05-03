@@ -90,21 +90,22 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
   return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=230&backgroundColor=white&version=2`;
 }
 
-/** 월별 수익금액 — 바 차트 (만원 단위, 3자리 콤마) */
-function buildPnlBarChartUrl(monthly: any[]): string {
-  if (!monthly || monthly.length < 2) return '';
+/** 월별 수익금액 — 바 차트 (만원 단위, 3자리 콤마)
+ *  basePnl: analyzeMonths[0] 직전 월의 누적손익 (API basePnl 필드)
+ *  → 앱의 renderPfAmtChart 와 동일 로직 */
+function buildPnlBarChartUrl(monthly: any[], basePnl: number): string {
+  if (!monthly || monthly.length === 0) return '';
 
   const labels = monthly.map((m: any) => toYYMM(m.month));
 
-  // 첫 달: 절대 손익(평가액-순투자액), 이후: 전월 대비 변동분
+  // 월별 수익금액 = 이번달 누적손익 - 전달 누적손익
+  // 첫 달은 basePnl(직전 월 누적손익)을 기준으로 사용 → 앱과 동일 값
   const valsKRW = monthly.map((m: any, i: number) => {
-    if (i === 0) {
-      return Math.round((m.marketValueKRW ?? 0) - (m.netInvestmentKRW ?? 0));
-    }
-    const cur    = monthly[i].marketValueKRW     ?? 0;
-    const prev   = monthly[i - 1].marketValueKRW ?? 0;
-    const netChg = (monthly[i].netInvestmentKRW  ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0);
-    return Math.round(cur - prev - netChg);
+    const curPnl  = (m.marketValueKRW ?? 0) - (m.netInvestmentKRW ?? 0);
+    const prevPnl = i > 0
+      ? ((monthly[i - 1].marketValueKRW ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0))
+      : (basePnl ?? 0);
+    return Math.round(curPnl - prevPnl);
   });
 
   // 만원 단위로 변환 (÷10000)
@@ -129,11 +130,11 @@ function buildPnlBarChartUrl(monthly: any[]): string {
         datalabels:{
           anchor:'end',
           align:'top',
-          fontSize:6,
+          fontSize:5,
           fontStyle:'bold',
           fontColor:'#374151',
           formatter:function(v){
-            if(Math.abs(v)<5)return '';
+            if(Math.abs(v)<10)return '';
             var s=v>=0?'+':'-';
             var a=Math.abs(Math.round(v));
             return s+a.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',')+'만';
@@ -275,8 +276,9 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const mtd    = s.mtd;
   const daily  = s.daily;
 
+  const basePnl        = data.basePnl ?? 0;
   const returnChartUrl = buildReturnChartUrl(monthly, indices);
-  const pnlBarUrl      = buildPnlBarChartUrl(monthly);
+  const pnlBarUrl      = buildPnlBarChartUrl(monthly, basePnl);
   const divChartUrl    = buildDivChartUrl(dividends);
   const divTableHtml   = buildDivTable(dividends);
 
