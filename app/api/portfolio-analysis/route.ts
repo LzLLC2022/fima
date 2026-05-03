@@ -475,7 +475,25 @@ export async function POST(req: NextRequest) {
       }));
     });
 
-    return NextResponse.json({ success: true, summary, monthly, indices, stocks, dividends });
+    // ── YTD / MTD 포트폴리오 손익 ──────────────────────────────────────
+    // monthly 배열에서 기준월(전년 12월, 전월)을 찾아 현재 평가액과 비교
+    const prevYearDecEntry = monthly.find(m => m.month === prevYearDec);
+    const prevMonthEntry   = monthly.find(m => m.month === prevMonth);
+    const curVal = summary.marketValueKRW;
+
+    const ytd = prevYearDecEntry && prevYearDecEntry.marketValueKRW > 0 ? {
+      startValueKRW: prevYearDecEntry.marketValueKRW,
+      pnlKRW       : Math.round(curVal - prevYearDecEntry.marketValueKRW),
+      pnlPct       : (curVal - prevYearDecEntry.marketValueKRW) / prevYearDecEntry.marketValueKRW * 100,
+    } : null;
+
+    const mtd = prevMonthEntry && prevMonthEntry.marketValueKRW > 0 ? {
+      startValueKRW: prevMonthEntry.marketValueKRW,
+      pnlKRW       : Math.round(curVal - prevMonthEntry.marketValueKRW),
+      pnlPct       : (curVal - prevMonthEntry.marketValueKRW) / prevMonthEntry.marketValueKRW * 100,
+    } : null;
+
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd }, monthly, indices, stocks, dividends });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
