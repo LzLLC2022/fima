@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 23 * * 1-5'  # Mon-Fri 23:00 UTC = Tue-Sat 08:00 KST
   workflow_dispatch:
+    inputs:
+      owner:
+        description: '특정 Owner만 발송 (비워두면 전체 발송)'
+        required: false
+        default: ''
 
 jobs:
   send-report:
@@ -11,15 +16,24 @@ jobs:
     steps:
       - name: Send portfolio report email
         run: |
+          OWNER="${{ github.event.inputs.owner }}"
+          if [ -n "$OWNER" ]; then
+            BODY="{\"owner\":\"$OWNER\"}"
+            echo "=== 대상: $OWNER ==="
+          else
+            BODY='{}'
+            echo "=== 대상: 전체 Owner ==="
+          fi
+
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST https://fima.lim.kr/api/report/email \
             -H "Authorization: Bearer ${{ secrets.REPORT_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d '{}')
+            -d "$BODY")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -1)
+          BODY_RESP=$(echo "$RESPONSE" | head -1)
           echo "HTTP Status: $HTTP_CODE"
-          echo "$BODY"
+          echo "$BODY_RESP" | python3 -m json.tool 2>/dev/null || echo "$BODY_RESP"
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Error: API returned $HTTP_CODE"
             exit 1
