@@ -3299,7 +3299,7 @@
       pfChartIndices = data.indices;
       pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
       renderPfChart(pfChartMonthly, pfChartIndices);
-      renderPfAmtChart(pfChartMonthly);
+      renderPfAmtChart(pfChartMonthly, data.basePnl || 0);
       renderPfDivChart(data.dividends || []);
 
       // ── 종목 테이블 ───────────────────────────────────────
@@ -3526,7 +3526,7 @@
   }
 
   // ── 월별 수익금액 바 차트 ──────────────────────────────────────────
-  function renderPfAmtChart(monthly) {
+  function renderPfAmtChart(monthly, basePnl) {
     var el = document.getElementById('pfAmtChart');
     if (!monthly || monthly.length === 0) {
       el.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:40px;">데이터 없음</div>';
@@ -3534,9 +3534,12 @@
     }
 
     // 월별 수익금액 = 이번달 누적손익 - 전달 누적손익
+    // 첫 달은 API에서 계산된 basePnl(직전 월 누적손익)을 기준으로 사용
     var data = monthly.map(function(m, i) {
       var curPnl  = m.marketValueKRW - m.netInvestmentKRW;
-      var prevPnl = i > 0 ? (monthly[i-1].marketValueKRW - monthly[i-1].netInvestmentKRW) : 0;
+      var prevPnl = i > 0
+        ? (monthly[i-1].marketValueKRW - monthly[i-1].netInvestmentKRW)
+        : (basePnl || 0);
       return { month: m.month, pnl: curPnl - prevPnl };
     });
 
@@ -3614,11 +3617,16 @@
       var color  = v >= 0 ? '#3182ce' : '#e53e3e';
       var lightC = v >= 0 ? '#90cdf4' : '#feb2b2';
       svg += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + color + '" rx="2"/>';
-      // 값 레이블 (바 위/아래)
-      if (bh > 10) {
-        var labelY = v >= 0 ? by - 4 : by + bh + 12;
-        svg += '<text x="' + cx.toFixed(1) + '" y="' + labelY.toFixed(1) + '" text-anchor="middle" font-size="9" fill="' + color + '" font-family="inherit" font-weight="700">' + fmtAmt(d.pnl) + '</text>';
+      // 값 레이블: 항상 표시 (작은 바는 0선 기준 최소 오프셋 적용)
+      var labelY;
+      if (v >= 0) {
+        labelY = by - 4;
+        if (labelY > y0 - 14) labelY = y0 - 14;
+      } else {
+        labelY = by + bh + 12;
+        if (labelY < y0 + 14) labelY = y0 + 14;
       }
+      svg += '<text x="' + cx.toFixed(1) + '" y="' + labelY.toFixed(1) + '" text-anchor="middle" font-size="9" fill="' + color + '" font-family="inherit" font-weight="700">' + fmtAmt(d.pnl) + '</text>';
     });
 
     // Y축 레이블 (단위 포함)
