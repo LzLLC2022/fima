@@ -2,40 +2,51 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OWNER_CONFIG } from '@/lib/config';
 import { getSheets, getSheetValues, MASTER_SHEET_NAME } from '@/lib/sheets';
 
-/** Master 시트에서 EMail 컬럼 값과 셀 위치를 반환하는 헬퍼 */
-async function getEmailInfo(sheetId: string) {
+/** 컬럼 인덱스 → 시트 알파벳 (A, B, ..., Z, AA, ...) */
+function colToLetter(idx: number): string {
+  let s = ''; idx++;
+  while (idx > 0) { s = String.fromCharCode(65 + ((idx - 1) % 26)) + s; idx = Math.floor((idx - 1) / 26); }
+  return s;
+}
+
+/** Master 시트에서 Email / EmailRecv 정보를 읽어 반환 */
+async function getMasterInfo(sheetId: string) {
   const masterData = await getSheetValues(sheetId, MASTER_SHEET_NAME);
   if (!masterData || masterData.length < 1) throw new Error('Master 시트를 읽을 수 없습니다.');
 
   const headers     = masterData[0].map((h: any) => String(h ?? '').trim().toLowerCase());
   const emailColIdx = headers.findIndex((h: string) => h === 'email');
-  if (emailColIdx === -1) throw new Error('Master 시트에 EMail 컬럼이 없습니다.');
+  if (emailColIdx === -1) throw new Error('Master 시트에 Email 컬럼이 없습니다.');
 
-  // 첫 번째 데이터 행에서 이메일 읽기
-  let currentEmail = '';
-  let emailRowIdx  = 1; // default: 헤더 다음 첫 행
-  for (let i = 1; i < masterData.length; i++) {
-    emailRowIdx = i;
-    currentEmail = String(masterData[i]?.[emailColIdx] ?? '').trim();
-    break; // 첫 번째 데이터 행 사용
+  const recvColIdx  = headers.findIndex((h: string) => h === 'emailrecv');
+
+  // 첫 번째 데이터 행 인덱스
+  const dataRowIdx = 1;
+
+  const currentEmail = String(masterData[dataRowIdx]?.[emailColIdx] ?? '').trim();
+
+  // EmailRecv: 'Y' / '1' / 'true' → true, 그 외 → false, 컬럼 없으면 false
+  let emailRecv = false;
+  if (recvColIdx !== -1) {
+    const v = String(masterData[dataRowIdx]?.[recvColIdx] ?? '').trim().toLowerCase();
+    emailRecv = v === 'y' || v === '1' || v === 'true';
   }
 
-  // 컬럼 인덱스 → 알파벳 (A, B, ..., Z, AA, ...)
-  const colToLetter = (idx: number): string => {
-    let s = ''; idx++;
-    while (idx > 0) { s = String.fromCharCode(65 + ((idx - 1) % 26)) + s; idx = Math.floor((idx - 1) / 26); }
-    return s;
-  };
+  const emailRange = `${MASTER_SHEET_NAME}!${colToLetter(emailColIdx)}${dataRowIdx + 1}`;
 
-  return {
-    currentEmail,
-    range: `${MASTER_SHEET_NAME}!${colToLetter(emailColIdx)}${emailRowIdx + 1}`,
-  };
+  // EmailRecv 컬럼이 없으면 헤더 뒤에 새 컬럼 추가
+  const recvActualIdx  = recvColIdx !== -1 ? recvColIdx : headers.length;
+  const recvRange      = `${MASTER_SHEET_NAME}!${colToLetter(recvActualIdx)}${dataRowIdx + 1}`;
+  const recvHeaderRange = recvColIdx === -1
+    ? `${MASTER_SHEET_NAME}!${colToLetter(recvActualIdx)}1`
+    : null;
+
+  return { currentEmail, emailRecv, emailRange, recvRange, recvHeaderRange };
 }
 
 /**
  * GET /api/auth/change-email?owner=Lz
- * Master 시트의 현재 EMail 값 반환
+ * Master 시트의 현재 Email + EmailRecv 값 반환
  */
 export async function GET(req: NextRequest) {
   try {
@@ -46,8 +57,8 @@ export async function GET(req: NextRequest) {
     const cfg = OWNER_CONFIG[name];
     if (!cfg?.sheetId) return NextResponse.json({ success: false, error: '등록되지 않은 사용자입니다.' }, { status: 401 });
 
-    const { currentEmail } = await getEmailInfo(cfg.sheetId);
-    return NextResponse.json({ success: true, email: currentEmail });
+    const { currentEmail, emailRecv } = await getMasterInfo(cfg.sheetId);
+    return NextResponse.json({ success: true, email: currentEmail, emailRecv });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
@@ -55,12 +66,12 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/auth/change-email
- * Body: { owner, newEmail }
- * Master 시트 EMail 컬럼 업데이트 (PIN 불필요)
+ * Body: { owner, newEmail, emailRecv }
+ * Master 시트 Email + EmailRecv 컬럼 업데이트
  */
 export async function POST(req: NextRequest) {
   try {
-    const { owner, newEmail } = await req.json().catch(() => ({}));
+    const { owner, newEmail, emailRecv } = await req.json().catch(() => ({}));
     const name = String(owner || '').trim();
 
     if (!name) return NextResponse.json({ success: false, error: 'Account Owner가 필요합니다.' }, { status: 400 });
@@ -73,17 +84,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '올바른 이메일 형식이 아닙니다.' }, { status: 400 });
     }
 
-    const { range } = await getEmailInfo(cfg.sheetId);
-
+    const { emailRange, recvRange, recvHeaderRange } = await getMasterInfo(cfg.sheetId);
     const sheets = await getSheets();
+
+    // Email 업데이트
     await sheets.spreadsheets.values.update({
       spreadsheetId   : cfg.sheetId,
-      range,
+      range           : emailRange,
       valueInputOption: 'RAW',
       requestBody     : { values: [[emailStr]] },
     });
 
-    return NextResponse.json({ success: true, message: '이메일이 변경되었습니다.' });
+    // EmailRecv 헤더가 없으면 먼저 생성
+    if (recvHeaderRange) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId   : cfg.sheetId,
+        range           : recvHeaderRange,
+        valueInputOption: 'RAW',
+        requestBody     : { values: [['EmailRecv']] },
+      });
+    }
+
+    // EmailRecv 값 업데이트 (Y / N)
+    const recvVal = emailRecv === true ? 'Y' : 'N';
+    await sheets.spreadsheets.values.update({
+      spreadsheetId   : cfg.sheetId,
+      range           : recvRange,
+      valueInputOption: 'RAW',
+      requestBody     : { values: [[recvVal]] },
+    });
+
+    return NextResponse.json({ success: true, message: '저장되었습니다.' });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
