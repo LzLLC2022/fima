@@ -582,22 +582,39 @@ export async function POST(req: NextRequest) {
     });
 
     // ── YTD / MTD 포트폴리오 손익 ──────────────────────────────────────
-    // monthly 배열에서 기준월(전년 12월, 전월)을 찾아 현재 평가액과 비교
+    // YTD = 현재 평가손익 - 기준월 평가손익
+    //     = (현재 평가액 - 현재 순투자액) - (기준월 평가액 - 기준월 순투자액)
+    // → 기간 중 입출금이 있어도 순수 운용 성과만 측정
     const prevYearDecEntry = monthly.find(m => m.month === prevYearDec);
     const prevMonthEntry   = monthly.find(m => m.month === prevMonth);
-    const curVal = summary.marketValueKRW;
+    const curVal    = summary.marketValueKRW;
+    const curPnlKRW = curVal - netInvKRW; // 현재 평가손익
 
-    const ytd = prevYearDecEntry && prevYearDecEntry.marketValueKRW > 0 ? {
-      startValueKRW: prevYearDecEntry.marketValueKRW,
-      pnlKRW       : Math.round(curVal - prevYearDecEntry.marketValueKRW),
-      pnlPct       : (curVal - prevYearDecEntry.marketValueKRW) / prevYearDecEntry.marketValueKRW * 100,
-    } : null;
+    const ytd = prevYearDecEntry && prevYearDecEntry.marketValueKRW > 0 ? (() => {
+      const startPnlKRW = prevYearDecEntry.marketValueKRW - prevYearDecEntry.netInvestmentKRW;
+      const pnlKRW      = curPnlKRW - startPnlKRW;
+      return {
+        startValueKRW : prevYearDecEntry.marketValueKRW,
+        startNetInvKRW: prevYearDecEntry.netInvestmentKRW,
+        startPnlKRW   : Math.round(startPnlKRW),
+        pnlKRW        : Math.round(pnlKRW),
+        pnlPct        : prevYearDecEntry.marketValueKRW > 0
+                          ? pnlKRW / prevYearDecEntry.marketValueKRW * 100 : 0,
+      };
+    })() : null;
 
-    const mtd = prevMonthEntry && prevMonthEntry.marketValueKRW > 0 ? {
-      startValueKRW: prevMonthEntry.marketValueKRW,
-      pnlKRW       : Math.round(curVal - prevMonthEntry.marketValueKRW),
-      pnlPct       : (curVal - prevMonthEntry.marketValueKRW) / prevMonthEntry.marketValueKRW * 100,
-    } : null;
+    const mtd = prevMonthEntry && prevMonthEntry.marketValueKRW > 0 ? (() => {
+      const startPnlKRW = prevMonthEntry.marketValueKRW - prevMonthEntry.netInvestmentKRW;
+      const pnlKRW      = curPnlKRW - startPnlKRW;
+      return {
+        startValueKRW : prevMonthEntry.marketValueKRW,
+        startNetInvKRW: prevMonthEntry.netInvestmentKRW,
+        startPnlKRW   : Math.round(startPnlKRW),
+        pnlKRW        : Math.round(pnlKRW),
+        pnlPct        : prevMonthEntry.marketValueKRW > 0
+                          ? pnlKRW / prevMonthEntry.marketValueKRW * 100 : 0,
+      };
+    })() : null;
 
     const daily = yesterdayValueKRW > 0 ? {
       startValueKRW: Math.round(yesterdayValueKRW),
