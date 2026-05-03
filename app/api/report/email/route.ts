@@ -204,7 +204,7 @@ function buildPnlTable(monthly: any[], basePnl: number): string {
     </table>`;
 }
 
-/** 월별 배당금 — 연도별 그룹 바 차트 (천원 단위) */
+/** 월별 배당금 — 연도별 그룹 바 차트 (만원 단위) */
 function buildDivChartUrl(dividends: any[]): string {
   if (!dividends || dividends.length === 0) return '';
 
@@ -212,7 +212,7 @@ function buildDivChartUrl(dividends: any[]): string {
   const palette = ['#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4'];
 
   const datasets = dividends.map((yr: any, i: number) => {
-    const data = monthLabels.map((mo: string) => Math.round((yr.months?.[mo] ?? 0) / 1000));
+    const data = monthLabels.map((mo: string) => Math.round((yr.months?.[mo] ?? 0) / 10000));
     return { label: String(yr.year), data, color: palette[i % palette.length] };
   });
 
@@ -250,55 +250,78 @@ function buildDivChartUrl(dividends: any[]): string {
   return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=220&backgroundColor=white&version=2`;
 }
 
-/** 월별 배당금 테이블 HTML (연도별 컬럼, 천원 단위) */
+/** 월별 배당금 테이블 HTML (행=연도, 열=월, 만원 단위) — 인앱 현황>리포트 레이아웃과 동일 */
 function buildDivTable(dividends: any[]): string {
   if (!dividends || dividends.length === 0) return '';
 
-  const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const monthNames  = ['01월','02월','03월','04월','05월','06월','07월','08월','09월','10월','11월','12월'];
-  const years = dividends.map((d: any) => d.year);
+  const monthCols  = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-  const activeMonths = monthLabels.filter((mo: string) =>
-    dividends.some((d: any) => (d.months?.[mo] ?? 0) > 0)
-  );
-  if (activeMonths.length === 0) return '';
+  // 실제 데이터가 있는 월만 열 표시
+  const activeIdxs = monthCols.reduce((acc: number[], mo, idx) => {
+    if (dividends.some((d: any) => (d.months?.[mo] ?? 0) > 0)) acc.push(idx);
+    return acc;
+  }, []);
+  if (activeIdxs.length === 0) return '';
 
-  const totals = dividends.map((d: any) =>
-    Object.values(d.months || {}).reduce((s: number, v: any) => s + (Number(v) || 0), 0) as number
-  );
+  // 만원 단위 포맷 (0이면 '-')
+  const fmtMAN_d = (v: number): string => {
+    const man = Math.round(v / 10000);
+    if (man === 0) return '-';
+    return man.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
 
-  const thStyle = 'padding:5px 8px;text-align:right;font-size:11px;color:#718096;font-weight:600;background:#edf2f7;';
-  const thL     = 'padding:5px 8px;text-align:left;font-size:11px;color:#718096;font-weight:600;background:#edf2f7;';
-  const tdStyle = 'padding:5px 8px;text-align:right;font-size:11px;color:#4a5568;';
-  const tdL     = 'padding:5px 8px;text-align:left;font-size:11px;color:#4a5568;font-weight:600;';
-  const tdTot   = 'padding:5px 8px;text-align:right;font-size:11px;font-weight:700;color:#2d3748;background:#f7fafc;';
-  const tdTotL  = 'padding:5px 8px;text-align:left;font-size:11px;font-weight:700;color:#2d3748;background:#f7fafc;';
+  const rowBgs = ['#ffffff','#f0f7ff','#f0fff4','#fff5f5','#faf5ff','#fffaf0'];
 
-  const headerCells = years.map((y: number) => `<th style="${thStyle}">${y}</th>`).join('');
-  const rows = activeMonths.map((mo: string) => {
-    const cells = dividends.map((d: any) => {
-      const v = d.months?.[mo] ?? 0;
-      return `<td style="${tdStyle}">${v > 0 ? fmtKTH(v) : '-'}</td>`;
+  const thStyle = 'padding:4px 5px;text-align:right;font-size:10px;color:#718096;font-weight:600;background:#edf2f7;white-space:nowrap;';
+  const thL     = 'padding:4px 5px;text-align:left;font-size:10px;color:#718096;font-weight:600;background:#edf2f7;white-space:nowrap;';
+  const tdTotL  = 'padding:4px 5px;text-align:left;font-size:10px;font-weight:700;color:#2d3748;background:#f7fafc;white-space:nowrap;';
+  const tdTotR  = 'padding:4px 5px;text-align:right;font-size:10px;font-weight:700;color:#2d3748;background:#f7fafc;white-space:nowrap;';
+
+  // 헤더: 연도 | 1월 ~ n월 | 합계
+  const headerCells = activeIdxs.map(idx =>
+    `<th style="${thStyle}">${monthNames[idx]}</th>`
+  ).join('');
+
+  // 연도별 행
+  const dataRows = dividends.map((d: any, yi: number) => {
+    const bg    = rowBgs[yi % rowBgs.length];
+    const tdR   = `padding:4px 5px;text-align:right;font-size:10px;color:#4a5568;background:${bg};white-space:nowrap;`;
+    const tdL   = `padding:4px 5px;text-align:left;font-size:10px;color:#2d3748;font-weight:600;background:${bg};white-space:nowrap;`;
+    const tdSum = `padding:4px 5px;text-align:right;font-size:10px;font-weight:700;color:#2d3748;background:${bg};white-space:nowrap;`;
+
+    const cells = activeIdxs.map(idx => {
+      const mo = monthCols[idx];
+      const v  = d.months?.[mo] ?? 0;
+      return `<td style="${tdR}">${fmtMAN_d(v)}</td>`;
     }).join('');
+
+    const yearTotal = Object.values(d.months || {}).reduce((s: number, v: any) => s + (Number(v) || 0), 0) as number;
     return `<tr style="border-bottom:1px solid #edf2f7;">
-      <td style="${tdL}">${monthNames[monthLabels.indexOf(mo)]}</td>${cells}
+      <td style="${tdL}">${d.year}</td>${cells}
+      <td style="${tdSum}">${fmtMAN_d(yearTotal)}</td>
     </tr>`;
   }).join('');
 
-  const totalCells = totals.map((t: number) =>
-    `<td style="${tdTot}">${t > 0 ? fmtKTH(t) : '-'}</td>`
+  // 월별 합계 행
+  const monthSums = monthCols.map(mo =>
+    dividends.reduce((s: number, d: any) => s + (d.months?.[mo] ?? 0), 0)
+  );
+  const grandTotal = monthSums.reduce((s, v) => s + v, 0);
+  const sumCells = activeIdxs.map(idx =>
+    `<td style="${tdTotR}">${fmtMAN_d(monthSums[idx])}</td>`
   ).join('');
 
   return `
-    <div style="font-size:11px;color:#718096;margin:8px 0 4px;text-align:right;">(단위: 천원)</div>
+    <div style="font-size:10px;color:#718096;margin:6px 0 3px;text-align:right;">(단위: 만원)</div>
     <table width="100%" cellpadding="0" cellspacing="0"
       style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
       <thead>
-        <tr><th style="${thL}">월</th>${headerCells}</tr>
+        <tr><th style="${thL}">연도</th>${headerCells}<th style="${thStyle}">합계</th></tr>
       </thead>
       <tbody>
-        ${rows}
-        <tr><td style="${tdTotL}">합계</td>${totalCells}</tr>
+        ${dataRows}
+        <tr><td style="${tdTotL}">합계</td>${sumCells}<td style="${tdTotR}">${fmtMAN_d(grandTotal)}</td></tr>
       </tbody>
     </table>`;
 }
@@ -378,7 +401,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
 <body style="margin:0;padding:0;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:24px 0;">
   <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+    <table width="660" cellpadding="0" cellspacing="0" style="max-width:660px;width:100%;">
 
       <!-- 헤더 -->
       <tr><td style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);border-radius:12px 12px 0 0;padding:24px 28px;">
@@ -430,7 +453,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
         <!-- 월별 배당금 -->
         ${divChartUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">🎁 월별 배당금</div>
-        <div style="font-size:11px;color:#718096;margin-bottom:8px;">세금·수수료 차감 후 KRW 환산 기준 · 단위: 천원</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">세금·수수료 차감 후 KRW 환산 기준 · 단위: 만원</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:12px;text-align:center;">
           ${chartImg(divChartUrl)}
         </div>
