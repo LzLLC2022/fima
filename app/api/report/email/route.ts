@@ -90,9 +90,7 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
   return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=230&backgroundColor=white&version=2`;
 }
 
-/** 월별 수익금액 — 바 차트 (만원 단위, 3자리 콤마)
- *  basePnl: analyzeMonths[0] 직전 월의 누적손익 (API basePnl 필드)
- *  → 앱의 renderPfAmtChart 와 동일 로직 */
+/** 월별 수익금액 — 바 차트 (만원 단위, 레이블 없음) */
 function buildPnlBarChartUrl(monthly: any[], basePnl: number): string {
   if (!monthly || monthly.length === 0) return '';
 
@@ -126,22 +124,7 @@ function buildPnlBarChartUrl(monthly: any[], basePnl: number): string {
     },
     options:{
       legend:{display:false},
-      plugins:{
-        datalabels:{
-          anchor:'end',
-          align:'top',
-          fontSize:7,
-          fontStyle:'normal',
-          fontColor:'#4a5568',
-          formatter:function(v){
-            if(Math.abs(v)<10)return '';
-            var s=v>=0?'+':'-';
-            var a=Math.abs(Math.round(v));
-            return s+a.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',')+'만';
-          }
-        }
-      },
-      layout:{padding:{top:20}},
+      plugins:{datalabels:{display:false}},
       scales:{
         yAxes:[{
           ticks:{
@@ -158,7 +141,67 @@ function buildPnlBarChartUrl(monthly: any[], basePnl: number): string {
     }
   }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=210&backgroundColor=white&version=2`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=190&backgroundColor=white&version=2`;
+}
+
+/** 월별 수익금액 테이블 HTML (만원 단위, 월별 컬럼) */
+function buildPnlTable(monthly: any[], basePnl: number): string {
+  if (!monthly || monthly.length === 0) return '';
+
+  // 월별 수익금액 계산 (차트와 동일 로직)
+  const rows = monthly.map((m: any, i: number) => {
+    const curPnl  = (m.marketValueKRW ?? 0) - (m.netInvestmentKRW ?? 0);
+    const prevPnl = i > 0
+      ? ((monthly[i - 1].marketValueKRW ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0))
+      : (basePnl ?? 0);
+    return { month: toYYMM(m.month), pnl: Math.round(curPnl - prevPnl) };
+  });
+
+  const total = rows.reduce((s, r) => s + r.pnl, 0);
+
+  const fmtMAN = (v: number) => {
+    const man = Math.round(v / 10000);
+    const abs = Math.abs(man).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (man >= 0 ? '+' : '-') + abs;
+  };
+
+  const posCol = '#2b6cb0';
+  const negCol = '#c53030';
+  const col    = (v: number) => v >= 0 ? posCol : negCol;
+
+  const thBase = 'padding:5px 6px;font-size:10px;color:#718096;font-weight:600;background:#edf2f7;white-space:nowrap;';
+  const thR    = thBase + 'text-align:right;';
+  const thL    = thBase + 'text-align:left;';
+
+  const headers = rows.map(r =>
+    `<th style="${thR}">${r.month}</th>`
+  ).join('');
+
+  const cells = rows.map(r =>
+    `<td style="padding:5px 6px;text-align:right;font-size:10px;color:${col(r.pnl)};font-weight:600;">${fmtMAN(r.pnl)}</td>`
+  ).join('');
+
+  const totStyle = `padding:5px 6px;text-align:right;font-size:10px;font-weight:700;color:${col(total)};background:#f7fafc;`;
+
+  return `
+    <div style="font-size:10px;color:#718096;margin:6px 0 3px;text-align:right;">(단위: 만원)</div>
+    <table width="100%" cellpadding="0" cellspacing="0"
+      style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <thead>
+        <tr>
+          <th style="${thL}">월</th>
+          ${headers}
+          <th style="${thR}">합계</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:5px 6px;font-size:10px;color:#4a5568;font-weight:600;white-space:nowrap;">수익금액</td>
+          ${cells}
+          <td style="${totStyle}">${fmtMAN(total)}</td>
+        </tr>
+      </tbody>
+    </table>`;
 }
 
 /** 월별 배당금 — 연도별 그룹 바 차트 (천원 단위) */
@@ -279,6 +322,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const basePnl        = data.basePnl ?? 0;
   const returnChartUrl = buildReturnChartUrl(monthly, indices);
   const pnlBarUrl      = buildPnlBarChartUrl(monthly, basePnl);
+  const pnlTableHtml   = buildPnlTable(monthly, basePnl);
   const divChartUrl    = buildDivChartUrl(dividends);
   const divTableHtml   = buildDivTable(dividends);
 
@@ -378,9 +422,10 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
         ${pnlBarUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">💰 월별 수익금액</div>
         <div style="font-size:11px;color:#718096;margin-bottom:8px;">각 월말 기준 (평가액 – 순투자액) 변동분 · 단위: 만원</div>
-        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
+        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:10px;text-align:center;">
           ${chartImg(pnlBarUrl)}
-        </div>` : ''}
+        </div>
+        ${pnlTableHtml}` : ''}
 
         <!-- 월별 배당금 -->
         ${divChartUrl ? `
