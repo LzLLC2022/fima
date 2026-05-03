@@ -548,10 +548,10 @@
       gap: 12px;
       margin-bottom: 12px;
     }
-    /* 포트폴리오 YTD/MTD 카드 그리드 */
+    /* 포트폴리오 YTD/MTD/Daily 카드 그리드 */
     .pf-period-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 12px;
       margin-bottom: 20px;
     }
@@ -636,7 +636,7 @@
       .pf-summary-grid .card { padding: 12px 10px; }
       .pf-summary-grid .card [style*="font-size:1.3rem"] { font-size: 1rem !important; }
       /* 포트폴리오 YTD/MTD: 모바일 동일 스타일 */
-      .pf-period-grid { gap: 8px; }
+      .pf-period-grid { gap: 8px; grid-template-columns: 1fr 1fr 1fr; }
       .pf-period-grid .card { padding: 12px 10px; }
 
 
@@ -1221,6 +1221,11 @@
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">MTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(월초 이후)</span></div>
             <div id="pfMtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
             <div id="pfMtdPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">Daily 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(전일 대비)</span></div>
+            <div id="pfDailyPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
+            <div id="pfDailyPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
           </div>
         </div>
 
@@ -3293,6 +3298,7 @@
       }
       setPeriodCard('pfYtdPnl', 'pfYtdPct', s.ytd);
       setPeriodCard('pfMtdPnl', 'pfMtdPct', s.mtd);
+      setPeriodCard('pfDailyPnl', 'pfDailyPct', s.daily);
 
       // ── 차트 ─────────────────────────────────────────────
       pfChartMonthly = data.monthly;
