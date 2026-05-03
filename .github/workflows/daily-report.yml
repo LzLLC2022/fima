@@ -1,0 +1,26 @@
+name: Portfolio Report Email
+
+on:
+  schedule:
+    - cron: '0 23 * * 1-5'  # Mon-Fri 23:00 UTC = Tue-Sat 08:00 KST
+  workflow_dispatch:
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send portfolio report email
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST https://fima.lim.kr/api/report/email \
+            -H "Authorization: Bearer ${{ secrets.REPORT_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "HTTP Status: $HTTP_CODE"
+          echo "$BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Error: API returned $HTTP_CODE"
+            exit 1
+          fi
