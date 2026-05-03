@@ -204,20 +204,26 @@ function buildPnlTable(monthly: any[], basePnl: number): string {
     </table>`;
 }
 
-/** 월별 배당금 — 연도별 그룹 바 차트 (만원 단위) */
+/** 월별 배당금 — 연도별 그룹 바 차트 (만원 단위, 데이터 있는 월까지만 표시) */
 function buildDivChartUrl(dividends: any[]): string {
   if (!dividends || dividends.length === 0) return '';
 
-  const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const palette = ['#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4'];
+  const allMonths = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const palette   = ['#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4'];
+
+  // 데이터가 있는 마지막 월 인덱스까지만 표시 (오른쪽 빈 공간 제거)
+  let lastActiveIdx = -1;
+  allMonths.forEach((mo, idx) => {
+    if (dividends.some((yr: any) => (yr.months?.[mo] ?? 0) > 0)) lastActiveIdx = idx;
+  });
+  if (lastActiveIdx === -1) return '';
+
+  const monthLabels = allMonths.slice(0, lastActiveIdx + 1);
 
   const datasets = dividends.map((yr: any, i: number) => {
     const data = monthLabels.map((mo: string) => Math.round((yr.months?.[mo] ?? 0) / 10000));
     return { label: String(yr.year), data, color: palette[i % palette.length] };
   });
-
-  const hasData = datasets.some((ds: any) => ds.data.some((v: number) => v > 0));
-  if (!hasData) return '';
 
   const dsJson = datasets.map((ds: any) =>
     `{label:'${ds.label}',data:${JSON.stringify(ds.data)},backgroundColor:'${ds.color}'}`
