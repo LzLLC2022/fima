@@ -28,6 +28,13 @@ function signPrefix(v: number): string {
   return v >= 0 ? '+' : '';
 }
 
+/** 현재가 포맷 — 정수부 3자리 콤마, 소수점 2자리 (예: 7,230.00 / 9,986.67) */
+function fmtPrice(v: number): string {
+  const parts = v.toFixed(2).split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+}
+
 // ── 차트 x축 레이블: "2025-05" → "25-05" ───────────────────────────
 function toYYMM(month: string): string {
   const s = String(month || '');
@@ -394,7 +401,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
       <tr style="border-bottom:1px solid #edf2f7;">
         <td style="padding:7px 8px;font-weight:600;color:#2d3748;font-size:12px;">${st.ticker}</td>
         <td style="padding:7px 8px;color:#4a5568;font-size:11px;">${st.name || '-'}</td>
-        <td style="padding:7px 8px;text-align:right;color:#4a5568;font-size:12px;">${st.currentPrice?.toFixed(2) ?? '-'} ${st.currency ?? ''}</td>
+        <td style="padding:7px 8px;text-align:right;color:#4a5568;font-size:12px;">${st.currentPrice != null ? fmtPrice(st.currentPrice) : '-'} ${st.currency ?? ''}</td>
         <td style="padding:7px 8px;text-align:right;color:${pnlCol};font-weight:600;font-size:12px;">${st.pnlPct != null ? fmtPct(st.pnlPct) : '-'}</td>
         <td style="padding:7px 8px;text-align:right;color:${ytdCol};font-weight:600;font-size:12px;">${fmtPct(st.annualReturnPct)}</td>
         <td style="padding:7px 8px;text-align:right;color:${mtdCol};font-weight:600;font-size:12px;">${fmtPct(st.monthlyReturnPct)}</td>
