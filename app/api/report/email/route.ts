@@ -90,21 +90,25 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
   return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=230&backgroundColor=white&version=2`;
 }
 
-/** 월별 수익금액 — 바 차트 (천원 단위, 3자리 콤마) */
+/** 월별 수익금액 — 바 차트 (만원 단위, 3자리 콤마) */
 function buildPnlBarChartUrl(monthly: any[]): string {
   if (!monthly || monthly.length < 2) return '';
 
   const labels = monthly.map((m: any) => toYYMM(m.month));
 
+  // 첫 달: 절대 손익(평가액-순투자액), 이후: 전월 대비 변동분
   const valsKRW = monthly.map((m: any, i: number) => {
-    if (i === 0) return 0;
+    if (i === 0) {
+      return Math.round((m.marketValueKRW ?? 0) - (m.netInvestmentKRW ?? 0));
+    }
     const cur    = monthly[i].marketValueKRW     ?? 0;
     const prev   = monthly[i - 1].marketValueKRW ?? 0;
     const netChg = (monthly[i].netInvestmentKRW  ?? 0) - (monthly[i - 1].netInvestmentKRW ?? 0);
     return Math.round(cur - prev - netChg);
   });
 
-  const vals   = valsKRW.map((v: number) => Math.round(v / 1000));
+  // 만원 단위로 변환 (÷10000)
+  const vals   = valsKRW.map((v: number) => Math.round(v / 10000));
   const colors = valsKRW.map((v: number) => v >= 0 ? '#3b82f6' : '#f87171');
 
   const cfg = `{
@@ -125,18 +129,18 @@ function buildPnlBarChartUrl(monthly: any[]): string {
         datalabels:{
           anchor:'end',
           align:'top',
-          fontSize:7,
+          fontSize:6,
           fontStyle:'bold',
           fontColor:'#374151',
           formatter:function(v){
-            if(Math.abs(v)<50)return '';
+            if(Math.abs(v)<5)return '';
             var s=v>=0?'+':'-';
             var a=Math.abs(Math.round(v));
-            return s+a.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',')+'천';
+            return s+a.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',')+'만';
           }
         }
       },
-      layout:{padding:{top:18}},
+      layout:{padding:{top:20}},
       scales:{
         yAxes:[{
           ticks:{
@@ -153,7 +157,7 @@ function buildPnlBarChartUrl(monthly: any[]): string {
     }
   }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=200&backgroundColor=white&version=2`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=210&backgroundColor=white&version=2`;
 }
 
 /** 월별 배당금 — 연도별 그룹 바 차트 (천원 단위) */
@@ -371,7 +375,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
         <!-- 월별 수익금액 -->
         ${pnlBarUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">💰 월별 수익금액</div>
-        <div style="font-size:11px;color:#718096;margin-bottom:8px;">각 월말 기준 (평가액 – 순투자액) 변동분 · 단위: 천원</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">각 월말 기준 (평가액 – 순투자액) 변동분 · 단위: 만원</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
           ${chartImg(pnlBarUrl)}
         </div>` : ''}
