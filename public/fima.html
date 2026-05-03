@@ -1222,19 +1222,25 @@
 
         <!-- 기준값 디버그 패널 -->
         <div class="card" style="margin-bottom:14px;padding:10px 16px;background:#f7fafc;border:1px dashed #bee3f8;">
-          <div style="font-size:0.72rem;font-weight:700;color:#90cdf4;margin-bottom:8px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
-            <div>
-              <div style="font-size:0.7rem;color:#a0aec0;margin-bottom:4px;">전년 12월 말 <span style="font-size:0.67rem;">(YTD 기준)</span></div>
-              <div id="pfDbgYtd" style="font-size:0.92rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+          <div style="font-size:0.72rem;font-weight:700;color:#90cdf4;margin-bottom:10px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가손익</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;text-align:center;">
+            <div style="border-right:1px solid #e2e8f0;padding-right:8px;">
+              <div style="font-size:0.68rem;color:#a0aec0;margin-bottom:3px;">현재 평가손익</div>
+              <div id="pfDbgCurPnl" style="font-size:0.88rem;font-weight:700;color:#276749;font-family:monospace;">-</div>
+            </div>
+            <div style="border-right:1px solid #e2e8f0;padding-right:8px;">
+              <div style="font-size:0.68rem;color:#a0aec0;margin-bottom:3px;">전년 12월 말 평가손익 <span style="font-size:0.63rem;">(YTD 기준)</span></div>
+              <div id="pfDbgYtd" style="font-size:0.88rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+              <div id="pfDbgYtdVal" style="font-size:0.7rem;color:#a0aec0;margin-top:2px;">평가액 -</div>
+            </div>
+            <div style="border-right:1px solid #e2e8f0;padding-right:8px;">
+              <div style="font-size:0.68rem;color:#a0aec0;margin-bottom:3px;">전월 말 평가손익 <span style="font-size:0.63rem;">(MTD 기준)</span></div>
+              <div id="pfDbgMtd" style="font-size:0.88rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+              <div id="pfDbgMtdVal" style="font-size:0.7rem;color:#a0aec0;margin-top:2px;">평가액 -</div>
             </div>
             <div>
-              <div style="font-size:0.7rem;color:#a0aec0;margin-bottom:4px;">전월 말 <span style="font-size:0.67rem;">(MTD 기준)</span></div>
-              <div id="pfDbgMtd" style="font-size:0.92rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
-            </div>
-            <div>
-              <div style="font-size:0.7rem;color:#a0aec0;margin-bottom:4px;">전일 <span style="font-size:0.67rem;">(Daily 기준)</span></div>
-              <div id="pfDbgDaily" style="font-size:0.92rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
+              <div style="font-size:0.68rem;color:#a0aec0;margin-bottom:3px;">전일 평가액 <span style="font-size:0.63rem;">(Daily 기준)</span></div>
+              <div id="pfDbgDaily" style="font-size:0.88rem;font-weight:700;color:#2b6cb0;font-family:monospace;">-</div>
             </div>
           </div>
         </div>
@@ -3410,10 +3416,22 @@
       // ── 기준값 디버그 패널 ─────────────────────────────────
       function fmtDbg(v) {
         if (v == null) return '-';
-        return Math.round(v).toLocaleString() + ' KRW';
+        var n = Math.round(v);
+        return (n >= 0 ? '+' : '') + n.toLocaleString() + ' KRW';
       }
-      document.getElementById('pfDbgYtd').textContent   = s.ytd   ? fmtDbg(s.ytd.startValueKRW)   : '-';
-      document.getElementById('pfDbgMtd').textContent   = s.mtd   ? fmtDbg(s.mtd.startValueKRW)   : '-';
+      // 현재 평가손익 = 평가액 - 순투자액
+      var curPnlVal = s.marketValueKRW - (s.netInvestmentKRW || 0);
+      document.getElementById('pfDbgCurPnl').textContent = fmtDbg(curPnlVal);
+      document.getElementById('pfDbgCurPnl').style.color = curPnlVal >= 0 ? '#276749' : '#c53030';
+
+      if (s.ytd) {
+        document.getElementById('pfDbgYtd').textContent    = fmtDbg(s.ytd.startPnlKRW);
+        document.getElementById('pfDbgYtdVal').textContent = '평가액 ' + (s.ytd.startValueKRW || 0).toLocaleString();
+      }
+      if (s.mtd) {
+        document.getElementById('pfDbgMtd').textContent    = fmtDbg(s.mtd.startPnlKRW);
+        document.getElementById('pfDbgMtdVal').textContent = '평가액 ' + (s.mtd.startValueKRW || 0).toLocaleString();
+      }
       document.getElementById('pfDbgDaily').textContent = s.daily ? fmtDbg(s.daily.startValueKRW) : '-';
 
       // ── 차트 ─────────────────────────────────────────────
