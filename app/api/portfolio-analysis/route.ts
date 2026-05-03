@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
-import { getExchangeRate, getStockPrice, getStockInfo } from '@/lib/stock';
+import { getExchangeRate, getStockPrice, getStockInfo, isKoreanCode } from '@/lib/stock';
 
 // ── 한국 채권 ISIN 판별 (KR + 10자리) ────────────────────────────────────
 function isKoreanBondISIN(ticker: string): boolean {
@@ -383,30 +383,33 @@ export async function POST(req: NextRequest) {
     });
 
     // 전일 종가 맵 (Daily PnL 계산용)
-    // 오늘/어제 날짜 KST 기준 (UTC+9) — 이 범위 내 거래일이면 실제 Daily 사용
-    const kstDateStr = (offsetDays: number) => {
-      const d = new Date(Date.now() + 9 * 3600 * 1000 + offsetDays * 86400 * 1000);
+    // 오늘 날짜 KST 기준 (UTC+9)
+    const todayKST = (() => {
+      const d = new Date(Date.now() + 9 * 3600 * 1000);
       return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-    };
-    const todayKST     = kstDateStr(0);
-    const yesterdayKST = kstDateStr(-1);
+    })();
 
     const yesterdayPrice: Record<string, number> = {};
     heldTickers.forEach((t, i) => {
       const r = yesterdayPriceList[i];
       if (r.status !== 'fulfilled' || !r.value) {
-        // 조회 실패 → 현재가로 대체 (Daily PnL = 0)
         yesterdayPrice[t] = currentPrice[t] || 0;
         return;
       }
       const data = r.value as Record<string, any>;
       const lastTradeDate = String(data.baseDate || '').slice(0, 10);
-      // 마지막 거래일이 오늘 또는 어제(KST)이면 실제 Daily 사용
-      // 그보다 오래됐으면 (한국 연휴 등) Daily PnL = 0
-      if (lastTradeDate !== todayKST && lastTradeDate !== yesterdayKST) {
-        yesterdayPrice[t] = currentPrice[t] || 0;
-        return;
+
+      // 한국 주식(채권 제외): 오늘 KST에 거래가 없으면 Daily = 0 (휴장/주말)
+      // → Naver localTradedAt 기준이므로 KST 날짜와 직접 비교 가능
+      const isTicker = t.split('.')[0];
+      if (!isKoreanBondISIN(isTicker) && isKoreanCode(isTicker)) {
+        if (lastTradeDate !== todayKST) {
+          yesterdayPrice[t] = currentPrice[t] || 0;
+          return;
+        }
       }
+
+      // 해외 주식 / 채권: 항상 최근 거래일 기준 Daily 표시 (Yahoo chartPreviousClose)
       const yp = Number(data.yesterday) || 0;
       yesterdayPrice[t] = yp > 0 ? yp : currentPrice[t] || 0;
     });
