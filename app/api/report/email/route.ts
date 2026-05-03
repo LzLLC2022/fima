@@ -232,9 +232,8 @@ export async function POST(req: NextRequest) {
 
     try {
       // 포트폴리오 데이터 조회 (내부 API 호출)
-      const baseUrl  = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'https://fima.lim.kr';
+      // VERCEL_URL은 deployment-specific URL이므로 커스텀 도메인 고정
+      const baseUrl = process.env.REPORT_BASE_URL || 'https://fima.lim.kr';
       const pfRes  = await fetch(`${baseUrl}/api/portfolio-analysis`, {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
