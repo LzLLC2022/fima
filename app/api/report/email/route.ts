@@ -9,6 +9,11 @@ function fmtKRW(v: number): string {
   return Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
+/** 천원 단위 3자리 콤마 (예: 42,840) */
+function fmtKTH(v: number): string {
+  return Math.round(v / 1000).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 function fmtPct(v: number | null | undefined): string {
   if (v == null) return '-';
   return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
@@ -26,16 +31,14 @@ function signPrefix(v: number): string {
 // ── 차트 x축 레이블: "2025-05" → "25-05" ───────────────────────────
 function toYYMM(month: string): string {
   const s = String(month || '');
-  // "2025-05" → "25-05"
   if (s.length >= 7) return s.slice(2, 7);
-  // "2025-5" → "25-05"
   if (s.length >= 6) return s.slice(2, 4) + '-' + s.slice(5).padStart(2, '0');
   return s;
 }
 
-// ── QuickChart.io 이미지 URL 생성 (Gmail 호환 PNG) ──────────────────
+// ── QuickChart.io: JS 오브젝트 리터럴 방식으로 함수 콜백 정상 동작 ──
 
-/** 월별 누적 수익률 비교 — 라인 차트 (앱 리포트와 동일 구성) */
+/** 월별 누적 수익률 비교 — 라인 차트 */
 function buildReturnChartUrl(monthly: any[], indices: any): string {
   if (!monthly || monthly.length < 2) return '';
 
@@ -51,45 +54,43 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
   const spVals = toArr('SP500');
   const nqVals = toArr('NASDAQ');
 
-  const cfg = {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: '포트폴리오', data: pfVals, borderColor: '#3b82f6', backgroundColor: 'transparent', pointRadius: 3, borderWidth: 2.5 },
-        { label: 'KOSPI',      data: koVals, borderColor: '#ef4444', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
-        { label: 'S&P500',     data: spVals, borderColor: '#10b981', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
-        { label: 'NASDAQ',     data: nqVals, borderColor: '#8b5cf6', backgroundColor: 'transparent', borderDash: [5, 3], pointRadius: 2, borderWidth: 1.5 },
-      ],
+  // JS 오브젝트 리터럴 문자열로 직접 빌드 → 함수 콜백이 QuickChart에서 정상 평가됨
+  const cfg = `{
+    type:'line',
+    data:{
+      labels:${JSON.stringify(labels)},
+      datasets:[
+        {label:'포트폴리오',data:${JSON.stringify(pfVals)},borderColor:'#3b82f6',backgroundColor:'transparent',pointRadius:3,borderWidth:2.5},
+        {label:'KOSPI',data:${JSON.stringify(koVals)},borderColor:'#ef4444',backgroundColor:'transparent',borderDash:[5,3],pointRadius:2,borderWidth:1.5},
+        {label:'S&P500',data:${JSON.stringify(spVals)},borderColor:'#10b981',backgroundColor:'transparent',borderDash:[5,3],pointRadius:2,borderWidth:1.5},
+        {label:'NASDAQ',data:${JSON.stringify(nqVals)},borderColor:'#8b5cf6',backgroundColor:'transparent',borderDash:[5,3],pointRadius:2,borderWidth:1.5}
+      ]
     },
-    options: {
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 11 } } },
+    options:{
+      plugins:{
+        legend:{position:'bottom',labels:{usePointStyle:true,font:{size:9}}}
       },
-      scales: {
-        y: {
-          ticks: {
-            callback: "function(v){return (v>=0?'+':'')+v.toFixed(0)+'%'}",
-            font: { size: 10 },
-          },
-          grid: { color: '#e2e8f0' },
+      scales:{
+        y:{
+          ticks:{callback:function(v){return (v>=0?'+':'')+v+'%';},font:{size:8}},
+          grid:{color:'#e2e8f0'}
         },
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-      },
-    },
-  };
+        x:{ticks:{font:{size:8}},grid:{display:false}}
+      }
+    }
+  }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=230&backgroundColor=white`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=230&backgroundColor=white`;
 }
 
-/** 월별 수익금액 — 바 차트 (앱 리포트와 동일 구성) */
+/** 월별 수익금액 — 바 차트 (천원 단위, 3자리 콤마) */
 function buildPnlBarChartUrl(monthly: any[]): string {
   if (!monthly || monthly.length < 2) return '';
 
   const labels = monthly.map((m: any) => toYYMM(m.month));
 
-  // 월간 순수 수익금액 = (평가액 변화) - (순투자 변화)
-  const vals = monthly.map((m: any, i: number) => {
+  // 원 단위 계산 후 천원으로 변환
+  const valsKRW = monthly.map((m: any, i: number) => {
     if (i === 0) return 0;
     const cur    = monthly[i].marketValueKRW     ?? 0;
     const prev   = monthly[i - 1].marketValueKRW ?? 0;
@@ -97,90 +98,160 @@ function buildPnlBarChartUrl(monthly: any[]): string {
     return Math.round(cur - prev - netChg);
   });
 
-  const colors = vals.map((v: number) => v >= 0 ? '#3b82f6' : '#f87171');
+  const vals   = valsKRW.map((v: number) => Math.round(v / 1000));
+  const colors = valsKRW.map((v: number) => v >= 0 ? '#3b82f6' : '#f87171');
 
-  const cfg = {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: '',
-        data: vals,
-        backgroundColor: colors,
-        borderColor: colors,
-        borderWidth: 1,
-        borderRadius: 2,
-      }],
+  const cfg = `{
+    type:'bar',
+    data:{
+      labels:${JSON.stringify(labels)},
+      datasets:[{
+        label:'',
+        data:${JSON.stringify(vals)},
+        backgroundColor:${JSON.stringify(colors)},
+        borderColor:${JSON.stringify(colors)},
+        borderWidth:1,
+        borderRadius:2
+      }]
     },
-    options: {
-      plugins: {
-        legend: { display: false },
-        datalabels: {
-          anchor: 'end',
-          align: 'top',
-          font: { size: 9, weight: 'bold' },
-          color: '#374151',
-          formatter: "function(v){if(Math.abs(v)<50000)return'';const a=Math.abs(v);const s=v>=0?'+':'-';if(a>=100000000)return s+(a/100000000).toFixed(1)+'억';return s+Math.round(a/10000)+'만'}",
-        },
+    options:{
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          anchor:'end',
+          align:'top',
+          font:{size:8,weight:'bold'},
+          color:'#374151',
+          formatter:function(v){
+            if(Math.abs(v)<50)return '';
+            var s=v>=0?'+':'-';
+            var a=Math.abs(Math.round(v));
+            return s+a.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',')+'천';
+          }
+        }
       },
-      layout: { padding: { top: 20 } },
-      scales: {
-        y: {
-          ticks: {
-            callback: "function(v){const a=Math.abs(v);if(a>=100000000)return(v/100000000).toFixed(1)+'억';if(a>=10000)return Math.round(v/10000)+'만';return v}",
-            font: { size: 10 },
+      layout:{padding:{top:20}},
+      scales:{
+        y:{
+          ticks:{
+            callback:function(v){return v.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');},
+            font:{size:8}
           },
-          grid: { color: '#e2e8f0' },
+          grid:{color:'#e2e8f0'}
         },
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-      },
-    },
-  };
+        x:{ticks:{font:{size:8}},grid:{display:false}}
+      }
+    }
+  }`;
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=200&backgroundColor=white`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=200&backgroundColor=white`;
 }
 
-/** 월별 배당금 — 연도별 그룹 바 차트 (앱 리포트와 동일 구성) */
+/** 월별 배당금 — 연도별 그룹 바 차트 (천원 단위) */
 function buildDivChartUrl(dividends: any[]): string {
   if (!dividends || dividends.length === 0) return '';
 
   const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const colors = ['#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4'];
+  const palette = ['#3b82f6','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4'];
 
-  const datasets = dividends.map((yr: any, i: number) => ({
-    label: String(yr.year),
-    data: monthLabels.map((mo: string) => yr.months?.[mo] ?? 0),
-    backgroundColor: colors[i % colors.length],
-    borderRadius: 2,
-  }));
+  // 값을 천원 단위로 변환
+  const datasets = dividends.map((yr: any, i: number) => {
+    const data = monthLabels.map((mo: string) => Math.round((yr.months?.[mo] ?? 0) / 1000));
+    return { label: String(yr.year), data, color: palette[i % palette.length] };
+  });
 
   const hasData = datasets.some((ds: any) => ds.data.some((v: number) => v > 0));
   if (!hasData) return '';
 
-  const cfg = {
-    type: 'bar',
-    data: {
-      labels: monthLabels.map((m: string) => m + '월'),
-      datasets,
-    },
-    options: {
-      plugins: {
-        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-      },
-      scales: {
-        y: {
-          ticks: {
-            callback: "function(v){const a=Math.abs(v);if(a>=100000000)return(a/100000000).toFixed(1)+'억';if(a>=10000)return Math.round(a/10000)+'만';return v}",
-            font: { size: 10 },
-          },
-          grid: { color: '#e2e8f0' },
-        },
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-      },
-    },
-  };
+  const dsJson = datasets.map((ds: any) =>
+    `{label:'${ds.label}',data:${JSON.stringify(ds.data)},backgroundColor:'${ds.color}',borderRadius:2}`
+  ).join(',');
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(cfg))}&width=520&height=220&backgroundColor=white`;
+  const monthAxisLabels = monthLabels.map(m => m + '월');
+
+  const cfg = `{
+    type:'bar',
+    data:{
+      labels:${JSON.stringify(monthAxisLabels)},
+      datasets:[${dsJson}]
+    },
+    options:{
+      plugins:{
+        legend:{position:'bottom',labels:{boxWidth:12,font:{size:9}}}
+      },
+      scales:{
+        y:{
+          ticks:{
+            callback:function(v){return v.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');},
+            font:{size:8}
+          },
+          grid:{color:'#e2e8f0'}
+        },
+        x:{ticks:{font:{size:8}},grid:{display:false}}
+      }
+    }
+  }`;
+
+  return `https://quickchart.io/chart?c=${encodeURIComponent(cfg)}&width=520&height=220&backgroundColor=white`;
+}
+
+/** 월별 배당금 테이블 HTML (연도별 컬럼, 천원 단위) */
+function buildDivTable(dividends: any[]): string {
+  if (!dividends || dividends.length === 0) return '';
+
+  const monthLabels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const monthNames  = ['01월','02월','03월','04월','05월','06월','07월','08월','09월','10월','11월','12월'];
+  const years = dividends.map((d: any) => d.year);
+
+  // 데이터 있는 월만 표시
+  const activeMonths = monthLabels.filter((mo: string) =>
+    dividends.some((d: any) => (d.months?.[mo] ?? 0) > 0)
+  );
+  if (activeMonths.length === 0) return '';
+
+  // 연도별 합계
+  const totals = dividends.map((d: any) =>
+    Object.values(d.months || {}).reduce((s: number, v: any) => s + (Number(v) || 0), 0) as number
+  );
+
+  const thStyle = 'padding:5px 8px;text-align:right;font-size:11px;color:#718096;font-weight:600;background:#edf2f7;';
+  const thL     = 'padding:5px 8px;text-align:left;font-size:11px;color:#718096;font-weight:600;background:#edf2f7;';
+  const tdStyle = 'padding:5px 8px;text-align:right;font-size:11px;color:#4a5568;';
+  const tdL     = 'padding:5px 8px;text-align:left;font-size:11px;color:#4a5568;font-weight:600;';
+  const tdTot   = 'padding:5px 8px;text-align:right;font-size:11px;font-weight:700;color:#2d3748;background:#f7fafc;';
+  const tdTotL  = 'padding:5px 8px;text-align:left;font-size:11px;font-weight:700;color:#2d3748;background:#f7fafc;';
+
+  const headerCells = years.map((y: number) => `<th style="${thStyle}">${y}</th>`).join('');
+  const rows = activeMonths.map((mo: string, idx: number) => {
+    const cells = dividends.map((d: any) => {
+      const v = d.months?.[mo] ?? 0;
+      return `<td style="${tdStyle}">${v > 0 ? fmtKTH(v) : '-'}</td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid #edf2f7;">
+      <td style="${tdL}">${monthNames[monthLabels.indexOf(mo)]}</td>${cells}
+    </tr>`;
+  }).join('');
+
+  const totalCells = totals.map((t: number) =>
+    `<td style="${tdTot}">${t > 0 ? fmtKTH(t) : '-'}</td>`
+  ).join('');
+
+  return `
+    <div style="font-size:11px;color:#718096;margin:8px 0 4px;text-align:right;">(단위: 천원)</div>
+    <table width="100%" cellpadding="0" cellspacing="0"
+      style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <thead>
+        <tr>
+          <th style="${thL}">월</th>${headerCells}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr>
+          <td style="${tdTotL}">합계</td>${totalCells}
+        </tr>
+      </tbody>
+    </table>`;
 }
 
 // ── HTML 이메일 생성 ────────────────────────────────────────────
@@ -203,6 +274,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
   const returnChartUrl = buildReturnChartUrl(monthly, indices);
   const pnlBarUrl      = buildPnlBarChartUrl(monthly);
   const divChartUrl    = buildDivChartUrl(dividends);
+  const divTableHtml   = buildDivTable(dividends);
 
   const chartImg = (url: string) =>
     `<img src="${url}" width="520" style="display:block;max-width:100%;border-radius:6px;" alt="chart">`;
@@ -302,7 +374,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
         <!-- 월별 수익금액 -->
         ${pnlBarUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">💰 월별 수익금액</div>
-        <div style="font-size:11px;color:#718096;margin-bottom:8px;">각 월말 기준 (평가액 – 순투자액) 변동분</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">각 월말 기준 (평가액 – 순투자액) 변동분 · 단위: 천원</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
           ${chartImg(pnlBarUrl)}
         </div>` : ''}
@@ -310,10 +382,11 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
         <!-- 월별 배당금 -->
         ${divChartUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">🎁 월별 배당금</div>
-        <div style="font-size:11px;color:#718096;margin-bottom:8px;">세금·수수료 차감 후 KRW 환산 기준</div>
-        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">세금·수수료 차감 후 KRW 환산 기준 · 단위: 천원</div>
+        <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:12px;text-align:center;">
           ${chartImg(divChartUrl)}
-        </div>` : ''}
+        </div>
+        ${divTableHtml}` : ''}
 
         <!-- 보유 종목별 수익률 테이블 -->
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:10px;">📋 보유 종목별 수익률</div>
