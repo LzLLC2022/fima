@@ -383,11 +383,13 @@ export async function POST(req: NextRequest) {
     });
 
     // 전일 종가 맵 (Daily PnL 계산용)
-    // 오늘 날짜 KST 기준 (UTC+9)
-    const todayKST = (() => {
-      const d = new Date(Date.now() + 9 * 3600 * 1000);
+    // 오늘/어제 날짜 KST 기준 (UTC+9) — 이 범위 내 거래일이면 실제 Daily 사용
+    const kstDateStr = (offsetDays: number) => {
+      const d = new Date(Date.now() + 9 * 3600 * 1000 + offsetDays * 86400 * 1000);
       return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-    })();
+    };
+    const todayKST     = kstDateStr(0);
+    const yesterdayKST = kstDateStr(-1);
 
     const yesterdayPrice: Record<string, number> = {};
     heldTickers.forEach((t, i) => {
@@ -398,9 +400,10 @@ export async function POST(req: NextRequest) {
         return;
       }
       const data = r.value as Record<string, any>;
-      // 마지막 거래일이 오늘이 아니면 (휴장·주말) → Daily PnL = 0
       const lastTradeDate = String(data.baseDate || '').slice(0, 10);
-      if (lastTradeDate !== todayKST) {
+      // 마지막 거래일이 오늘 또는 어제(KST)이면 실제 Daily 사용
+      // 그보다 오래됐으면 (한국 연휴 등) Daily PnL = 0
+      if (lastTradeDate !== todayKST && lastTradeDate !== yesterdayKST) {
         yesterdayPrice[t] = currentPrice[t] || 0;
         return;
       }
