@@ -332,6 +332,173 @@ fima-next/
 
 ---
 
+## 포트폴리오 리포트 이메일 자동발송 설정
+
+> 매일 아침(화~토 08:00 KST) 각 사용자에게 포트폴리오 현황을 이메일로 자동 발송합니다.  
+> GitHub Actions + Resend API 조합으로 구현되어 있습니다.
+
+---
+
+### 이메일 내용 구성
+
+| 섹션 | 내용 |
+|---|---|
+| 포트폴리오 요약 | 순투자액 · 평가액 · 평가손익 · 수익률 카드 |
+| 기간별 손익 | YTD / MTD / Daily 손익 및 수익률 |
+| 월별 누적 수익률 비교 | 포트폴리오 vs KOSPI / S&P500 / NASDAQ 라인 차트 |
+| 월별 수익금액 | 월간 수익/손실 바 차트 (KRW) |
+| 월별 배당금 | 연도별 그룹 바 차트 (KRW) |
+| 보유 종목별 수익률 | 티커 · 현재가 · 투자수익률 · YTD · MTD 테이블 |
+
+- 제목 형식: `[AccountOwner] YYYY.MM.DD 포트폴리오`  (예: `[Lz] 2026.05.03 포트폴리오`)
+- 발신 주소: `company@lim.kr` (Resend 인증 도메인)
+- 수신 주소: 각 사용자 Google Sheets **Master 시트**의 `Email` 컬럼에서 조회
+
+---
+
+### Step 1 — Resend 가입 및 도메인 인증
+
+1. [https://resend.com](https://resend.com) 에서 무료 계정 가입
+2. **Domains → Add Domain** 에서 발신에 사용할 도메인 등록  
+   예) `lim.kr`
+3. 안내에 따라 DNS에 **SPF / DKIM 레코드** 추가 후 인증 완료 대기  
+   (보통 수 분 ~ 수 시간 소요)
+4. **API Keys → Create API Key** 에서 키 발급 후 복사해 둡니다.
+
+> 도메인 인증 없이도 `onboarding@resend.dev` 주소로 발송 테스트는 가능합니다.
+
+---
+
+### Step 2 — Vercel 환경변수 추가
+
+[Vercel 대시보드](https://vercel.com) → `fima` 프로젝트 → **Settings → Environment Variables**
+
+| 변수명 | 값 | 설명 |
+|---|---|---|
+| `RESEND_API_KEY` | `re_xxxxxxxx...` | Resend 대시보드에서 발급한 API 키 |
+| `REPORT_SECRET` | 임의의 비밀 문자열 | 이메일 발송 API 보호용 Bearer 토큰 |
+| `REPORT_BASE_URL` | `https://fima.lim.kr` | 내부 API 호출 시 사용할 도메인 (커스텀 도메인) |
+
+> `REPORT_SECRET` 예시: `fima-report-2026abc123` (길고 유추하기 어렵게 설정)  
+> `REPORT_BASE_URL` 은 `VERCEL_URL` 대신 커스텀 도메인을 직접 지정해야 합니다.
+
+환경변수 저장 후 → **Deployments → 최신 배포 → Redeploy**
+
+---
+
+### Step 3 — GitHub Actions Secret 등록
+
+이메일 발송 API는 Bearer 토큰으로 보호되므로, GitHub Actions에서 호출할 때 사용할 토큰을 등록합니다.
+
+1. GitHub 저장소 → **Settings → Secrets and variables → Actions**
+2. **New repository secret** 클릭
+3. 아래 값 입력:
+
+| Name | Secret |
+|---|---|
+| `REPORT_SECRET` | Step 2에서 설정한 `REPORT_SECRET` 값과 **동일한 값** |
+
+---
+
+### Step 4 — 각 사용자 Master 시트에 Email 컬럼 추가
+
+각 사용자의 Google Spreadsheet **`Master` 시트**에 수신 이메일 주소를 입력합니다.
+
+1. `Master` 시트 헤더 행에 `Email` 컬럼 추가 (위치 자유)
+2. 첫 번째 데이터 행에 수신할 이메일 주소 입력
+
+```
+| Account Owner | Account | Region | Currency | ... | Email           |
+|---------------|---------|--------|----------|-----|-----------------|
+| Lz            | 일반    | USA    | USD      | ... | user@gmail.com  |
+```
+
+> ⚠️ 헤더명은 반드시 `Email` (대소문자 무관, 공백 없이)  
+> `Email` 컬럼이 없거나 비어있으면 해당 사용자는 발송 건너뜀(skip)
+
+**앱 내에서 이메일 주소 변경:**  
+로그인 후 우측 상단 🔒 아이콘 → **E-Mail 변경** 탭에서도 설정 가능합니다.
+
+---
+
+### Step 5 — GitHub Actions 스케줄 확인
+
+저장소에 `.github/workflows/daily-report.yml` 이 이미 포함되어 있습니다.
+
+```yaml
+on:
+  schedule:
+    - cron: '0 23 * * 1-5'   # 월~금 23:00 UTC = 화~토 08:00 KST
+  workflow_dispatch:          # 수동 실행 가능
+```
+
+별도 설정 없이 **main 브랜치에 push 되면 자동으로 스케줄이 활성화**됩니다.
+
+---
+
+### 테스트 방법
+
+**수동 실행 (GitHub Actions UI):**
+
+1. GitHub → **Actions → Portfolio Report Email** 탭
+2. 우측 **Run workflow → Run workflow** 클릭
+3. 실행 완료 후 이메일 수신 확인
+
+**curl로 단건 테스트:**
+
+```bash
+# Lz만 발송
+curl -X POST https://fima.lim.kr/api/report/email \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"Lz"}'
+
+# 전체 발송 (Sample 제외)
+curl -X POST https://fima.lim.kr/api/report/email \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**정상 응답 예시:**
+
+```json
+{
+  "success": true,
+  "sent": 5,
+  "failed": 0,
+  "results": [
+    { "owner": "Lz",     "status": "sent",  "email": "lz@example.com" },
+    { "owner": "Forest", "status": "sent",  "email": "forest@example.com" },
+    { "owner": "Jenny",  "status": "skip",  "error": "EMail 없음" }
+  ]
+}
+```
+
+---
+
+### 발송 제외 조건
+
+| 상황 | 처리 |
+|---|---|
+| `Sample` 사용자 | 항상 skip (테스트 계정) |
+| Master 시트에 `Email` 컬럼 없음 | skip |
+| `Email` 셀이 비어 있음 | skip |
+| 포트폴리오 데이터 조회 실패 | fail (오류 기록) |
+| Resend API 오류 | error (오류 메시지 기록) |
+
+---
+
+### 관련 파일
+
+| 파일 | 역할 |
+|---|---|
+| `app/api/report/email/route.ts` | 이메일 발송 API (POST) |
+| `app/api/auth/change-email/route.ts` | 이메일 주소 조회/변경 API |
+| `.github/workflows/daily-report.yml` | GitHub Actions 스케줄 워크플로우 |
+
+---
+
 ## 라이선스
 
 개인 사용 목적으로 제작된 프로젝트입니다.
