@@ -770,7 +770,7 @@
       transition: background 0.15s; white-space: nowrap;
     }
     .nav-pin-btn:hover { background: rgba(255,255,255,0.2); }
-    /* PIN 변경 모달 */
+    /* 정보 변경 모달 */
     .pin-modal-backdrop {
       display: none; position: fixed; inset: 0; z-index: 10000;
       background: rgba(0,0,0,0.45); align-items: center; justify-content: center;
@@ -778,20 +778,29 @@
     .pin-modal-backdrop.open { display: flex; }
     .pin-modal {
       background: #fff; border-radius: 14px; padding: 28px 28px 22px;
-      width: 340px; max-width: 95vw;
+      width: 400px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
       box-shadow: 0 12px 40px rgba(0,0,0,0.22);
     }
     .pin-modal h3 { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 18px; }
+    .pin-modal .info-section-title {
+      font-size: 0.82rem; font-weight: 700; color: #2b6cb0;
+      margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+    }
+    .pin-modal .info-divider {
+      border: none; border-top: 1px solid #e2e8f0; margin: 18px 0;
+    }
     .pin-modal .pin-field { margin-bottom: 14px; }
     .pin-modal .pin-field label { display: block; font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
     .pin-modal .pin-field input {
       width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0;
       border-radius: 7px; font-size: 0.9rem; font-family: inherit; outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s; box-sizing: border-box;
     }
     .pin-modal .pin-field input:focus { border-color: #63b3ed; }
     .pin-modal .pin-error { color: #e53e3e; font-size: 0.8rem; min-height: 18px; margin-bottom: 10px; }
+    .pin-modal .pin-success { color: #38a169; font-size: 0.8rem; min-height: 18px; margin-bottom: 10px; }
     .pin-modal .pin-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .pin-modal .pin-btns-close { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
     .pin-modal .pin-btn-cancel {
       padding: 8px 18px; border: 1px solid #e2e8f0; border-radius: 7px;
       background: #f7fafc; color: #4a5568; font-size: 0.87rem; font-weight: 600;
@@ -808,10 +817,13 @@
 </head>
 <body>
 
-<!-- ===================== PIN 변경 모달 ===================== -->
+<!-- ===================== 정보 변경 모달 ===================== -->
 <div id="pinModalBackdrop" class="pin-modal-backdrop" onclick="if(event.target===this)closePinModal()">
   <div class="pin-modal">
-    <h3>🔐 PIN 변경</h3>
+    <h3>⚙️ 정보 변경</h3>
+
+    <!-- ── PIN 변경 섹션 ── -->
+    <div class="info-section-title">🔐 PIN 변경</div>
     <div class="pin-field">
       <label>기존 PIN</label>
       <input type="password" id="pinOld" placeholder="현재 PIN 입력" maxlength="20" />
@@ -827,8 +839,29 @@
     </div>
     <p id="pinModalError" class="pin-error"></p>
     <div class="pin-btns">
-      <button class="pin-btn-cancel" onclick="closePinModal()">취소</button>
-      <button class="pin-btn-ok" id="pinOkBtn" onclick="submitPinChange()">변경</button>
+      <button class="pin-btn-ok" id="pinOkBtn" onclick="submitPinChange()">PIN 변경</button>
+    </div>
+
+    <hr class="info-divider" />
+
+    <!-- ── E-Mail 변경 섹션 ── -->
+    <div class="info-section-title">✉️ E-Mail 변경</div>
+    <div class="pin-field">
+      <label>새 E-Mail</label>
+      <input type="email" id="emailNew" placeholder="새 이메일 주소 입력" maxlength="100" />
+    </div>
+    <div class="pin-field">
+      <label>PIN 확인 <span style="font-weight:400;color:#a0aec0;font-size:0.9em;">(본인 확인)</span></label>
+      <input type="password" id="emailPin" placeholder="PIN 입력" maxlength="20"
+             onkeydown="if(event.key==='Enter')submitEmailChange()" />
+    </div>
+    <p id="emailModalMsg" class="pin-error"></p>
+    <div class="pin-btns">
+      <button class="pin-btn-ok" id="emailOkBtn" onclick="submitEmailChange()">E-Mail 변경</button>
+    </div>
+
+    <div class="pin-btns-close">
+      <button class="pin-btn-cancel" onclick="closePinModal()">닫기</button>
     </div>
   </div>
 </div>
@@ -884,7 +917,7 @@
       <select id="navOwnerSelect" class="nav-owner-select" onchange="onNavOwnerChange()">
         <option value="">-- 선택 --</option>
       </select>
-      <button class="nav-pin-btn" onclick="openPinModal()">🔐 PIN 변경</button>
+      <button class="nav-pin-btn" onclick="openPinModal()">⚙️ 정보변경</button>
       <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -1567,13 +1600,20 @@
     }
   }
 
-  // ── PIN 변경 모달 ──────────────────────────────────────
+  // ── 정보 변경 모달 ──────────────────────────────────────
   function openPinModal() {
     document.getElementById('pinOld').value     = '';
     document.getElementById('pinNew').value     = '';
     document.getElementById('pinConfirm').value = '';
+    document.getElementById('emailNew').value   = '';
+    document.getElementById('emailPin').value   = '';
     document.getElementById('pinModalError').textContent = '';
-    document.getElementById('pinOkBtn').disabled = false;
+    document.getElementById('emailModalMsg').textContent = '';
+    document.getElementById('emailModalMsg').className  = 'pin-error';
+    document.getElementById('pinOkBtn').disabled   = false;
+    document.getElementById('emailOkBtn').disabled = false;
+    document.getElementById('pinOkBtn').textContent   = 'PIN 변경';
+    document.getElementById('emailOkBtn').textContent = 'E-Mail 변경';
     document.getElementById('pinModalBackdrop').classList.add('open');
     setTimeout(function() { document.getElementById('pinOld').focus(); }, 80);
   }
@@ -1608,16 +1648,59 @@
       });
       var data = await res.json();
       if (data.success) {
-        closePinModal();
-        alert('PIN이 성공적으로 변경되었습니다.');
+        document.getElementById('pinOld').value     = '';
+        document.getElementById('pinNew').value     = '';
+        document.getElementById('pinConfirm').value = '';
+        errEl.textContent = '✅ PIN이 성공적으로 변경되었습니다.';
+        errEl.style.color = '#38a169';
       } else {
+        errEl.style.color = '#e53e3e';
         errEl.textContent = data.error || 'PIN 변경에 실패했습니다.';
       }
     } catch (e) {
+      errEl.style.color = '#e53e3e';
       errEl.textContent = '서버 오류: ' + e.message;
     } finally {
       okBtn.disabled = false;
-      okBtn.textContent = '변경';
+      okBtn.textContent = 'PIN 변경';
+    }
+  }
+
+  async function submitEmailChange() {
+    var newEmail = document.getElementById('emailNew').value.trim();
+    var pin      = document.getElementById('emailPin').value;
+    var msgEl    = document.getElementById('emailModalMsg');
+    var okBtn    = document.getElementById('emailOkBtn');
+
+    msgEl.textContent = '';
+    msgEl.style.color = '#e53e3e';
+
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      msgEl.textContent = '올바른 이메일 형식이 아닙니다.'; return;
+    }
+
+    okBtn.disabled = true;
+    okBtn.textContent = '변경 중...';
+    try {
+      var res  = await fetch('/api/auth/change-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: currentOwner, pin: pin, newEmail: newEmail }),
+      });
+      var data = await res.json();
+      if (data.success) {
+        document.getElementById('emailNew').value = '';
+        document.getElementById('emailPin').value = '';
+        msgEl.style.color = '#38a169';
+        msgEl.textContent = '✅ E-Mail이 성공적으로 변경되었습니다.';
+      } else {
+        msgEl.textContent = data.error || 'E-Mail 변경에 실패했습니다.';
+      }
+    } catch (e) {
+      msgEl.textContent = '서버 오류: ' + e.message;
+    } finally {
+      okBtn.disabled = false;
+      okBtn.textContent = 'E-Mail 변경';
     }
   }
 
