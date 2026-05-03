@@ -4628,7 +4628,9 @@
     popup.style.display    = 'block';
     backdrop.style.display = 'block';
 
-    fetch('/api/stock-info', {
+    var isBond = /^KR[A-Z0-9]{10}$/i.test(ticker);
+    var apiUrl = isBond ? '/api/bond-info' : '/api/stock-info';
+    fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ticker: ticker })
@@ -4636,7 +4638,10 @@
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.error) { body.innerHTML = '<div style="color:#c53030;padding:16px;">오류: ' + d.error + '</div>'; return; }
-      if (rbDetailTicker === ticker) renderStockDetail(d, rbDetailDivCycle);
+      if (rbDetailTicker === ticker) {
+        if (isBond) renderBondDetail(d);
+        else renderStockDetail(d, rbDetailDivCycle);
+      }
     })
     .catch(function(e) { body.innerHTML = '<div style="color:#c53030;padding:16px;">요청 실패: ' + e.message + '</div>'; });
   }
@@ -4647,6 +4652,72 @@
     if (p) p.style.display = 'none';
     if (b) b.style.display = 'none';
     rbDetailTicker = '';
+  }
+
+  // ── 채권 상세 팝업 렌더링 ─────────────────────────────────────────────
+  function renderBondDetail(d) {
+    var body  = document.getElementById('rbPopupBody');
+    var title = document.getElementById('rbPopupTitle');
+    if (!body) return;
+
+    title.textContent = '📋 ' + (d.name || d.isin);
+
+    function fmtRate(v) { return v ? parseFloat(v).toFixed(3) + ' %' : '-'; }
+    function fmtDate(v) {
+      if (!v) return '-';
+      // YYYYMMDD → YYYY-MM-DD
+      var s = String(v).replace(/[^0-9]/g, '');
+      if (s.length === 8) return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8);
+      return String(v);
+    }
+    function fmtPrc(v) {
+      if (!v) return '-';
+      return parseFloat(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    // ── 기본정보 / 시세 구분 ──────────────────────────────────────────
+    var rows = [
+      { label: '표면이율 (%)',         val: fmtRate(d.couponRate)       },
+      { label: '만기일자',             val: fmtDate(d.maturityDate)     },
+      { label: '채권분류',             val: d.bondClass        || '-'   },
+      { label: '이자유형',             val: d.interestType     || '-'   },
+      { label: '차기 이자지급일',       val: fmtDate(d.nextCouponDate)   },
+      { label: '예금환산이율 (세후)',    val: fmtRate(d.depositEquivRate) },
+    ];
+
+    var priceRows = [
+      { label: '현재가',          val: d.price            ? fmtPrc(d.price) : '-' },
+      { label: '현재 YTM (%)',    val: d.ytm              ? fmtRate(d.ytm)  : '-' },
+      { label: '경과이자',        val: d.accruedInterest  ? fmtPrc(d.accruedInterest) : '-' },
+      { label: '최근 거래일',     val: fmtDate(d.tradeDate) },
+    ].filter(function(r) { return r.val && r.val !== '-'; });
+
+    function buildSection(title, items) {
+      var s = '<div style="margin-bottom:14px;">';
+      if (title) s += '<div style="font-size:0.72rem;font-weight:700;color:#90cdf4;margin-bottom:8px;letter-spacing:0.06em;">' + title + '</div>';
+      s += '<table style="width:100%;border-collapse:collapse;">';
+      items.forEach(function(r, i) {
+        var bg = i % 2 === 0 ? '#f7fafc' : '#fff';
+        s += '<tr style="background:' + bg + ';">'
+          +  '<td style="padding:7px 10px;font-size:0.8rem;color:#718096;width:160px;white-space:nowrap;">' + r.label + '</td>'
+          +  '<td style="padding:7px 10px;font-size:0.88rem;font-weight:600;color:#2d3748;font-family:monospace;">' + r.val + '</td>'
+          +  '</tr>';
+      });
+      s += '</table></div>';
+      return s;
+    }
+
+    var html = buildSection('기본 정보', rows);
+    if (priceRows.length > 0) html += buildSection('시세 / 수익률', priceRows);
+
+    // 데이터 없음 안내 (모두 '-'인 경우)
+    var allEmpty = rows.every(function(r) { return r.val === '-'; });
+    if (allEmpty) {
+      html += '<div style="color:#e53e3e;font-size:0.82rem;padding:8px 0;">채권 기본정보를 가져올 수 없습니다.<br>'
+            + '<span style="color:#a0aec0;font-size:0.75rem;">ISIN: ' + d.isin + '</span></div>';
+    }
+
+    body.innerHTML = html;
   }
 
   function miniLineChart(prices, w, h) {
