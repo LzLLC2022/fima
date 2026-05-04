@@ -81,14 +81,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 추가 ────────────────────────────────────────────────
+    // ── 추가 (같은 그룹+티커 중복 방지) ────────────────────
     if (newItems && Array.isArray(newItems) && newItems.length > 0) {
+      // 삭제 후 최신 시트 상태 반영
+      const latestData = await getSheetValues(spreadsheetId, WATCHLIST_SHEET_NAME).catch(() => [data[0]]);
+      const existingRows = latestData.slice(1);
+
       for (const item of newItems) {
+        const inputTicker = String(item.ticker || '').trim().toUpperCase();
+        const inputGroup  = String(item.group  || '').trim();
+
+        // 같은 그룹에 동일 ticker가 이미 있으면 건너뜀
+        const isDuplicate = existingRows.some((row: any[]) => {
+          const sheetTicker = String(row[tickerIdx] ?? '').trim().toUpperCase();
+          const sheetGroup  = groupIdx !== -1 ? String(row[groupIdx] ?? '').trim() : '';
+          return sheetTicker === inputTicker && sheetGroup === inputGroup;
+        });
+        if (isDuplicate) continue;
+
         const row: any[] = new Array(headers.length).fill('');
         if (groupIdx  !== -1) row[groupIdx]  = item.group  || '';
         if (regionIdx !== -1) row[regionIdx] = item.region || '';
-        if (tickerIdx !== -1) row[tickerIdx] = String(item.ticker || '').trim().toUpperCase();
+        if (tickerIdx !== -1) row[tickerIdx] = inputTicker;
         await appendRow(spreadsheetId, WATCHLIST_SHEET_NAME, row);
+        existingRows.push(row); // 동일 요청 내 중복도 방지
         addedCount++;
       }
     }
