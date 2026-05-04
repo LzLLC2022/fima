@@ -4165,7 +4165,7 @@
         '<th style="padding:7px 8px;text-align:center;white-space:nowrap;">지역</th>' +
         '<th style="padding:7px 10px;text-align:right;white-space:nowrap;">현재가</th>' +
         '<th style="padding:7px 10px;text-align:right;white-space:nowrap;">등락률</th>' +
-        '<th style="padding:7px 10px;text-align:right;white-space:nowrap;color:#a0aec0;font-weight:400;">52주 고/저</th>' +
+        '<th style="padding:7px 10px;text-align:center;white-space:nowrap;color:#a0aec0;font-weight:400;min-width:150px;">52주 차트</th>' +
         '</tr></thead><tbody>';
 
       items.forEach(function(it) {
@@ -4215,7 +4215,10 @@
           '</td>' +
           '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
           '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + changeStr + '</td>' +
-          '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + hlStr + '</td>' +
+          '<td class="wl-sparkline" data-ticker="' + it.ticker + '" data-iskrw="' + (isKRW ? '1' : '0') + '" ' +
+              'style="padding:6px 8px;text-align:center;min-width:150px;">' +
+            '<div class="wl-hl-text" style="font-size:0.8em;margin-bottom:2px;">' + hlStr + '</div>' +
+          '</td>' +
         '</tr>';
       });
 
@@ -4223,6 +4226,52 @@
     });
 
     container.innerHTML = html;
+
+    // 52주 스파크라인 비동기 로드
+    loadWlSparklines();
+  }
+
+  function loadWlSparklines() {
+    var cells = document.querySelectorAll('#wlContent .wl-sparkline');
+    cells.forEach(function(cell) {
+      var ticker = cell.dataset.ticker;
+      var isKRW  = cell.dataset.iskrw === '1';
+      if (!ticker) return;
+
+      fetch('/api/stock-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: ticker })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error || !d.w52 || !d.w52.prices || d.w52.prices.length < 2) return;
+
+        var prices = d.w52.prices;
+        // ~60개 포인트로 다운샘플 (렌더 성능)
+        var step = Math.max(1, Math.floor(prices.length / 60));
+        var sampled = [];
+        for (var i = 0; i < prices.length; i += step) sampled.push(prices[i]);
+        if (sampled[sampled.length - 1] !== prices[prices.length - 1]) sampled.push(prices[prices.length - 1]);
+
+        var fmtP = isKRW
+          ? function(v) { return Math.round(v).toLocaleString('ko-KR'); }
+          : function(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
+        var high = d.w52.high || 0;
+        var low  = d.w52.low  || 0;
+        var hlHtml = high > 0
+          ? '<div style="font-size:0.75em;margin-top:3px;">' +
+              '<span style="color:#276749;">↑' + fmtP(high) + '</span>' +
+              '<span style="color:#a0aec0;"> / </span>' +
+              '<span style="color:#c53030;">↓' + fmtP(low)  + '</span>' +
+            '</div>'
+          : '';
+
+        cell.innerHTML = miniLineChart(sampled, 140, 44) + hlHtml;
+      })
+      .catch(function() { /* 실패 시 고/저 텍스트 그대로 유지 */ });
+    });
   }
 
   async function wlDeleteItem(ticker, group) {
