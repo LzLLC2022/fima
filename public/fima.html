@@ -2020,12 +2020,22 @@
 
   function fillSelectWithAll(id, items) {
     const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">\uC804\uCCB4</option>';
-    items.forEach(item => {
+    if (items.length === 1) {
+      // \uD56D\uBAA9 1\uAC1C: \uC804\uCCB4 \uC635\uC158 \uC5C6\uC774 \uD574\uB2F9 Account \uC790\uB3D9 \uC120\uD0DD
+      sel.innerHTML = '';
       const opt = document.createElement('option');
-      opt.value = opt.textContent = item;
+      opt.value = opt.textContent = items[0];
       sel.appendChild(opt);
-    });
+      sel.value = items[0];
+      sel.dispatchEvent(new Event('change'));
+    } else {
+      sel.innerHTML = '<option value="">\uC804\uCCB4</option>';
+      items.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = item;
+        sel.appendChild(opt);
+      });
+    }
   }
 
   // ---- Trade \uBCC0\uACBD \u2192 \uD544\uB4DC \uD45C\uC2DC/\uC228\uAE40 ----
