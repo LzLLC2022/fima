@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSheets, getSheetValues, appendRow, deleteRow } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
 
-const WATCHLIST_SHEET_NAME = 'Watchlist';
+const WATCHLIST_SHEET_NAME = 'Favorate';
 const WATCHLIST_HEADERS    = ['Group', 'Region', 'Ticker'];
 
 /**
