@@ -339,8 +339,8 @@ function buildDivTable(dividends: any[]): string {
     </table>`;
 }
 
-// ── HTML 이메일 생성 ────────────────────────────────────────────
-function buildEmailHtml(owner: string, data: any, dateStr: string): string {
+// ── AccountOwner 단위 섹션 내용 HTML ──────────────────────────────
+function buildSectionContent(accountOwner: string, data: any): string {
   const s         = data.summary  || {};
   const stocks    = (data.stocks  || []).filter((st: any) => st);
   const monthly   = data.monthly  || [];
@@ -408,23 +408,7 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
       </tr>`;
   }).join('');
 
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:24px 0;">
-  <tr><td align="center">
-    <table width="660" cellpadding="0" cellspacing="0" style="max-width:660px;width:100%;">
-
-      <!-- 헤더 -->
-      <tr><td style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);border-radius:12px 12px 0 0;padding:24px 28px;">
-        <div style="color:#fff;font-size:20px;font-weight:700;">📈 FiMa-Inv 포트폴리오</div>
-        <div style="color:#90cdf4;font-size:13px;margin-top:4px;">${owner} · ${dateStr} 기준</div>
-      </td></tr>
-
-      <!-- 본문 -->
-      <tr><td style="background:#fff;border-radius:0 0 12px 12px;padding:24px 28px;">
-
+  return `
         <!-- 포트폴리오 요약 카드 4개 -->
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:10px;">📊 포트폴리오 요약</div>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
@@ -486,8 +470,41 @@ function buildEmailHtml(owner: string, data: any, dateStr: string): string {
             </tr>
           </thead>
           <tbody>${stockRows}</tbody>
-        </table>
+        </table>`;
+}
 
+// ── HTML 이메일 생성 (복수 AccountOwner 통합) ──────────────────────
+function buildEmailHtml(
+  owner: string,
+  sections: Array<{ accountOwner: string; data: any }>,
+  dateStr: string
+): string {
+  const showHeaders = sections.length > 1;
+
+  const sectionsHtml = sections.map((sec, idx) => {
+    const aoHeader = showHeaders
+      ? `<div style="font-size:15px;font-weight:700;color:#1a365d;margin:${idx > 0 ? '28px' : '0'} 0 16px;padding:10px 12px;background:#ebf4ff;border-left:4px solid #3b82f6;border-radius:4px;">📂 ${sec.accountOwner}</div>`
+      : '';
+    return aoHeader + buildSectionContent(sec.accountOwner, sec.data);
+  }).join('<div style="border-top:2px dashed #e2e8f0;margin:28px 0;"></div>');
+
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:24px 0;">
+  <tr><td align="center">
+    <table width="660" cellpadding="0" cellspacing="0" style="max-width:660px;width:100%;">
+
+      <!-- 헤더 -->
+      <tr><td style="background:linear-gradient(135deg,#1a365d 0%,#2b6cb0 100%);border-radius:12px 12px 0 0;padding:24px 28px;">
+        <div style="color:#fff;font-size:20px;font-weight:700;">📈 FiMa-Inv 포트폴리오</div>
+        <div style="color:#90cdf4;font-size:13px;margin-top:4px;">${owner} · ${dateStr} 기준</div>
+      </td></tr>
+
+      <!-- 본문 -->
+      <tr><td style="background:#fff;border-radius:0 0 12px 12px;padding:24px 28px;">
+        ${sectionsHtml}
       </td></tr>
 
       <!-- 푸터 -->
@@ -564,6 +581,24 @@ async function sendEmail(to: string, subject: string, html: string, owner: strin
   return true;
 }
 
+// ── Master 시트에서 AccountOwner 목록 조회 ───────────────────────
+async function getAccountOwners(sheetId: string): Promise<string[]> {
+  try {
+    const rows = await getSheetValues(sheetId, MASTER_SHEET_NAME);
+    if (!rows || rows.length < 2) return [];
+    const headers = rows[0].map((h: any) => String(h ?? '').trim().toLowerCase());
+    const aoIdx   = headers.indexOf('account owner');
+    if (aoIdx < 0) return [];
+    const seen = new Set<string>();
+    const result: string[] = [];
+    rows.slice(1).forEach((row: any[]) => {
+      const v = String(row[aoIdx] ?? '').trim();
+      if (v && !seen.has(v)) { seen.add(v); result.push(v); }
+    });
+    return result;
+  } catch { return []; }
+}
+
 // ── 메인 핸들러 ────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const auth   = req.headers.get('authorization') || '';
@@ -599,20 +634,33 @@ export async function POST(req: NextRequest) {
 
     try {
       const baseUrl = process.env.REPORT_BASE_URL || 'https://fima.lim.kr';
-      const pfRes   = await fetch(`${baseUrl}/api/portfolio-analysis`, {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ owner }),
-      });
-      const pfData = await pfRes.json();
 
-      if (!pfData.success || !pfData.summary) {
+      // 1. 스프레드시트의 AccountOwner 목록 조회
+      const accountOwners = await getAccountOwners(cfg.sheetId);
+      const targets = accountOwners.length > 0 ? accountOwners : [owner];
+
+      // 2. AccountOwner별 포트폴리오 분석 데이터 수집
+      const sections: { accountOwner: string; data: any }[] = [];
+      for (const accountOwner of targets) {
+        const pfRes = await fetch(`${baseUrl}/api/portfolio-analysis`, {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body   : JSON.stringify({ owner, accountOwner }),
+        });
+        const pfData = await pfRes.json();
+        if (pfData.success && pfData.summary) {
+          sections.push({ accountOwner, data: pfData });
+        }
+      }
+
+      if (sections.length === 0) {
         results.push({ owner, status: 'fail', email, error: '포트폴리오 조회 실패' });
         continue;
       }
 
+      // 3. AccountOwner별 섹션을 통합한 이메일 생성 및 발송
       const subject = `[${owner}] ${dateStr} 포트폴리오`;
-      const html    = buildEmailHtml(owner, pfData, dateStr);
+      const html    = buildEmailHtml(owner, sections, dateStr);
       await sendEmail(email, subject, html, owner);
 
       results.push({ owner, status: 'sent', email });
