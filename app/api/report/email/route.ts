@@ -341,6 +341,16 @@ function buildDivTable(dividends: any[]): string {
 
 // ── AccountOwner 단위 섹션 내용 HTML ──────────────────────────────
 function buildSectionContent(accountOwner: string, data: any): string {
+  // 거래 기록 없는 경우
+  if (!data.summary) {
+    return `
+        <div style="padding:24px;text-align:center;color:#a0aec0;background:#f7fafc;border-radius:8px;border:1px dashed #e2e8f0;">
+          <div style="font-size:28px;margin-bottom:8px;">📭</div>
+          <div style="font-size:14px;font-weight:600;color:#718096;">거래 기록이 없습니다</div>
+          <div style="font-size:12px;margin-top:4px;">아직 Ledger 시트에 거래 내역이 없습니다.</div>
+        </div>`;
+  }
+
   const s         = data.summary  || {};
   const stocks    = (data.stocks  || []).filter((st: any) => st);
   const monthly   = data.monthly  || [];
@@ -648,7 +658,7 @@ export async function POST(req: NextRequest) {
           body   : JSON.stringify({ owner, accountOwner }),
         });
         const pfData = await pfRes.json();
-        if (pfData.success && pfData.summary) {
+        if (pfData.success) {
           sections.push({ accountOwner, data: pfData });
         }
       }
