@@ -3,7 +3,7 @@ import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
 import { getStockInfo, get52WeekHighLow } from '@/lib/stock';
 
-const WATCHLIST_SHEET_NAME = 'Watchlist';
+const WATCHLIST_SHEET_NAME = 'Favorate';
 
 /**
  * POST /api/watchlist
