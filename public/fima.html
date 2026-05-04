@@ -1413,8 +1413,41 @@
             <tbody id="rbTbody"></tbody>
           </table>
         </div>
-        <div style="margin-top:12px;font-size:0.8rem;color:#a0aec0;">
-          ※ 매수/매도 수량은 현재가 기준 정수 주 단위. 실제 주문 전 확인 필요.
+        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:0.8rem;color:#a0aec0;">※ 매수/매도 수량은 현재가 기준 정수 주 단위. 실제 주문 전 확인 필요.</div>
+          <button onclick="showRbAddForm()" id="rbAddBtn" style="padding:5px 13px;font-size:0.82rem;background:#e6fffa;color:#276749;border:1px solid #81e6d9;border-radius:6px;cursor:pointer;font-weight:600;">➕ 종목 추가</button>
+        </div>
+
+        <!-- 종목 추가 폼 -->
+        <div id="rbAddFormContainer" style="display:none;margin-top:12px;padding:14px 16px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;">
+          <div style="font-weight:600;color:#276749;margin-bottom:10px;font-size:0.88rem;">➕ 새 종목 추가</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div>
+              <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Ticker</label>
+              <input id="rbAddTickerInput" type="text" placeholder="예: AAPL / 005930.KS"
+                style="width:140px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;"
+                oninput="this.value=this.value.toUpperCase()" onblur="rbAutoFillName(this.value)">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">종목명</label>
+              <input id="rbAddNameInput" type="text" placeholder="종목명"
+                style="width:150px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">목표비중(%)</label>
+              <div style="display:flex;align-items:center;gap:3px;">
+                <input id="rbAddPctInput" type="number" step="0.01" min="0" max="100" value="0"
+                  style="width:62px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;text-align:right;">
+                <span style="color:#553c9a;font-weight:600;">%</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;padding-bottom:1px;">
+              <button onclick="confirmRbAddItem()"
+                style="padding:6px 16px;font-size:0.85rem;background:#276749;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">추가</button>
+              <button onclick="hideRbAddForm()"
+                style="padding:6px 12px;font-size:0.85rem;background:#edf2f7;color:#4a5568;border:1px solid #cbd5e0;border-radius:6px;cursor:pointer;">취소</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4005,6 +4038,8 @@
   var rbTargetState   = {};   // { ticker: targetPct } 사용자 수정값 보존
   var rbLoaded        = false;
   var rbDivSortDir    = 0;    // 0=원본순, 1=배당율↓(내림), -1=배당율↑(오름)
+  var rbDeletedTickers = []; // 삭제 예정 ticker 목록 (저장 시 시트에서 행 삭제)
+  var rbAddedItems     = []; // 신규 추가 항목 [{region,ticker,name,targetPct,...}]
 
   var rbPrevRegion = ''; // Region 변경 감지용
 
@@ -4150,7 +4185,10 @@
   }
 
   function resetRbTargets() {
-    rbTargetState = {};
+    rbTargetState    = {};
+    rbDeletedTickers = [];
+    rbAddedItems     = [];
+    hideRbAddForm();
     var btn = document.getElementById('rbSaveBtn');
     if (btn) btn.style.display = 'none';
     if (rbPortfolioData) renderRebalanceTable();
@@ -4161,13 +4199,106 @@
     document.getElementById('rbRegion').value      = '';
     document.getElementById('rbAmountInput').value = '';
     document.getElementById('rbSearchBtn').style.display = 'none';
-    rbSheetItems    = [];
-    rbPortfolioData = null;
-    rbAmountKRW     = 0;
-    rbTargetState   = {};
-    rbLoaded        = false;
+    rbSheetItems     = [];
+    rbPortfolioData  = null;
+    rbAmountKRW      = 0;
+    rbTargetState    = {};
+    rbDeletedTickers = [];
+    rbAddedItems     = [];
+    rbLoaded         = false;
+    hideRbAddForm();
     document.getElementById('rbTableCard').style.display = 'none';
     document.getElementById('rbAlertBox').innerHTML = '';
+  }
+
+  // ── 종목 삭제 ──────────────────────────────────────────────
+  function rbDeleteItem(ticker) {
+    // 로컬 추가 항목이면 rbAddedItems에서만 제거 (시트엔 없으므로 deleteTickers 불필요)
+    var addedIdx = rbAddedItems.findIndex(function(it) { return it.ticker === ticker; });
+    if (addedIdx !== -1) {
+      rbAddedItems.splice(addedIdx, 1);
+    } else {
+      if (rbDeletedTickers.indexOf(ticker) === -1) rbDeletedTickers.push(ticker);
+    }
+    rbSheetItems = rbSheetItems.filter(function(it) { return it.ticker !== ticker; });
+    // rbTargetState 에서도 제거
+    delete rbTargetState[ticker];
+    renderRebalanceTable();
+    var btn = document.getElementById('rbSaveBtn');
+    if (btn) btn.style.display = 'inline-block';
+  }
+
+  // ── 종목 추가 폼 ──────────────────────────────────────────
+  function showRbAddForm() {
+    var c = document.getElementById('rbAddFormContainer');
+    var b = document.getElementById('rbAddBtn');
+    if (c) c.style.display = 'block';
+    if (b) b.style.display = 'none';
+    var t = document.getElementById('rbAddTickerInput');
+    if (t) t.focus();
+  }
+
+  function hideRbAddForm() {
+    var c = document.getElementById('rbAddFormContainer');
+    var b = document.getElementById('rbAddBtn');
+    if (c) c.style.display = 'none';
+    if (b) b.style.display = '';
+    var ti = document.getElementById('rbAddTickerInput');
+    var ni = document.getElementById('rbAddNameInput');
+    var pi = document.getElementById('rbAddPctInput');
+    if (ti) ti.value = '';
+    if (ni) ni.value = '';
+    if (pi) pi.value = '0';
+  }
+
+  function rbAutoFillName(ticker) {
+    if (!ticker) return;
+    var ni = document.getElementById('rbAddNameInput');
+    if (!ni || ni.value.trim()) return; // 이미 입력된 경우 덮어쓰지 않음
+    // 포트폴리오에서 이름 자동 완성
+    if (rbPortfolioData) {
+      var all = (rbPortfolioData.stocks || []).concat(rbPortfolioData.funds || []);
+      var match = all.find(function(s) {
+        return s.ticker && s.ticker.toUpperCase() === ticker.toUpperCase();
+      });
+      if (match && match.name) ni.value = match.name;
+    }
+  }
+
+  function confirmRbAddItem() {
+    var ticker = (document.getElementById('rbAddTickerInput').value || '').trim().toUpperCase();
+    var name   = (document.getElementById('rbAddNameInput').value  || '').trim();
+    var pct    = parseFloat(document.getElementById('rbAddPctInput').value) || 0;
+
+    if (!ticker) { alert('Ticker를 입력하세요.'); return; }
+    if (!name)   { alert('종목명을 입력하세요.'); return; }
+
+    // 중복 체크
+    if (rbSheetItems.find(function(it) { return it.ticker.toUpperCase() === ticker; })) {
+      alert('이미 목록에 있는 종목입니다: ' + ticker);
+      return;
+    }
+
+    var region = document.getElementById('rbRegion').value;
+    var newItem = {
+      region: region, ticker: ticker, name: name,
+      divCycle: '', divCount: 0, targetPct: pct,
+      currentPrice: 0, divPerShare: 0, weekHigh52: 0, weekLow52: 0
+    };
+
+    // 포트폴리오에 이미 있으면 현재가 적용
+    if (rbPortfolioData) {
+      var pm = buildPortfolioMap(rbPortfolioData);
+      if (pm[ticker]) newItem.currentPrice = pm[ticker].currentPrice || 0;
+    }
+
+    rbSheetItems.push(newItem);
+    rbAddedItems.push({ region: region, ticker: ticker, name: name, targetPct: pct });
+
+    hideRbAddForm();
+    renderRebalanceTable();
+    var btn = document.getElementById('rbSaveBtn');
+    if (btn) btn.style.display = 'inline-block';
   }
 
   function buildPortfolioMap(portData) {
@@ -4329,9 +4460,14 @@
       }
 
       return '<tr style="border-bottom:1px solid #edf2f7;">' +
-        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;cursor:pointer;" onclick="showStockDetail(\'' + item.ticker.replace(/'/g,"\\'") + '\',event,\'' + (item.divCycle||'').replace(/'/g,"\\'") + '\')">' +
-          '<span style="color:#2b6cb0;text-decoration:underline dotted;">' + item.name + '</span>' +
-          '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + (item.divCycle ? ' (' + item.divCycle + ')' : '') + '</div>' +
+        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">' +
+            '<div style="cursor:pointer;flex:1;min-width:0;" onclick="showStockDetail(\'' + item.ticker.replace(/'/g,"\\'") + '\',event,\'' + (item.divCycle||'').replace(/'/g,"\\'") + '\')">' +
+              '<span style="color:#2b6cb0;text-decoration:underline dotted;">' + item.name + '</span>' +
+              '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + (item.divCycle ? ' (' + item.divCycle + ')' : '') + '</div>' +
+            '</div>' +
+            '<button onclick="event.stopPropagation();rbDeleteItem(\'' + item.ticker.replace(/'/g,"\\'") + '\')" title="목록에서 제거" style="background:none;border:none;cursor:pointer;color:#fc8181;font-size:1em;padding:0 2px;line-height:1;flex-shrink:0;opacity:0.65;">🗑</button>' +
+          '</div>' +
         '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#4a5568;">' + avgHtml + '</td>' +
@@ -4403,14 +4539,26 @@
   async function saveRbTargets() {
     var owner = currentAccountOwner;
     if (!owner) { alert('계정을 먼저 선택해주세요.'); return; }
-    var inputs = document.querySelectorAll('.rb-tgt');
-    if (!inputs.length || !rbSheetItems.length) { alert('저장할 데이터가 없습니다.'); return; }
 
-    var items = [];
-    inputs.forEach(function(inp, idx) {
-      var item = rbSheetItems[idx];
-      if (!item) return;
-      items.push({ ticker: item.ticker, targetPct: parseFloat(inp.value) || 0 });
+    var inputs = document.querySelectorAll('.rb-tgt');
+    var hasChanges = inputs.length > 0 || rbDeletedTickers.length > 0 || rbAddedItems.length > 0;
+    if (!hasChanges) { alert('저장할 데이터가 없습니다.'); return; }
+
+    var region = document.getElementById('rbRegion').value;
+    var addedTickers = rbAddedItems.map(function(it) { return it.ticker; });
+
+    // 기존 항목(시트에 이미 있는 것)의 비중만 updateItems에 담음
+    var updateItems = [];
+    inputs.forEach(function(inp) {
+      var ticker = inp.dataset.ticker;
+      if (!ticker || addedTickers.indexOf(ticker) !== -1) return;
+      updateItems.push({ ticker: ticker, targetPct: parseFloat(inp.value) || 0 });
+    });
+
+    // 신규 추가 항목의 최신 비중 반영
+    var finalNewItems = rbAddedItems.map(function(it) {
+      var inp = document.querySelector('.rb-tgt[data-ticker="' + it.ticker + '"]');
+      return Object.assign({}, it, { targetPct: inp ? (parseFloat(inp.value) || 0) : it.targetPct });
     });
 
     var btn = document.getElementById('rbSaveBtn');
@@ -4420,12 +4568,25 @@
       var res = await fetch('/api/rebalancing/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: owner, items: items }),
+        body: JSON.stringify({
+          owner: owner,
+          region: region,
+          items: updateItems,
+          newItems: finalNewItems,
+          deleteTickers: rbDeletedTickers
+        }),
       });
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || '저장 실패');
       if (btn) { btn.style.display = 'none'; btn.disabled = false; btn.textContent = '💾 저장'; }
-      alert('저장 완료 (' + (data.updated || 0) + '개 항목)');
+      // 저장 성공 후 상태 초기화
+      rbDeletedTickers = [];
+      rbAddedItems     = [];
+      var parts = [];
+      if (data.updated) parts.push(data.updated + '개 수정');
+      if (data.added)   parts.push(data.added + '개 추가');
+      if (data.deleted) parts.push(data.deleted + '개 삭제');
+      alert('저장 완료' + (parts.length ? ' (' + parts.join(', ') + ')' : ''));
     } catch (e) {
       if (btn) { btn.disabled = false; btn.textContent = '💾 저장'; }
       alert('저장 오류: ' + e.message);
