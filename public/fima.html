@@ -925,6 +925,7 @@
       <button class="tab-btn"        id="subtab-query"      onclick="switchTab('query')">거래 조회</button>
       <button class="tab-btn"        id="subtab-portfolio"  onclick="switchTab('portfolio')">리포트</button>
       <button class="tab-btn"        id="subtab-rebalance"  onclick="switchTab('rebalance')">리밸런싱</button>
+      <button class="tab-btn"        id="subtab-watchlist"  onclick="switchTab('watchlist')">관심종목</button>
     </div>
     <!-- 2단계: 서브탭 (입력관리 그룹) -->
     <div id="subtabs-manage" style="display:none;">
@@ -1455,6 +1456,66 @@
 
     </div>
 
+    <!-- ===================== 관심종목 탭 ===================== -->
+    <div id="tab-watchlist" class="tab-content">
+
+      <div id="wlAlertBox"></div>
+      <div id="wlLoadingMsg" class="hidden" style="text-align:center;padding:30px;color:#718096;font-size:0.95rem;">⏳ 시세 조회 중...</div>
+
+      <div class="card" id="wlCard">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>⭐ 관심종목</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button onclick="loadWatchlistData(true)" style="padding:5px 12px;font-size:0.82rem;background:#ebf8ff;color:#2b6cb0;border:1px solid #bee3f8;border-radius:6px;cursor:pointer;font-weight:600;">🔄 새로고침</button>
+            <button onclick="showWlAddForm()" id="wlAddBtn" style="padding:5px 13px;font-size:0.82rem;background:#fffaf0;color:#c05621;border:1px solid #fbd38d;border-radius:6px;cursor:pointer;font-weight:600;">➕ 종목 추가</button>
+          </div>
+        </div>
+
+        <!-- 종목 추가 폼 -->
+        <div id="wlAddFormContainer" style="display:none;margin:12px 0 4px;padding:14px 16px;background:#fffaf0;border:1px solid #fbd38d;border-radius:8px;">
+          <div style="font-weight:600;color:#c05621;margin-bottom:10px;font-size:0.88rem;">➕ 관심종목 추가</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+            <div>
+              <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Group</label>
+              <input id="wlAddGroupInput" type="text" placeholder="예: 미국ETF" list="wlGroupList"
+                style="width:120px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;">
+              <datalist id="wlGroupList"></datalist>
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Region</label>
+              <select id="wlAddRegionSelect"
+                style="width:105px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;">
+                <option value="">-- 선택 --</option>
+                <option value="KOREA">KOREA</option>
+                <option value="USA">USA</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Ticker</label>
+              <input id="wlAddTickerInput" type="text" placeholder="예: AAPL / 005930.KS"
+                style="width:155px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;"
+                oninput="this.value=this.value.toUpperCase()"
+                onkeydown="if(event.key==='Enter')confirmWlAddItem()">
+            </div>
+            <div style="display:flex;gap:6px;padding-bottom:1px;">
+              <button onclick="confirmWlAddItem()"
+                style="padding:6px 16px;font-size:0.85rem;background:#c05621;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">추가</button>
+              <button onclick="hideWlAddForm()"
+                style="padding:6px 12px;font-size:0.85rem;background:#edf2f7;color:#4a5568;border:1px solid #cbd5e0;border-radius:6px;cursor:pointer;">취소</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 관심종목 목록 -->
+        <div id="wlContent" style="margin-top:8px;">
+          <div style="text-align:center;padding:40px;color:#a0aec0;font-size:0.92rem;">
+            Account Owner를 선택하면 자동으로 로드됩니다.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- ===================== 거래 조회 탭 ===================== -->
     <div id="tab-query" class="tab-content">
 
@@ -1865,7 +1926,7 @@
 
   // ---- 서브탭 전환 (2단계) ----
   function switchTab(tab) {
-    ['overview', 'input', 'query', 'portfolio', 'rebalance'].forEach(function(id) {
+    ['overview', 'input', 'query', 'portfolio', 'rebalance', 'watchlist'].forEach(function(id) {
       var btn = document.getElementById('subtab-' + id);
       if (btn) btn.classList.toggle('active', id === tab);
       var content = document.getElementById('tab-' + id);
@@ -1874,6 +1935,7 @@
     if (tab === 'overview')   loadPortfolioData(false);
     if (tab === 'portfolio')  loadPortfolioAnalysis();
     if (tab === 'rebalance')  loadRebalanceData(false);
+    if (tab === 'watchlist')  loadWatchlistData(false);
   }
 
   // ---- 마스터 데이터 로딩 ----
@@ -4024,6 +4086,214 @@
 
     tblHtml += '</tbody></table>';
     if (tableEl) tableEl.innerHTML = tblHtml;
+  }
+
+  // ================================================================
+  //  관심종목 탭
+  // ================================================================
+  var wlItems  = [];    // 현재 로드된 관심종목
+  var wlLoaded = false;
+
+  function loadWatchlistData(force) {
+    if (wlLoaded && !force) return;
+    if (!currentOwner) return;
+    document.getElementById('wlLoadingMsg').classList.remove('hidden');
+    document.getElementById('wlContent').innerHTML = '';
+    document.getElementById('wlAlertBox').innerHTML = '';
+
+    fetch('/api/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner: currentOwner })
+    }).then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('wlLoadingMsg').classList.add('hidden');
+      if (data.error) {
+        document.getElementById('wlAlertBox').innerHTML =
+          '<div class="alert alert-error">' + data.error + '</div>';
+        return;
+      }
+      wlItems = data.items || [];
+      wlLoaded = true;
+      renderWatchlist();
+    }).catch(function(err) {
+      document.getElementById('wlLoadingMsg').classList.add('hidden');
+      document.getElementById('wlAlertBox').innerHTML =
+        '<div class="alert alert-error">오류: ' + err.message + '</div>';
+    });
+  }
+
+  function renderWatchlist() {
+    var container = document.getElementById('wlContent');
+    if (!container) return;
+
+    // Group 자동완성 datalist 갱신
+    var dl = document.getElementById('wlGroupList');
+    if (dl) {
+      var existingGroups = wlItems
+        .map(function(it) { return it.group || ''; })
+        .filter(function(g, i, a) { return g && a.indexOf(g) === i; });
+      dl.innerHTML = existingGroups.map(function(g) { return '<option value="' + g + '">'; }).join('');
+    }
+
+    if (wlItems.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:#a0aec0;font-size:0.92rem;">관심종목이 없습니다. ➕ 버튼으로 추가해 주세요.</div>';
+      return;
+    }
+
+    var fmtN = function(v, d) { return Number(v).toLocaleString('ko-KR',  { maximumFractionDigits: d !== undefined ? d : 4 }); };
+    var fmtU = function(v, d) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: d !== undefined ? d : 2, maximumFractionDigits: d !== undefined ? d : 2 }); };
+
+    // Group 순서 유지 (시트 순서)
+    var groups = {};
+    var groupOrder = [];
+    wlItems.forEach(function(it) {
+      var g = it.group || '기타';
+      if (!groups[g]) { groups[g] = []; groupOrder.push(g); }
+      groups[g].push(it);
+    });
+
+    var html = '';
+    groupOrder.forEach(function(groupName) {
+      var items = groups[groupName];
+      html += '<div style="margin-bottom:22px;">';
+      html += '<div style="font-weight:700;color:#4a5568;font-size:0.82rem;padding:5px 0 5px;' +
+              'border-bottom:2px solid #e2e8f0;margin-bottom:2px;letter-spacing:0.03em;">📁 ' + groupName + '</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:0.87rem;">';
+      html += '<thead><tr style="background:#f7fafc;color:#4a5568;border-bottom:1px solid #e2e8f0;">' +
+        '<th style="padding:7px 10px;text-align:left;">종목</th>' +
+        '<th style="padding:7px 8px;text-align:center;white-space:nowrap;">지역</th>' +
+        '<th style="padding:7px 10px;text-align:right;white-space:nowrap;">현재가</th>' +
+        '<th style="padding:7px 10px;text-align:right;white-space:nowrap;">등락률</th>' +
+        '<th style="padding:7px 10px;text-align:right;white-space:nowrap;color:#a0aec0;font-weight:400;">52주 고/저</th>' +
+        '</tr></thead><tbody>';
+
+      items.forEach(function(it) {
+        var isKRW = (it.currency === 'KRW');
+        var priceStr = it.price > 0
+          ? (isKRW ? fmtN(it.price, 0) : fmtU(it.price, 2)) + ' <span style="color:#a0aec0;font-size:0.85em;">' + (it.currency || '') + '</span>'
+          : '<span style="color:#a0aec0;">-</span>';
+
+        var cpct = it.changePct || 0;
+        var changeStr;
+        if (cpct !== 0) {
+          var cc = cpct >= 0 ? '#276749' : '#c53030';
+          var bg = cpct >= 0 ? '#f0fff4' : '#fff5f5';
+          changeStr = '<span style="color:' + cc + ';background:' + bg + ';font-weight:700;font-size:0.83em;padding:2px 7px;border-radius:10px;">' +
+            (cpct >= 0 ? '+' : '') + cpct.toFixed(2) + '%</span>';
+        } else {
+          changeStr = '<span style="color:#a0aec0;">-</span>';
+        }
+
+        var hlStr;
+        if (it.weekHigh52 > 0) {
+          var hFmt = isKRW ? fmtN(it.weekHigh52, 0) : fmtU(it.weekHigh52, 2);
+          var lFmt = isKRW ? fmtN(it.weekLow52,  0) : fmtU(it.weekLow52,  2);
+          hlStr = '<span style="color:#276749;font-size:0.83em;">↑' + hFmt + '</span>' +
+                  '<span style="color:#a0aec0;font-size:0.83em;"> / </span>' +
+                  '<span style="color:#c53030;font-size:0.83em;">↓' + lFmt + '</span>';
+        } else {
+          hlStr = '<span style="color:#a0aec0;">-</span>';
+        }
+
+        var tkSafe  = it.ticker.replace(/'/g, "\\'");
+        var grpSafe = (it.group || '').replace(/'/g, "\\'");
+
+        html += '<tr style="border-bottom:1px solid #edf2f7;">' +
+          '<td style="padding:8px 10px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">' +
+              '<div style="cursor:pointer;" onclick="showStockDetail(\'' + tkSafe + '\',event,\'\')">' +
+                '<span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:500;">' + (it.name || it.ticker) + '</span>' +
+                '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + it.ticker + '</div>' +
+              '</div>' +
+              '<button onclick="event.stopPropagation();wlDeleteItem(\'' + tkSafe + '\',\'' + grpSafe + '\')" ' +
+                'title="관심종목 삭제" style="background:none;border:none;cursor:pointer;color:#fc8181;font-size:1em;padding:0 2px;line-height:1;flex-shrink:0;opacity:0.65;">🗑</button>' +
+            '</div>' +
+          '</td>' +
+          '<td style="padding:8px 8px;text-align:center;">' +
+            '<span style="font-size:0.78em;color:#718096;background:#edf2f7;padding:2px 7px;border-radius:10px;">' + (it.region || '') + '</span>' +
+          '</td>' +
+          '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
+          '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + changeStr + '</td>' +
+          '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + hlStr + '</td>' +
+        '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+    });
+
+    container.innerHTML = html;
+  }
+
+  async function wlDeleteItem(ticker, group) {
+    if (!confirm(ticker + (group ? ' [' + group + ']' : '') + ' 을(를) 관심종목에서 삭제할까요?')) return;
+    try {
+      var res = await fetch('/api/watchlist/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner: currentOwner,
+          deleteTickers: [{ ticker: ticker, group: group }]
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || '삭제 실패');
+      // 로컬 목록에서도 즉시 제거
+      wlItems = wlItems.filter(function(it) {
+        return !(it.ticker === ticker && (it.group || '') === (group || ''));
+      });
+      renderWatchlist();
+    } catch(e) {
+      alert('삭제 오류: ' + e.message);
+    }
+  }
+
+  function showWlAddForm() {
+    var c = document.getElementById('wlAddFormContainer');
+    var b = document.getElementById('wlAddBtn');
+    if (c) c.style.display = 'block';
+    if (b) b.style.display = 'none';
+    var ti = document.getElementById('wlAddGroupInput');
+    if (ti) ti.focus();
+  }
+
+  function hideWlAddForm() {
+    var c = document.getElementById('wlAddFormContainer');
+    var b = document.getElementById('wlAddBtn');
+    if (c) c.style.display = 'none';
+    if (b) b.style.display = '';
+    var gi = document.getElementById('wlAddGroupInput');
+    var ri = document.getElementById('wlAddRegionSelect');
+    var ti = document.getElementById('wlAddTickerInput');
+    if (gi) gi.value = '';
+    if (ri) ri.value = '';
+    if (ti) ti.value = '';
+  }
+
+  async function confirmWlAddItem() {
+    var group  = (document.getElementById('wlAddGroupInput').value  || '').trim();
+    var region = document.getElementById('wlAddRegionSelect').value || '';
+    var ticker = (document.getElementById('wlAddTickerInput').value || '').trim().toUpperCase();
+    if (!ticker) { alert('Ticker를 입력하세요.'); return; }
+
+    try {
+      var res = await fetch('/api/watchlist/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner: currentOwner,
+          newItems: [{ group: group, region: region, ticker: ticker }]
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || '추가 실패');
+      hideWlAddForm();
+      // 시세 포함 새로고침
+      wlLoaded = false;
+      loadWatchlistData(true);
+    } catch(e) {
+      alert('추가 오류: ' + e.message);
+    }
   }
 
   // ================================================================
