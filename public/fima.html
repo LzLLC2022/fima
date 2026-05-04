@@ -2559,7 +2559,7 @@
     } else if (isDividend) {
       const divKRW = toKRW(fd.dividend || fd.price || 0);
       const taxKRW = toKRW(fd.tax || 0);
-      const net    = divKRW - taxKRW;
+      const net    = Math.floor(divKRW) - Math.floor(taxKRW);
       resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uBC30\uB2F9\uAE08</div><div class="pv-result-rows">
         <div class="pv-result-row"><span>\uBC30\uB2F9\uAE08</span><span>${fmtK(divKRW)} KRW</span></div>
         ${fd.tax ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
@@ -2568,7 +2568,7 @@
     } else if (isDivStock) {
       const divKRW = toKRW(fd.dividend || 0);
       const taxKRW = toKRW(fd.tax || 0);
-      const net    = divKRW - taxKRW;
+      const net    = Math.floor(divKRW) - Math.floor(taxKRW);
       resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uBC30\uB2F9\uAE08 (\uC8FC\uC2DD \uC7AC\uCDE8\uB4DD)</div><div class="pv-result-rows">
         <div class="pv-result-row"><span>\uBC30\uB2F9\uAE08</span><span>${fmtK(divKRW)} KRW</span></div>
         ${fd.tax ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
