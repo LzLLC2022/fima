@@ -3139,8 +3139,22 @@
       const isK  = item.currency === 'KRW';
       const cur  = item.currency;
 
-      const avgStr = item.avgPrice > 0 ? fmtAmt(item.avgPrice, isK) + ' ' + cur : 'N/A';
-      const curStr = item.currentPrice > 0 ? fmtAmt(item.currentPrice, isK) + ' ' + cur : 'N/A';
+      // 주당 연배당금 및 배당율 (Stock 섹션만 표시)
+      const divPerShare = (item.quantity > 0)
+        ? (isK ? (item.annualDivKRW || 0) : (item.annualDivFX || 0)) / item.quantity : 0;
+      const avgDivYield = (showDividend && divPerShare > 0 && item.avgPrice > 0)
+        ? (divPerShare / item.avgPrice * 100) : 0;
+      const curDivYield = (showDividend && divPerShare > 0 && item.currentPrice > 0)
+        ? (divPerShare / item.currentPrice * 100) : 0;
+
+      const avgStr = item.avgPrice > 0
+        ? fmtAmt(item.avgPrice, isK) + ' ' + cur
+          + (avgDivYield > 0 ? '<div style="font-size:0.75em;color:#276749;margin-top:1px;">' + avgDivYield.toFixed(2) + '%</div>' : '')
+        : 'N/A';
+      const curStr = item.currentPrice > 0
+        ? fmtAmt(item.currentPrice, isK) + ' ' + cur
+          + (curDivYield > 0 ? '<div style="font-size:0.75em;color:#276749;margin-top:1px;">' + curDivYield.toFixed(2) + '%</div>' : '')
+        : 'N/A';
       const purStr = fmtAmt(item.purchaseAmtFX, isK) + ' ' + cur;
       const mktStr = item.currentPrice > 0 ? fmtAmt(item.marketValueFX, isK) + ' ' + cur : 'N/A';
       const pnlStr = item.currentPrice > 0
