@@ -14,13 +14,18 @@ const YAHOO_HEADERS = {
 };
 
 async function fetchChart(yticker: string, params: string) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?${params}`;
-  const res = await fetch(url, { headers: YAHOO_HEADERS });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  const result = json?.chart?.result?.[0];
-  if (!result) throw new Error('No result');
-  return result;
+  const encoded = encodeURIComponent(yticker);
+  for (const host of ['query1', 'query2']) {
+    try {
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encoded}?${params}`;
+      const res = await fetch(url, { headers: YAHOO_HEADERS });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if (result) return result;
+    } catch { /* try next host */ }
+  }
+  throw new Error('No result');
 }
 
 async function fetchSummary(yticker: string) {
@@ -97,7 +102,10 @@ export async function POST(req: NextRequest) {
     const meta       = chartResult.meta;
     const timestamps: number[]          = chartResult.timestamp || [];
     const q          = chartResult.indicators?.quote?.[0] || {};
-    const closes: (number|null)[]  = q.close  || [];
+    // adjclose 폴백: 일부 한국 ETF는 q.close가 null 배열이고 adjclose에만 종가가 있음
+    const adjCloses: (number|null)[] = chartResult.indicators?.adjclose?.[0]?.adjclose || [];
+    const rawClose: (number|null)[]  = q.close || [];
+    const closes: (number|null)[]    = rawClose.some(v => v != null) ? rawClose : adjCloses;
     const highs:  (number|null)[]  = q.high   || [];
     const lows:   (number|null)[]  = q.low    || [];
 
