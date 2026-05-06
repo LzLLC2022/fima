@@ -4211,7 +4211,7 @@
           var cc = cpct >= 0 ? '#276749' : '#c53030';
           var bg = cpct >= 0 ? '#f0fff4' : '#fff5f5';
           changeStr = '<span style="color:' + cc + ';background:' + bg + ';font-weight:700;font-size:0.83em;padding:2px 7px;border-radius:10px;">' +
-            (cpct >= 0 ? '+' : '') + cpct.toFixed(2) + '%</span>';
+            (cpct >= 0 ? '+' : '') + (cpct * 100).toFixed(2) + '%</span>';
         } else {
           changeStr = '<span style="color:#a0aec0;">-</span>';
         }
