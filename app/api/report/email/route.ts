@@ -50,8 +50,13 @@ function buildReturnChartUrl(monthly: any[], indices: any): string {
   if (!monthly || monthly.length < 2) return '';
 
   const n      = monthly.length;
-  const labels = monthly.map((m: any) => toYYMM(m.month));
-  const pfVals = monthly.map((m: any) => parseFloat((m.returnPct ?? 0).toFixed(2)));
+  const labels  = monthly.map((m: any) => toYYMM(m.month));
+  // 포트폴리오: 첫 월 기준 누적수익률로 정규화 (지수와 동일 기준)
+  const pfRaw   = monthly.map((m: any) => parseFloat((m.returnPct ?? 0).toFixed(2)));
+  const pfBase  = pfRaw.length > 0 ? pfRaw[0] : 0;
+  const pfVals  = pfBase > -100
+    ? pfRaw.map((v: number) => parseFloat(((((1 + v / 100) / (1 + pfBase / 100)) - 1) * 100).toFixed(2)))
+    : pfRaw.map(() => 0);
 
   const toArr = (key: string) =>
     ((indices?.[key] || []) as any[]).slice(0, n).map((d: any) =>
@@ -547,7 +552,7 @@ function buildSectionContent(accountOwner: string, data: any): string {
         <!-- 월별 누적 수익률 비교 -->
         ${returnChartUrl ? `
         <div style="font-size:13px;font-weight:700;color:#4a5568;margin-bottom:4px;">📈 월별 누적 수익률 비교</div>
-        <div style="font-size:11px;color:#718096;margin-bottom:8px;">포트폴리오: 순투자액 대비 평가손익률 / 지수: 동기간 누적 등락률</div>
+        <div style="font-size:11px;color:#718096;margin-bottom:8px;">포트폴리오·지수 모두 분석 시작 시점(첫 월) 대비 누적 등락률</div>
         <div style="background:#f7fafc;border-radius:8px;padding:12px;margin-bottom:20px;text-align:center;">
           ${chartImg(returnChartUrl)}
         </div>` : ''}
