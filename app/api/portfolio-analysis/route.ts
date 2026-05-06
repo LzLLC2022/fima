@@ -358,25 +358,10 @@ export async function POST(req: NextRequest) {
     });
     const allHistoryTickers = Array.from(allStateTickers);
 
-    // ── 현재 보유 종목 월별 주당배당 조회 (예상배당 계산용) ─────────────
-    const monthlyDivResults = await Promise.allSettled(
+    // ── 현재 보유 종목 월별 주당배당 조회 시작 (병렬 실행, resolveRate 정의 후 await) ─
+    const monthlyDivPromise = Promise.allSettled(
       heldTickers.map(tk => getMonthlyDivPerShare(tk).catch(() => ({} as Record<string, number>)))
     );
-    const tickerMonthlyDivKRW: Record<string, Record<string, number>> = {};
-    heldTickers.forEach((tk, i) => {
-      const r = monthlyDivResults[i];
-      if (r.status !== 'fulfilled') return;
-      const monthly = r.value;
-      if (!monthly || Object.keys(monthly).length === 0) return;
-      const p = currentState.positions[tk];
-      if (!p) return;
-      const isKRW = (currencyMap[p.region] || 'KRW') === 'KRW';
-      const rate = isKRW ? 1 : resolveRate(p.region);
-      tickerMonthlyDivKRW[tk] = {};
-      Object.entries(monthly).forEach(([mo, amt]) => {
-        tickerMonthlyDivKRW[tk][mo] = (amt as number) * rate;
-      });
-    });
 
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
     const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates] = await Promise.all([
@@ -482,6 +467,23 @@ export async function POST(req: NextRequest) {
       const cur = currencyMap[region] || 'KRW';
       return cur === 'KRW' ? 1 : (exchangeRates[region] || currentState.latestRate[region] || 1);
     };
+
+    // ── 월별 주당배당 KRW 환산 (resolveRate 확보 후 처리) ────────────
+    const monthlyDivResults = await monthlyDivPromise;
+    const tickerMonthlyDivKRW: Record<string, Record<string, number>> = {};
+    heldTickers.forEach((tk, i) => {
+      const r = monthlyDivResults[i];
+      if (r.status !== 'fulfilled') return;
+      const monthly = r.value;
+      if (!monthly || Object.keys(monthly).length === 0) return;
+      const p = currentState.positions[tk];
+      if (!p) return;
+      const rate = resolveRate(p.region);
+      tickerMonthlyDivKRW[tk] = {};
+      Object.entries(monthly).forEach(([mo, amt]) => {
+        tickerMonthlyDivKRW[tk][mo] = (amt as number) * rate;
+      });
+    });
 
     let marketValueKRW = 0;
     Object.entries(currentState.cashFX).forEach(([region, amt]) => {
