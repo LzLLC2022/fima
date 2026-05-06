@@ -460,17 +460,65 @@ function buildSectionContent(accountOwner: string, data: any): string {
   };
 
   const stockRows = stocks.map((st: any) => {
+    const cur      = st.currency ?? '';
+    const isKRW    = cur === 'KRW';
+    const fmtFX    = (v: number) => isKRW
+      ? Math.round(v).toLocaleString('ko-KR')
+      : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtPrc   = (v: number) => isKRW
+      ? Math.round(v).toLocaleString('ko-KR')
+      : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    const fmtQty   = (q: number) =>
+      q % 1 === 0 ? Math.round(q).toLocaleString('ko-KR')
+                  : q.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+    const sub      = (txt: string) =>
+      `<div style="font-size:10px;color:#a0aec0;margin-top:2px;">${txt}</div>`;
+    const priceSub = (diff: number | null) => {
+      if (diff == null) return '';
+      const sign = diff >= 0 ? '+' : '';
+      const col  = diff >= 0 ? '#38a169' : '#e53e3e';
+      return `<div style="font-size:10px;color:${col};margin-top:2px;">${sign}${fmtPrc(diff)}&nbsp;${cur}</div>`;
+    };
+
+    const avgPrice   = st.buyCostFX > 0 && st.qty > 0 ? st.buyCostFX / st.qty : 0;
+    const ytdDiff    = avgPrice > 0 && st.yearStartPrice  > 0 ? avgPrice - st.yearStartPrice  : null;
+    const mtdDiff    = avgPrice > 0 && st.monthStartPrice > 0 ? avgPrice - st.monthStartPrice : null;
+
     const ytdCol = signColor(st.annualReturnPct);
     const mtdCol = signColor(st.monthlyReturnPct);
     const pnlCol = signColor(st.pnlPct);
+
+    // 매입금액 셀: 총매입금액 + 매입단가×수량
+    const acCell = st.buyCostFX > 0
+      ? fmtFX(st.buyCostFX) + '&nbsp;' + cur
+        + (avgPrice > 0 ? sub(fmtPrc(avgPrice) + '&nbsp;×&nbsp;' + fmtQty(st.qty)) : '')
+      : '-';
+
+    // 평가금액 셀: 총평가금액 + 현재가×수량
+    const mvCell = st.marketValueFX > 0
+      ? fmtFX(st.marketValueFX) + '&nbsp;' + cur
+        + (st.currentPrice > 0 && st.qty > 0 ? sub(fmtPrc(st.currentPrice) + '&nbsp;×&nbsp;' + fmtQty(st.qty)) : '')
+      : '-';
+
+    // YTD/MTD 셀: % + 수식(매입단가−기준가)
+    const ytdCell = st.annualReturnPct  != null
+      ? `<span style="color:${ytdCol};font-weight:600;">${fmtPct(st.annualReturnPct)}</span>`
+        + (ytdDiff != null ? priceSub(ytdDiff) : '')
+      : '-';
+    const mtdCell = st.monthlyReturnPct != null
+      ? `<span style="color:${mtdCol};font-weight:600;">${fmtPct(st.monthlyReturnPct)}</span>`
+        + (mtdDiff != null ? priceSub(mtdDiff) : '')
+      : '-';
+
     return `
       <tr style="border-bottom:1px solid #edf2f7;">
         <td style="padding:7px 8px;font-weight:600;color:#2d3748;font-size:12px;">${st.ticker}</td>
         <td style="padding:7px 8px;color:#4a5568;font-size:11px;">${st.name || '-'}</td>
-        <td style="padding:7px 8px;text-align:right;color:#4a5568;font-size:12px;">${st.currentPrice != null ? fmtPrice(st.currentPrice) : '-'} ${st.currency ?? ''}</td>
+        <td style="padding:7px 8px;text-align:right;font-size:12px;">${acCell}</td>
+        <td style="padding:7px 8px;text-align:right;font-size:12px;">${mvCell}</td>
         <td style="padding:7px 8px;text-align:right;color:${pnlCol};font-weight:600;font-size:12px;">${st.pnlPct != null ? fmtPct(st.pnlPct) : '-'}</td>
-        <td style="padding:7px 8px;text-align:right;color:${ytdCol};font-weight:600;font-size:12px;">${fmtPct(st.annualReturnPct)}</td>
-        <td style="padding:7px 8px;text-align:right;color:${mtdCol};font-weight:600;font-size:12px;">${fmtPct(st.monthlyReturnPct)}</td>
+        <td style="padding:7px 8px;text-align:right;font-size:12px;">${ytdCell}</td>
+        <td style="padding:7px 8px;text-align:right;font-size:12px;">${mtdCell}</td>
       </tr>`;
   }).join('');
 
@@ -529,7 +577,8 @@ function buildSectionContent(accountOwner: string, data: any): string {
             <tr style="background:#edf2f7;">
               <th style="padding:8px;text-align:left;font-size:11px;color:#718096;font-weight:600;">티커</th>
               <th style="padding:8px;text-align:left;font-size:11px;color:#718096;font-weight:600;">종목명</th>
-              <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">현재가</th>
+              <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">매입금액</th>
+              <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">평가금액</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">투자수익률</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">YTD</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">MTD</th>
