@@ -3693,15 +3693,16 @@
     }
 
     // 전체 시리즈 정의 (데이터 있는 것만)
+    // 포트폴리오: 첫 월 기준 누적수익률로 정규화 (지수와 동일 기준)
+    var pfRawData = monthly.map(function(m) { return { month: m.month, v: m.returnPct }; });
+    var pfBase = pfRawData.length > 0 ? pfRawData[0].v : 0;
+    var pfData = pfRawData.map(function(d) {
+      return { month: d.month, v: pfBase > -100
+        ? Math.round(((1 + d.v / 100) / (1 + pfBase / 100) - 1) * 10000) / 100
+        : 0 };
+    });
+
     var allSeries = [
-      // 포트폴리오: 첫 월 기준 누적수익률로 정규화 (지수와 동일 기준)
-      var pfRawData = monthly.map(function(m) { return { month: m.month, v: m.returnPct }; });
-      var pfBase = pfRawData.length > 0 ? pfRawData[0].v : 0;
-      var pfData = pfRawData.map(function(d) {
-        return { month: d.month, v: pfBase > -100
-          ? Math.round(((1 + d.v / 100) / (1 + pfBase / 100) - 1) * 10000) / 100
-          : 0 };
-      });
       { key: 'portfolio', label: '포트폴리오', color: '#3182ce',
         data: pfData },
       { key: 'KOSPI',  label: 'KOSPI',   color: '#e53e3e',
