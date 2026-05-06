@@ -136,9 +136,27 @@ export async function POST(req: NextRequest) {
     // ── 월별 배당 집계 (전체 기간 — 연도×월 크로스탭) ────────────────
     const divByYearMonth: Record<string, Record<string, number>> = {};
     const divRateCache: Record<string, number> = {};
+    // 종목별 월배당 상세 (예상 계산용): [year][mo][ticker] = { divKRW, qty }
+    const divDetailMap: Record<string, Record<string, Record<string, { divKRW: number; qty: number }>>> = {};
+    const runQtyMap: Record<string, number> = {};  // 배당 시점 수량 추적
+
     sorted.forEach(({ row, date }) => {
       if (date.getTime() === 0) return;
-      const t2 = String(row[tradeIdx] ?? '').trim().toLowerCase().replace(/[-\s]/g, '');
+      const t2      = String(row[tradeIdx]  ?? '').trim().toLowerCase().replace(/[-\s]/g, '');
+      const ticker2 = String(row[tickerIdx] ?? '').trim().toUpperCase();
+      const qty2    = Number(row[qtyIdx])   || 0;
+      const asset2  = String(row[assetIdx]  ?? '').trim().toLowerCase();
+
+      // 수량 추적 (배당 시점 보유량 계산용)
+      if (ticker2 && asset2 !== 'cash') {
+        if (!runQtyMap[ticker2]) runQtyMap[ticker2] = 0;
+        if (t2 === 'buy') runQtyMap[ticker2] += qty2;
+        else if (t2 === 'sell') runQtyMap[ticker2] -= qty2;
+        else if (t2 === 'split') runQtyMap[ticker2] += qty2;
+        else if (t2 === 'merge' || t2 === 'reversesplit') runQtyMap[ticker2] -= qty2;
+        else if (t2.startsWith('div') && t2.includes('stock')) runQtyMap[ticker2] += qty2;
+      }
+
       if (!t2.startsWith('div') && !t2.includes('stock')) return;
       const region2 = String(row[regionIdx] ?? '').trim();
       const price2  = Number(row[priceIdx]) || 0;
@@ -159,6 +177,18 @@ export async function POST(req: NextRequest) {
       const mo = String(date.getUTCMonth() + 1).padStart(2, '0');
       if (!divByYearMonth[yr]) divByYearMonth[yr] = {};
       divByYearMonth[yr][mo] = (divByYearMonth[yr][mo] || 0) + divKRW;
+
+      // 현금배당 & ticker 있는 경우: 종목별 상세 기록
+      if (ticker2 && t2.startsWith('div') && !t2.includes('stock')) {
+        const qtyAtDiv = runQtyMap[ticker2] || 0;
+        if (qtyAtDiv > 0) {
+          if (!divDetailMap[yr]) divDetailMap[yr] = {};
+          if (!divDetailMap[yr][mo]) divDetailMap[yr][mo] = {};
+          if (!divDetailMap[yr][mo][ticker2]) divDetailMap[yr][mo][ticker2] = { divKRW: 0, qty: qtyAtDiv };
+          divDetailMap[yr][mo][ticker2].divKRW += divKRW;
+          divDetailMap[yr][mo][ticker2].qty = qtyAtDiv;
+        }
+      }
     });
 
     const dividends = Object.entries(divByYearMonth)
@@ -525,6 +555,7 @@ export async function POST(req: NextRequest) {
       return {
         ticker: t, name: p.name,
         currency: currencyMap[p.region] || 'KRW',
+        qty: p.qty,
         marketValueKRW: Math.round(mktVal),
         marketValueFX:  marketValueFX,
         currentPrice:   cp,
@@ -638,7 +669,23 @@ export async function POST(req: NextRequest) {
       basePnl = Math.round(baseVal - baseState.netDepositKRW);
     }
 
-    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, basePnl });
+    const divDetail = Object.fromEntries(
+      Object.entries(divDetailMap).map(([yr, months]) => [
+        yr,
+        Object.fromEntries(
+          Object.entries(months).map(([mo, tickers]) => [
+            mo,
+            Object.fromEntries(
+              Object.entries(tickers).map(([tk, v]) => [
+                tk,
+                { divKRW: Math.round(v.divKRW), qty: v.qty },
+              ])
+            ),
+          ])
+        ),
+      ])
+    );
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, basePnl });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }

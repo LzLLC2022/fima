@@ -3596,7 +3596,7 @@
       pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
       renderPfChart(pfChartMonthly, pfChartIndices);
       renderPfAmtChart(pfChartMonthly, data.basePnl || 0);
-      renderPfDivChart(data.dividends || []);
+      renderPfDivChart(data.dividends || [], data.stocks || [], data.divDetail || {});
 
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
@@ -3952,7 +3952,7 @@
   }
 
   // ── 월별 배당 현황 그룹 바 차트 + 테이블 ────────────────────────────────
-  function renderPfDivChart(dividends) {
+  function renderPfDivChart(dividends, stocks, divDetail) {
     var chartEl = document.getElementById('pfDivChart');
     var tableEl = document.getElementById('pfDivTable');
     if (!dividends || dividends.length === 0) {
@@ -4096,28 +4096,52 @@
       tblHtml += '</tr>';
     });
 
-    // ── 올해 예상배당 행 (실적 + 전년도 기반 예상) ──
+    // ── 올해 예상배당 행 (실적 + 현재 보유수량 기반 예상) ──
     var thisYear = new Date().getFullYear().toString();
     var thisYearData = dividends.find(function(d) { return d.year.toString() === thisYear; });
     if (thisYearData) {
       var prevYear = (parseInt(thisYear) - 1).toString();
-      var prevYearData = dividends.find(function(d) { return d.year.toString() === prevYear; });
+      // 현재 보유수량 맵: { ticker → qty }
+      var curQtyMap = {};
+      (stocks || []).forEach(function(s) { if (s && s.ticker && s.qty > 0) curQtyMap[s.ticker] = s.qty; });
+      // 전년도 divDetail: divDetail[prevYear][mo][ticker] = { divKRW, qty }
+      var prevDetail = (divDetail && divDetail[prevYear]) || {};
+
       var expTotal = 0;
       var expCells = {};
       var hasEstimate = false;
+
       ALL_MONTHS.forEach(function(mo) {
         if (thisYearData.months[mo]) {
+          // 이미 수령한 달: 실제값 사용
           expCells[mo] = { val: thisYearData.months[mo], est: false };
           expTotal += thisYearData.months[mo];
-        } else if (prevYearData && prevYearData.months[mo]) {
-          expCells[mo] = { val: prevYearData.months[mo], est: true };
-          expTotal += prevYearData.months[mo];
-          hasEstimate = true;
+        } else {
+          // 미수령 달: 전년도 동월 데이터로 현재 수량 기준 재계산
+          var moDetail = prevDetail[mo] || {};
+          var moTickers = Object.keys(moDetail);
+          if (moTickers.length > 0) {
+            // 종목별 주당배당 × 현재 보유수량 합산
+            var estVal = 0;
+            moTickers.forEach(function(tk) {
+              var d = moDetail[tk];
+              if (d && d.qty > 0 && curQtyMap[tk] > 0) {
+                var perShare = d.divKRW / d.qty;  // 수령 당시 주당 배당(KRW)
+                estVal += perShare * curQtyMap[tk];
+              }
+            });
+            if (estVal > 0) {
+              expCells[mo] = { val: Math.round(estVal), est: true };
+              expTotal += Math.round(estVal);
+              hasEstimate = true;
+            }
+          }
         }
       });
+
       if (hasEstimate) {
         tblHtml += '<tr style="background:#faf5ff;">';
-        tblHtml += '<td style="padding:6px 10px;font-weight:700;color:#805ad5;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;">예상 (' + thisYear + ')<div style="font-size:0.75em;font-weight:400;color:#b794f4;margin-top:1px;">전년도 기준</div></td>';
+        tblHtml += '<td style="padding:6px 10px;font-weight:700;color:#805ad5;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;">예상 (' + thisYear + ')<div style="font-size:0.75em;font-weight:400;color:#b794f4;margin-top:1px;">현재수량 × 전년 주당배당</div></td>';
         ALL_MONTHS.forEach(function(mo) {
           var cell = expCells[mo];
           if (!cell) {
