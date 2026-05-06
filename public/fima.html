@@ -4101,6 +4101,7 @@
     var thisYearData = dividends.find(function(d) { return d.year.toString() === thisYear; });
     if (thisYearData) {
       var prevYear = (parseInt(thisYear) - 1).toString();
+      var prevYearData = dividends.find(function(d) { return d.year.toString() === prevYear; });
       // 현재 보유수량 맵: { ticker → qty }
       var curQtyMap = {};
       (stocks || []).forEach(function(s) { if (s && s.ticker && s.qty > 0) curQtyMap[s.ticker] = s.qty; });
