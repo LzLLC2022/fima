@@ -4096,6 +4096,43 @@
       tblHtml += '</tr>';
     });
 
+    // ── 올해 예상배당 행 (실적 + 전년도 기반 예상) ──
+    var thisYear = new Date().getFullYear().toString();
+    var thisYearData = dividends.find(function(d) { return d.year.toString() === thisYear; });
+    if (thisYearData) {
+      var prevYear = (parseInt(thisYear) - 1).toString();
+      var prevYearData = dividends.find(function(d) { return d.year.toString() === prevYear; });
+      var expTotal = 0;
+      var expCells = {};
+      var hasEstimate = false;
+      ALL_MONTHS.forEach(function(mo) {
+        if (thisYearData.months[mo]) {
+          expCells[mo] = { val: thisYearData.months[mo], est: false };
+          expTotal += thisYearData.months[mo];
+        } else if (prevYearData && prevYearData.months[mo]) {
+          expCells[mo] = { val: prevYearData.months[mo], est: true };
+          expTotal += prevYearData.months[mo];
+          hasEstimate = true;
+        }
+      });
+      if (hasEstimate) {
+        tblHtml += '<tr style="background:#faf5ff;">';
+        tblHtml += '<td style="padding:6px 10px;font-weight:700;color:#805ad5;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;">예상 (' + thisYear + ')<div style="font-size:0.75em;font-weight:400;color:#b794f4;margin-top:1px;">전년도 기준</div></td>';
+        ALL_MONTHS.forEach(function(mo) {
+          var cell = expCells[mo];
+          if (!cell) {
+            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#a0aec0;">-</td>';
+          } else if (!cell.est) {
+            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#553c9a;font-weight:600;">' + fmtKRW(cell.val) + '</td>';
+          } else {
+            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#b794f4;font-style:italic;">' + fmtKRW(cell.val) + '</td>';
+          }
+        });
+        tblHtml += '<td style="padding:6px 10px;text-align:right;font-weight:700;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#805ad5;">' + fmtKRW(expTotal) + '</td>';
+        tblHtml += '</tr>';
+      }
+    }
+
     var moTotals = ALL_MONTHS.map(function(mo) {
       return dividends.reduce(function(s, d) { return s + (d.months[mo] || 0); }, 0);
     });
