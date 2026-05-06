@@ -1333,7 +1333,6 @@
             <table id="pfStockTable">
               <thead><tr>
                 <th>Name</th>
-                <th style="text-align:right;">현재가</th>
                 <th style="text-align:right;">매입금액</th>
                 <th style="text-align:right;">평가금액</th>
                 <th style="text-align:right;">투자수익률</th>
@@ -3601,7 +3600,7 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
         tbody.innerHTML = data.stocks.map(function(st) {
           var cur   = st.currency || 'KRW';
@@ -3617,26 +3616,37 @@
               : Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
           };
 
+          var avgPrice = (st.buyCostFX > 0 && st.qty > 0) ? st.buyCostFX / st.qty : 0;
+          var fmtQty = function(q) {
+            if (!q) return '0';
+            return (q % 1 === 0)
+              ? Math.round(q).toLocaleString('ko-KR')
+              : Number(q).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
+          };
+          var fmtPriceDiff = function(diff, c) {
+            if (diff === null || diff === undefined) return '';
+            var sign = diff >= 0 ? '+' : '';
+            var col  = diff >= 0 ? '#38a169' : '#e53e3e';
+            return '<div style="font-size:0.78em;color:' + col + ';margin-top:1px;">' + sign + fmtPrice(diff) + ' ' + c + '</div>';
+          };
           var annStr = st.annualReturnPct !== null
             ? '<span style="color:' + pnlCol(st.annualReturnPct) + '">' + fmtPct(st.annualReturnPct) + '</span>'
+              + (avgPrice > 0 && st.yearStartPrice > 0 ? fmtPriceDiff(avgPrice - st.yearStartPrice, cur) : '')
             : '<span style="color:#a0aec0">-</span>';
           var monStr = st.monthlyReturnPct !== null
             ? '<span style="color:' + pnlCol(st.monthlyReturnPct) + '">' + fmtPct(st.monthlyReturnPct) + '</span>'
+              + (avgPrice > 0 && st.monthStartPrice > 0 ? fmtPriceDiff(avgPrice - st.monthStartPrice, cur) : '')
             : '<span style="color:#a0aec0">-</span>';
           var pnlStr = (st.pnlPct !== null && st.pnlPct !== undefined)
             ? '<span style="color:' + pnlCol(st.pnlPct) + ';font-weight:700;">' + fmtPct(st.pnlPct) + '</span>'
             : '<span style="color:#a0aec0">-</span>';
-
-          var cpStr = st.currentPrice > 0
-            ? fmtPrice(st.currentPrice) + ' ' + cur
-            : '-';
-          var avgPrice = (st.buyCostFX > 0 && st.qty > 0) ? st.buyCostFX / st.qty : 0;
           var acStr = (st.buyCostFX > 0)
             ? fmtFX(st.buyCostFX) + ' ' + cur
-              + (avgPrice > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(avgPrice) + ' ' + cur + '</div>' : '')
+              + (avgPrice > 0 && st.qty > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(avgPrice) + ' × ' + fmtQty(st.qty) + '</div>' : '')
             : '-';
           var mvStr = (st.marketValueFX > 0)
             ? fmtFX(st.marketValueFX) + ' ' + cur
+              + (st.currentPrice > 0 && st.qty > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(st.currentPrice) + ' × ' + fmtQty(st.qty) + '</div>' : '')
             : (st.marketValueKRW > 0 ? fmtK(st.marketValueKRW) + ' KRW' : '-');
 
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -3646,7 +3656,6 @@
             + '<span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
             + '</td>'
-            + '<td style="text-align:right;">' + cpStr + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
             + '<td style="text-align:right;">' + mvStr + '</td>'
             + '<td style="text-align:right;">' + pnlStr + '</td>'

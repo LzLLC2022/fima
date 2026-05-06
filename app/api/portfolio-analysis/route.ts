@@ -585,6 +585,8 @@ export async function POST(req: NextRequest) {
         pnlPct:         pnlPct,
         annualReturnPct:  ysp  > 0 && cp > 0 ? (cp - ysp)  / ysp  * 100 : null,
         monthlyReturnPct: mpsp > 0 && cp > 0 ? (cp - mpsp) / mpsp * 100 : null,
+        yearStartPrice:   ysp  > 0 ? ysp  : null,
+        monthStartPrice:  mpsp > 0 ? mpsp : null,
       };
     }).filter(Boolean).sort((a, b) => (b?.marketValueKRW || 0) - (a?.marketValueKRW || 0));
 
