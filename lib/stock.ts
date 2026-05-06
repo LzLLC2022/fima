@@ -490,6 +490,54 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
   return 0;
 }
 
+/**
+ * 최근 1년간 종목의 월별 주당 배당금 (로컬 통화 기준)
+ * 반환: { "01": 주당배당, "03": 주당배당, ... }  (배당 없는 달은 키 없음)
+ */
+export async function getMonthlyDivPerShare(ticker: string): Promise<Record<string, number>> {
+  if (!ticker) return {};
+  ticker = ticker.toString().trim().toUpperCase();
+  if (isKoreanBondISIN(ticker)) return {};
+
+  const candidates: string[] = isKoreanCode(ticker)
+    ? [`${ticker.split('.')[0]}.KS`, `${ticker.split('.')[0]}.KQ`]
+    : [ticker];
+
+  const fetchMonthly = async (yticker: string): Promise<Record<string, number>> => {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1d&range=2y&events=dividends`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com/',
+      },
+    });
+    if (!res.ok) return {};
+    const json = await res.json();
+    const events = json?.chart?.result?.[0]?.events?.dividends;
+    if (!events) return {};
+
+    const now = Date.now() / 1000;
+    const cutoff = now - 365 * 24 * 3600;
+    const monthly: Record<string, number> = {};
+    Object.entries(events as Record<string, { amount: number; date?: number }>).forEach(([ts, d]) => {
+      const t = d.date ?? Number(ts);
+      if (t < cutoff || t > now) return;
+      const mo = String(new Date(t * 1000).getUTCMonth() + 1).padStart(2, '0');
+      monthly[mo] = (monthly[mo] || 0) + (d.amount || 0);
+    });
+    return monthly;
+  };
+
+  for (const yticker of candidates) {
+    try {
+      const val = await fetchMonthly(yticker);
+      if (Object.keys(val).length > 0) return val;
+    } catch { /* try next */ }
+  }
+  return {};
+}
+
 // ─────────────────────────────────────────────────────────────────
 // 역사적 시세 / 환율 조회
 // ─────────────────────────────────────────────────────────────────

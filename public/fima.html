@@ -3596,7 +3596,7 @@
       pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
       renderPfChart(pfChartMonthly, pfChartIndices);
       renderPfAmtChart(pfChartMonthly, data.basePnl || 0);
-      renderPfDivChart(data.dividends || [], data.stocks || [], data.divDetail || {});
+      renderPfDivChart(data.dividends || [], data.stocks || [], data.divDetail || {}, data.tickerMonthlyDivKRW || {});
 
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
@@ -3952,7 +3952,7 @@
   }
 
   // ── 월별 배당 현황 그룹 바 차트 + 테이블 ────────────────────────────────
-  function renderPfDivChart(dividends, stocks, divDetail) {
+  function renderPfDivChart(dividends, stocks, divDetail, tickerMonthlyDivKRW) {
     var chartEl = document.getElementById('pfDivChart');
     var tableEl = document.getElementById('pfDivTable');
     if (!dividends || dividends.length === 0) {
@@ -4149,12 +4149,19 @@
             // 매도 종목은 scaledVal에 미포함 (추적 합계에만 반영)
           });
 
-          // ② 현재 보유 중이나 전년 동월 데이터 없는 종목
-          //    → 전년도 다른 달 주당배당 평균으로 추정 (신규종목 포함)
+          // ② 현재 보유 중이나 전년 동월 원장 데이터 없는 종목
+          //    → Yahoo Finance 실제 주당 월배당 우선, 없으면 원장 평균으로 추정
           Object.keys(curQtyMap).forEach(function(tk) {
             if (moDetail[tk]) return; // ①에서 처리됨
             var curQty = curQtyMap[tk];
             if (curQty <= 0) return;
+            // Yahoo Finance 기준 주당 월배당 (리밸런싱과 동일 소스)
+            var yahooPSK = tickerMonthlyDivKRW && tickerMonthlyDivKRW[tk] && tickerMonthlyDivKRW[tk][mo];
+            if (yahooPSK > 0) {
+              scaledVal += yahooPSK * curQty;
+              return;
+            }
+            // fallback: 전년도 원장 다른 달 주당배당 평균
             var avg = prevPerShareAvg[tk];
             if (avg && avg.cnt > 0) {
               scaledVal += (avg.sum / avg.cnt) * curQty;

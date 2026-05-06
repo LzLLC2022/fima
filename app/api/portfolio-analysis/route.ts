@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/config';
-import { getExchangeRate, getStockPrice, getStockInfo, isKoreanCode } from '@/lib/stock';
+import { getExchangeRate, getStockPrice, getStockInfo, isKoreanCode, getMonthlyDivPerShare } from '@/lib/stock';
 
 // ── 한국 채권 ISIN 판별 (KR + 10자리) ────────────────────────────────────
 function isKoreanBondISIN(ticker: string): boolean {
@@ -358,6 +358,26 @@ export async function POST(req: NextRequest) {
     });
     const allHistoryTickers = Array.from(allStateTickers);
 
+    // ── 현재 보유 종목 월별 주당배당 조회 (예상배당 계산용) ─────────────
+    const monthlyDivResults = await Promise.allSettled(
+      heldTickers.map(tk => getMonthlyDivPerShare(tk).catch(() => ({} as Record<string, number>)))
+    );
+    const tickerMonthlyDivKRW: Record<string, Record<string, number>> = {};
+    heldTickers.forEach((tk, i) => {
+      const r = monthlyDivResults[i];
+      if (r.status !== 'fulfilled') return;
+      const monthly = r.value;
+      if (!monthly || Object.keys(monthly).length === 0) return;
+      const p = currentState.positions[tk];
+      if (!p) return;
+      const isKRW = (currencyMap[p.region] || 'KRW') === 'KRW';
+      const rate = isKRW ? 1 : resolveRate(p.region);
+      tickerMonthlyDivKRW[tk] = {};
+      Object.entries(monthly).forEach(([mo, amt]) => {
+        tickerMonthlyDivKRW[tk][mo] = (amt as number) * rate;
+      });
+    });
+
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
     const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates] = await Promise.all([
       // 종목 월별 역사적 종가: allHistoryTickers (현재 보유 + 과거 보유 매도 종목 포함)
@@ -685,7 +705,7 @@ export async function POST(req: NextRequest) {
         ),
       ])
     );
-    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, basePnl });
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, tickerMonthlyDivKRW, basePnl });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
