@@ -264,15 +264,53 @@ function buildDivChartUrl(dividends: any[]): string {
 }
 
 /** 월별 배당금 테이블 HTML (행=연도, 열=월, 만원 단위) — 인앱 현황>리포트 레이아웃과 동일 */
-function buildDivTable(dividends: any[]): string {
+function buildDivTable(
+  dividends: any[],
+  tickerMonthlyDivKRW?: Record<string, Record<string, number>>,
+  stocks?: any[]
+): string {
   if (!dividends || dividends.length === 0) return '';
 
   const monthCols  = ['01','02','03','04','05','06','07','08','09','10','11','12'];
   const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-  // 실제 데이터가 있는 월만 열 표시
+  // ── 올해 예상배당 계산 (Yahoo Finance 주당월배당 × 현재수량) ──────
+  const thisYear   = new Date().getFullYear().toString();
+  const thisYrDiv  = dividends.find((d: any) => String(d.year) === thisYear);
+  const curQtyMap: Record<string, number> = {};
+  (stocks || []).forEach((s: any) => { if (s?.ticker && (s.qty ?? 0) > 0) curQtyMap[s.ticker] = s.qty; });
+
+  const expMonths: Record<string, number> = {};  // mo → KRW
+  let   expTotal   = 0;
+  let   hasEst     = false;
+
+  if (thisYrDiv && tickerMonthlyDivKRW && Object.keys(curQtyMap).length > 0) {
+    monthCols.forEach((mo: string) => {
+      if (thisYrDiv.months?.[mo]) {
+        // 실적 달
+        expMonths[mo] = thisYrDiv.months[mo];
+        expTotal += thisYrDiv.months[mo];
+      } else {
+        // 예상 달
+        let estVal = 0;
+        Object.entries(curQtyMap).forEach(([tk, qty]) => {
+          const psk = tickerMonthlyDivKRW[tk]?.[mo] ?? 0;
+          if (psk > 0) estVal += psk * qty;
+        });
+        if (estVal > 0) {
+          expMonths[mo] = Math.round(estVal);
+          expTotal += Math.round(estVal);
+          hasEst = true;
+        }
+      }
+    });
+  }
+
+  // 실제 데이터 또는 예상 데이터가 있는 월만 열 표시
   const activeIdxs = monthCols.reduce((acc: number[], mo, idx) => {
-    if (dividends.some((d: any) => (d.months?.[mo] ?? 0) > 0)) acc.push(idx);
+    const hasReal = dividends.some((d: any) => (d.months?.[mo] ?? 0) > 0);
+    const hasExp  = (expMonths[mo] ?? 0) > 0;
+    if (hasReal || hasExp) acc.push(idx);
     return acc;
   }, []);
   if (activeIdxs.length === 0) return '';
@@ -291,7 +329,6 @@ function buildDivTable(dividends: any[]): string {
   const tdTotL  = 'padding:4px 5px;text-align:left;font-size:10px;font-weight:700;color:#2d3748;background:#f7fafc;white-space:nowrap;';
   const tdTotR  = 'padding:4px 5px;text-align:right;font-size:10px;font-weight:700;color:#2d3748;background:#f7fafc;white-space:nowrap;';
 
-  // 헤더: 연도 | 1월 ~ n월 | 합계
   const headerCells = activeIdxs.map(idx =>
     `<th style="${thStyle}">${monthNames[idx]}</th>`
   ).join('');
@@ -302,19 +339,35 @@ function buildDivTable(dividends: any[]): string {
     const tdR   = `padding:4px 5px;text-align:right;font-size:10px;color:#4a5568;background:${bg};white-space:nowrap;`;
     const tdL   = `padding:4px 5px;text-align:left;font-size:10px;color:#2d3748;font-weight:600;background:${bg};white-space:nowrap;`;
     const tdSum = `padding:4px 5px;text-align:right;font-size:10px;font-weight:700;color:#2d3748;background:${bg};white-space:nowrap;`;
-
     const cells = activeIdxs.map(idx => {
-      const mo = monthCols[idx];
-      const v  = d.months?.[mo] ?? 0;
+      const v = d.months?.[monthCols[idx]] ?? 0;
       return `<td style="${tdR}">${fmtMAN_d(v)}</td>`;
     }).join('');
-
     const yearTotal = Object.values(d.months || {}).reduce((s: number, v: any) => s + (Number(v) || 0), 0) as number;
     return `<tr style="border-bottom:1px solid #edf2f7;">
       <td style="${tdL}">${d.year}</td>${cells}
       <td style="${tdSum}">${fmtMAN_d(yearTotal)}</td>
     </tr>`;
   }).join('');
+
+  // 예상배당 행
+  const expRow = (hasEst && expTotal > 0) ? (() => {
+    const tdExpL = 'padding:4px 5px;text-align:left;font-size:10px;font-weight:700;color:#805ad5;background:#faf5ff;white-space:nowrap;';
+    const cells  = activeIdxs.map(idx => {
+      const mo  = monthCols[idx];
+      const v   = expMonths[mo] ?? 0;
+      const isAct = !!(thisYrDiv?.months?.[mo]);
+      const style = isAct
+        ? 'padding:4px 5px;text-align:right;font-size:10px;font-weight:600;color:#553c9a;background:#faf5ff;white-space:nowrap;'
+        : 'padding:4px 5px;text-align:right;font-size:10px;color:#b794f4;font-style:italic;background:#faf5ff;white-space:nowrap;';
+      return `<td style="${style}">${v > 0 ? fmtMAN_d(v) : '-'}</td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid #e9d8fd;">
+      <td style="${tdExpL}">예상 (${thisYear})<div style="font-size:9px;font-weight:400;color:#b794f4;">주당월배당×현재수량</div></td>
+      ${cells}
+      <td style="padding:4px 5px;text-align:right;font-size:10px;font-weight:700;color:#805ad5;background:#faf5ff;white-space:nowrap;">${fmtMAN_d(expTotal)}</td>
+    </tr>`;
+  })() : '';
 
   // 월별 합계 행
   const monthSums = monthCols.map(mo =>
@@ -334,6 +387,7 @@ function buildDivTable(dividends: any[]): string {
       </thead>
       <tbody>
         ${dataRows}
+        ${expRow}
         <tr><td style="${tdTotL}">합계</td>${sumCells}<td style="${tdTotR}">${fmtMAN_d(grandTotal)}</td></tr>
       </tbody>
     </table>`;
@@ -365,12 +419,14 @@ function buildSectionContent(accountOwner: string, data: any): string {
   const mtd    = s.mtd;
   const daily  = s.daily;
 
+  const tickerMonthlyDivKRW = data.tickerMonthlyDivKRW || {};
+
   const basePnl        = data.basePnl ?? 0;
   const returnChartUrl = buildReturnChartUrl(monthly, indices);
   const pnlBarUrl      = buildPnlBarChartUrl(monthly, basePnl);
   const pnlTableHtml   = buildPnlTable(monthly, basePnl);
   const divChartUrl    = buildDivChartUrl(dividends);
-  const divTableHtml   = buildDivTable(dividends);
+  const divTableHtml   = buildDivTable(dividends, tickerMonthlyDivKRW, stocks);
 
   const chartImg = (url: string) =>
     `<img src="${url}" width="580" style="display:block;margin:0 auto;max-width:100%;border-radius:6px;" alt="chart">`;
