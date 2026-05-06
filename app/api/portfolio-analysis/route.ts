@@ -16,6 +16,44 @@ function toYahooTicker(ticker: string, currency: string): string {
   return ticker;
 }
 
+// ── YTD/MTD 기준가 조회 (1d interval) — stock-info 팝업과 동일한 기준 ──────
+// YTD: 당해년 1월 1일 이후 첫 거래일 종가
+// MTD: 이번 달 1일 이후 첫 거래일 종가
+async function fetchPeriodStartPrices(
+  ticker: string
+): Promise<{ ytd: number; mtd: number }> {
+  const now  = new Date();
+  const ytdStartTs = new Date(now.getFullYear(), 0, 1).getTime() / 1000;
+  const mtdStartTs = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+  const fetchStart = Math.floor(ytdStartTs) - 5 * 86400; // 5일 여유
+  const fetchEnd   = Math.floor(Date.now() / 1000) + 86400;
+  const encoded    = encodeURIComponent(ticker);
+
+  for (const host of ['query2', 'query1']) {
+    try {
+      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encoded}?interval=1d&period1=${fetchStart}&period2=${fetchEnd}`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com' },
+      });
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if (!result) continue;
+      const timestamps: number[] = result.timestamp || [];
+      const closes: number[]     = result.indicators?.quote?.[0]?.close || [];
+
+      let ytd = 0, mtd = 0;
+      for (let i = 0; i < timestamps.length; i++) {
+        const c = Number(closes[i]);
+        if (!c) continue;
+        if (!ytd && timestamps[i] >= ytdStartTs) ytd = c;
+        if (!mtd && timestamps[i] >= mtdStartTs) mtd = c;
+      }
+      return { ytd, mtd };
+    } catch (_e) { /* try next host */ }
+  }
+  return { ytd: 0, mtd: 0 };
+}
+
 // ── 월별 종가 조회 (Yahoo Finance 1mo interval) ──────────────────────────
 async function fetchMonthlyCloses(
   ticker: string, months = 15
@@ -363,6 +401,16 @@ export async function POST(req: NextRequest) {
       heldTickers.map(tk => getMonthlyDivPerShare(tk).catch(() => ({} as Record<string, number>)))
     );
 
+    // ── YTD/MTD 기준가 조회 시작 (병렬 실행) — stock-info 팝업과 동일 기준 ──
+    const periodStartPromise = Promise.allSettled(
+      heldTickers.map(tk => {
+        if (isKoreanBondISIN(tk)) return Promise.resolve({ ytd: 0, mtd: 0 });
+        const region   = currentState.positions[tk]?.region || '';
+        const currency = currencyMap[region] || 'KRW';
+        return fetchPeriodStartPrices(toYahooTicker(tk, currency)).catch(() => ({ ytd: 0, mtd: 0 }));
+      })
+    );
+
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
     const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates] = await Promise.all([
       // 종목 월별 역사적 종가: allHistoryTickers (현재 보유 + 과거 보유 매도 종목 포함)
@@ -551,20 +599,24 @@ export async function POST(req: NextRequest) {
     };
 
     // ── 종목별 연간/월간 수익률 ──────────────────────────────────
+    // YTD/MTD 기준가: 일봉 기준 (stock-info 팝업과 동일), 실패 시 월봉 폴백
+    const periodStartResults = await periodStartPromise;
     const prevYearDec = `${now.getFullYear() - 1}-12`;
     const prevMonth   = now.getMonth() === 0
       ? `${now.getFullYear() - 1}-12`
       : `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
 
-    const stocks = heldTickers.map(t => {
+    const stocks = heldTickers.map((t, idx) => {
       const p = currentState.positions[t];
       if (p.qty < 0.0001) return null;
       const pm = priceMap[t] || {};
       const cp = currentPrice[t] || 0;
       const rate = resolveRate(p.region);
       const mktVal = cp * p.qty * rate;
-      const ysp  = pm[prevYearDec]  || pm[`${now.getFullYear()}-01`] || 0;
-      const mpsp = pm[prevMonth] || 0;
+      // 일봉 기준가 우선, 없으면 월봉 폴백
+      const ps = periodStartResults[idx]?.status === 'fulfilled' ? periodStartResults[idx].value : { ytd: 0, mtd: 0 };
+      const ysp  = ps.ytd  || pm[prevYearDec] || pm[`${now.getFullYear()}-01`] || 0;
+      const mpsp = ps.mtd  || pm[prevMonth]   || 0;
 
       // 현지 통화 기준 값
       const marketValueFX = cp * p.qty;   // 평가금액 (현지통화)
