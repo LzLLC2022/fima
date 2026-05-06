@@ -38,8 +38,10 @@ async function fetchPeriodStartPrices(
       const json = await res.json();
       const result = json?.chart?.result?.[0];
       if (!result) continue;
-      const timestamps: number[] = result.timestamp || [];
-      const closes: number[]     = result.indicators?.quote?.[0]?.close || [];
+      const timestamps: number[]       = result.timestamp || [];
+      const rawCl: (number|null)[]     = result.indicators?.quote?.[0]?.close || [];
+      const adjCl: (number|null)[]     = result.indicators?.adjclose?.[0]?.adjclose || [];
+      const closes: (number|null)[]    = rawCl.map((v: number|null, i: number) => v ?? adjCl[i] ?? null);
 
       let ytd = 0, mtd = 0;
       for (let i = 0; i < timestamps.length; i++) {

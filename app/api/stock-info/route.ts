@@ -102,10 +102,11 @@ export async function POST(req: NextRequest) {
     const meta       = chartResult.meta;
     const timestamps: number[]          = chartResult.timestamp || [];
     const q          = chartResult.indicators?.quote?.[0] || {};
-    // adjclose 폴백: 일부 한국 ETF는 q.close가 null 배열이고 adjclose에만 종가가 있음
+    // adjclose 원소별 병합: q.close[i]가 null이면 adjclose[i]로 대체
+    // (일부 한국 ETF는 최근 구간 q.close가 null이고 adjclose에만 종가가 있음)
     const adjCloses: (number|null)[] = chartResult.indicators?.adjclose?.[0]?.adjclose || [];
     const rawClose: (number|null)[]  = q.close || [];
-    const closes: (number|null)[]    = rawClose.some(v => v != null) ? rawClose : adjCloses;
+    const closes: (number|null)[]    = rawClose.map((v, i) => v ?? adjCloses[i] ?? null);
     const highs:  (number|null)[]  = q.high   || [];
     const lows:   (number|null)[]  = q.low    || [];
 
