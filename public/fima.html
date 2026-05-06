@@ -3630,8 +3630,10 @@
           var cpStr = st.currentPrice > 0
             ? fmtPrice(st.currentPrice) + ' ' + cur
             : '-';
+          var avgPrice = (st.buyCostFX > 0 && st.qty > 0) ? st.buyCostFX / st.qty : 0;
           var acStr = (st.buyCostFX > 0)
             ? fmtFX(st.buyCostFX) + ' ' + cur
+              + (avgPrice > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(avgPrice) + ' ' + cur + '</div>' : '')
             : '-';
           var mvStr = (st.marketValueFX > 0)
             ? fmtFX(st.marketValueFX) + ' ' + cur
