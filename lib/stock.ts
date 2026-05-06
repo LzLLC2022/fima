@@ -526,6 +526,26 @@ export async function getMonthlyDivPerShare(ticker: string): Promise<Record<stri
       const mo = String(new Date(t * 1000).getUTCMonth() + 1).padStart(2, '0');
       monthly[mo] = (monthly[mo] || 0) + (d.amount || 0);
     });
+
+    // 한국 분기/반기 ETF 보정:
+    // Yahoo Finance는 기준일(record date) 기준으로 배당 이벤트를 저장하지만
+    // 실제 지급월(지급일)은 기준일보다 약 +2개월 후임.
+    // 예) 6월 기준일 → 8월 지급, 12월 기준일 → 2월 지급
+    // 월 4회 이하(분기·반기) 배당 종목에 한해 +2개월 시프트 적용.
+    if (isKoreanCode(yticker.replace(/\.(KS|KQ)$/, ''))) {
+      const eventCount = Object.keys(monthly).length;
+      if (eventCount > 0 && eventCount <= 4) {
+        const shifted: Record<string, number> = {};
+        for (const [mo, amt] of Object.entries(monthly)) {
+          const moNum = parseInt(mo);
+          const newMoNum = ((moNum - 1 + 2) % 12) + 1;
+          const newMo = String(newMoNum).padStart(2, '0');
+          shifted[newMo] = (shifted[newMo] || 0) + amt;
+        }
+        return shifted;
+      }
+    }
+
     return monthly;
   };
 
