@@ -3631,11 +3631,13 @@
           };
           var annStr = st.annualReturnPct !== null
             ? '<span style="color:' + pnlCol(st.annualReturnPct) + '">' + fmtPct(st.annualReturnPct) + '</span>'
-              + (avgPrice > 0 && st.yearStartPrice > 0 ? fmtPriceDiff(avgPrice - st.yearStartPrice, cur) : '')
+              + (avgPrice > 0 && st.yearStartPrice > 0
+                ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(avgPrice) + ' − ' + fmtPrice(st.yearStartPrice) + ' ' + cur + '</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
           var monStr = st.monthlyReturnPct !== null
             ? '<span style="color:' + pnlCol(st.monthlyReturnPct) + '">' + fmtPct(st.monthlyReturnPct) + '</span>'
-              + (avgPrice > 0 && st.monthStartPrice > 0 ? fmtPriceDiff(avgPrice - st.monthStartPrice, cur) : '')
+              + (avgPrice > 0 && st.monthStartPrice > 0
+                ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(avgPrice) + ' − ' + fmtPrice(st.monthStartPrice) + ' ' + cur + '</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
           var pnlStr = (st.pnlPct !== null && st.pnlPct !== undefined)
             ? '<span style="color:' + pnlCol(st.pnlPct) + ';font-weight:700;">' + fmtPct(st.pnlPct) + '</span>'
