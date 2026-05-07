@@ -149,6 +149,17 @@
       pointer-events: none; letter-spacing: 0.5px;
     }
 
+    /* 세금 KRW 토글 버튼 */
+    .tax-krw-btn {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      color: #805ad5; background: #faf5ff;
+      border: 1.5px solid #d6bcfa; border-radius: 5px;
+      padding: 3px 9px; cursor: pointer; margin-top: 4px;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .tax-krw-btn:hover { background: #e9d8fd; }
+    .tax-krw-btn.active { background: #805ad5; color: white; border-color: #805ad5; }
+
     /* 환율 안내 */
     .currency-hint { font-size: 0.75rem; color: #718096; margin-top: 3px; }
 
@@ -1111,7 +1122,11 @@
                        oninput="fmtNum(this); updateKrwConversion()" />
                 <span class="currency-badge" id="taxCurrency">-</span>
               </div>
+              <button type="button" id="taxKrwToggleBtn" class="tax-krw-btn hidden"
+                      onclick="toggleTaxCurrency()">💱 세금 KRW로 입력</button>
               <span class="krw-display hidden" id="taxKrw"></span>
+              <span class="krw-display hidden" id="taxUsdNote"
+                    style="color:#805ad5;background:#faf5ff;border-color:#d6bcfa;"></span>
             </div>
 
             <div class="field" id="chargeField">
@@ -1593,12 +1608,10 @@
       <div class="edit-field"><label>Quantity</label><input type="number" step="any" id="ef_quantity"></div>
       <div class="edit-field"><label>Dividend</label><input type="number" step="any" id="ef_dividend"></div>
       <div class="edit-field">
-        <label>Tax
-          <button type="button" id="ef_taxKrwBtn" class="tax-krw-btn hidden"
-                  onclick="toggleEditTaxKrw()" style="margin-left:6px;position:static;"
-                  title="클릭: 세금을 KRW로 직접 입력">KRW</button>
-        </label>
+        <label>Tax</label>
         <input type="number" step="any" id="ef_tax" placeholder="0" oninput="efUpdateTaxNote()">
+        <button type="button" id="ef_taxKrwBtn" class="tax-krw-btn hidden"
+                onclick="toggleEditTaxKrw()">💱 세금 KRW로 입력</button>
         <span id="ef_taxNote" style="font-size:0.75rem;color:#805ad5;display:none;margin-top:2px;"></span>
       </div>
       <div class="edit-field"><label>Charge</label><input type="number" step="any" id="ef_charge"></div>
@@ -1658,6 +1671,7 @@
   let _purchaseFX     = 0;
   let pendingFormData = null;
   let pendingFgnBuy   = false;
+  var taxIsKRW        = false;   // Tax 필드 KRW 직접입력 모드
   var lastQueryResult = { headers: [], data: [], rowIndices: [] };
   var editingSheetRow = null;
   var editTaxIsKRW    = false;  // 수정 모달 Tax KRW 직접입력 모드
