@@ -1592,7 +1592,15 @@
       <div class="edit-field"><label>Currency (환율)</label><input type="number" step="any" id="ef_currency"></div>
       <div class="edit-field"><label>Quantity</label><input type="number" step="any" id="ef_quantity"></div>
       <div class="edit-field"><label>Dividend</label><input type="number" step="any" id="ef_dividend"></div>
-      <div class="edit-field"><label>Tax</label><input type="number" step="any" id="ef_tax"></div>
+      <div class="edit-field">
+        <label>Tax
+          <button type="button" id="ef_taxKrwBtn" class="tax-krw-btn hidden"
+                  onclick="toggleEditTaxKrw()" style="margin-left:6px;position:static;"
+                  title="클릭: 세금을 KRW로 직접 입력">KRW</button>
+        </label>
+        <input type="number" step="any" id="ef_tax" placeholder="0" oninput="efUpdateTaxNote()">
+        <span id="ef_taxNote" style="font-size:0.75rem;color:#805ad5;display:none;margin-top:2px;"></span>
+      </div>
       <div class="edit-field"><label>Charge</label><input type="number" step="any" id="ef_charge"></div>
       <div class="edit-field"><label>Purchase</label><input type="number" step="any" id="ef_purchase"></div>
       <div class="edit-field"><label>Purchase Currency</label><input type="number" step="any" id="ef_purchaseCurrency"></div>
@@ -1652,6 +1660,7 @@
   let pendingFgnBuy   = false;
   var lastQueryResult = { headers: [], data: [], rowIndices: [] };
   var editingSheetRow = null;
+  var editTaxIsKRW    = false;  // 수정 모달 Tax KRW 직접입력 모드
 
   // ---- 초기화 ----
   window.addEventListener('DOMContentLoaded', () => {
@@ -3315,6 +3324,56 @@
     'Comment': 'comment',
   };
 
+  // ---- 수정 모달 Tax KRW 토글 ----
+  function toggleEditTaxKrw() {
+    editTaxIsKRW = !editTaxIsKRW;
+    var btn    = document.getElementById('ef_taxKrwBtn');
+    var taxEl  = document.getElementById('ef_tax');
+    var noteEl = document.getElementById('ef_taxNote');
+    var curEl  = document.getElementById('ef_currency');
+    var rate   = parseFloat(curEl.value) || 0;
+
+    if (editTaxIsKRW) {
+      // USD → KRW 변환해서 미리 채워줌
+      var usdVal = parseFloat(taxEl.value) || 0;
+      taxEl.value = usdVal > 0 && rate > 0 ? Math.round(usdVal * rate) : '';
+      taxEl.placeholder = '세금 KRW 직접 입력';
+      taxEl.step = '1';
+      btn.classList.add('active');
+      btn.title = '클릭: 원래 통화로 전환';
+      efUpdateTaxNote();
+    } else {
+      // KRW → USD 역산
+      var krwVal = parseFloat(taxEl.value) || 0;
+      taxEl.value = krwVal > 0 && rate > 0
+        ? Math.round(krwVal / rate * 100000) / 100000 : '';
+      taxEl.placeholder = '0';
+      taxEl.step = 'any';
+      btn.classList.remove('active');
+      btn.title = '클릭: 세금을 KRW로 직접 입력';
+      noteEl.style.display = 'none';
+      noteEl.textContent = '';
+    }
+  }
+
+  function efUpdateTaxNote() {
+    if (!editTaxIsKRW) return;
+    var taxEl  = document.getElementById('ef_tax');
+    var curEl  = document.getElementById('ef_currency');
+    var noteEl = document.getElementById('ef_taxNote');
+    var krwVal = parseFloat(taxEl.value) || 0;
+    var rate   = parseFloat(curEl.value) || 0;
+    if (krwVal > 0 && rate > 0) {
+      var regEl = document.getElementById('ef_region');
+      var regVal = (regEl ? regEl.value : '').trim();
+      var curLabel = regVal ? regVal.replace(/.*\(/, '').replace(/\).*/, '') : 'USD';
+      noteEl.textContent = '≈ ' + Math.round(krwVal / rate * 100000) / 100000 + ' ' + curLabel + ' (저장값)';
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+    }
+  }
+
   function openEditModal(sheetRow, rowIdx) {
     editingSheetRow = sheetRow;
     var headers = lastQueryResult.headers;
@@ -3343,12 +3402,28 @@
       el.value = val;
     });
 
+    // Tax KRW 토글 초기화
+    editTaxIsKRW = false;
+    var efBtn  = document.getElementById('ef_taxKrwBtn');
+    var efNote = document.getElementById('ef_taxNote');
+    efBtn.classList.remove('active');
+    efBtn.title = '클릭: 세금을 KRW로 직접 입력';
+    efNote.style.display = 'none';
+    efNote.textContent = '';
+    // 해외 거래(KRW 아닌 Region)일 때만 버튼 표시
+    var regVal = (document.getElementById('ef_region').value || '').trim().toLowerCase();
+    var isKrwRegion = (regVal === 'korea' || regVal === 'kr' || regVal === '');
+    efBtn.classList.toggle('hidden', isKrwRegion);
+
     document.getElementById('editSaveBtn').disabled = false;
     document.getElementById('editModal').classList.remove('hidden');
   }
 
   function closeEditModal() {
     editingSheetRow = null;
+    editTaxIsKRW    = false;
+    document.getElementById('ef_taxKrwBtn').classList.remove('active');
+    document.getElementById('ef_taxNote').style.display = 'none';
     document.getElementById('editModal').classList.add('hidden');
   }
 
@@ -3373,6 +3448,14 @@
       var el = document.getElementById('ef_' + fieldId);
       fields[fieldId] = el ? el.value : '';
     });
+    // Tax KRW 모드: KRW → 거래통화 역산
+    if (editTaxIsKRW) {
+      var krwTax = parseFloat(fields.tax) || 0;
+      var rate   = parseFloat(fields.currency) || 0;
+      fields.tax = (krwTax > 0 && rate > 0)
+        ? String(Math.round(krwTax / rate * 100000) / 100000)
+        : '0';
+    }
 
     try {
       var res = await fetch('/api/update-transaction', {
