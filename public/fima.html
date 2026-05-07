@@ -2146,6 +2146,20 @@
     ['priceCurrency','taxCurrency','chargeCurrency','divCurrency'].forEach(id => {
       document.getElementById(id).textContent = label;
     });
+    // Tax KRW 토글 리셋
+    taxIsKRW = false;
+    document.getElementById('taxKrwToggleBtn').classList.remove('active');
+    document.getElementById('taxKrwToggleBtn').title = '클릭: 세금을 KRW로 직접 입력';
+    document.getElementById('taxCurrency').classList.remove('hidden');
+    document.getElementById('tax').placeholder = '0';
+    document.getElementById('taxUsdNote').classList.add('hidden');
+    document.getElementById('taxUsdNote').textContent = '';
+    // 해외 거래만 KRW 토글 버튼 노출
+    if (!isKorea && region) {
+      document.getElementById('taxKrwToggleBtn').classList.remove('hidden');
+    } else {
+      document.getElementById('taxKrwToggleBtn').classList.add('hidden');
+    }
 
     if (isKorea || !region) {
       ['priceKrw','taxKrw','chargeKrw'].forEach(id => {
@@ -2189,6 +2203,30 @@
   }
 
   // ---- KRW \uD658\uC0B0 ----
+  // ---- Tax 통화 토글 (외화 거래시 KRW 직접입력 모드) ----
+  function toggleTaxCurrency() {
+    taxIsKRW = !taxIsKRW;
+    document.getElementById('tax').value = '';
+    var btn      = document.getElementById('taxKrwToggleBtn');
+    var badge    = document.getElementById('taxCurrency');
+    var noteEl   = document.getElementById('taxUsdNote');
+    var taxInput = document.getElementById('tax');
+    if (taxIsKRW) {
+      badge.classList.add('hidden');
+      btn.classList.add('active');
+      btn.title            = '클릭: 원래 통화로 전환';
+      taxInput.placeholder = '세금 KRW 직접 입력';
+    } else {
+      badge.classList.remove('hidden');
+      btn.classList.remove('active');
+      btn.title            = '클릭: 세금을 KRW로 직접 입력';
+      taxInput.placeholder = '0';
+      noteEl.classList.add('hidden');
+      noteEl.textContent = '';
+    }
+    updateKrwConversion();
+  }
+
   function updateKrwConversion() {
     const rate   = parseNum('currency');
     const price  = parseNum('price');
@@ -2214,7 +2252,22 @@
     const dividend = parseNum('dividend');
     setKrw('priceKrw',  price);
     setKrw('divKrw',    dividend);
-    setKrw('taxKrw',    tax);
+    // Tax: KRW 직접입력 모드 분기
+    if (taxIsKRW) {
+      document.getElementById('taxKrw').classList.add('hidden');
+      const noteEl = document.getElementById('taxUsdNote');
+      if (tax > 0 && rate > 0) {
+        const _reg = document.getElementById('region').value;
+        const _cur = regionMap[_reg] || 'USD';
+        noteEl.textContent = '≈ ' + (tax / rate).toFixed(4) + ' ' + _cur + ' (저장값)';
+        noteEl.classList.remove('hidden');
+      } else {
+        noteEl.classList.add('hidden');
+        noteEl.textContent = '';
+      }
+    } else {
+      setKrw('taxKrw', tax);
+    }
     setKrw('chargeKrw', charge);
   }
 
@@ -2494,7 +2547,13 @@
       quantity:     parseNum('quantity'),
       trade:            document.getElementById('trade').value,
       dividend:         parseNum('dividend'),
-      tax:              parseNum('tax'),
+      tax:              (function() {
+                          var rawTax = parseNum('tax');
+                          if (!taxIsKRW) return rawTax;
+                          var r = parseNum('currency');
+                          return r > 0 ? Math.round(rawTax / r * 100000) / 100000 : 0;
+                        })(),
+      taxDisplayKRW:    taxIsKRW ? parseNum('tax') : 0,
       charge:           parseNum('charge'),
       purchase:         _purchaseKRW || '',          // KRW \uAE30\uC900 \uCE90\uC2DC\uAC12 \uC0AC\uC6A9
       purchaseCurrency: parseFloat(
@@ -2661,21 +2720,23 @@
         <div class="pv-result-total"><span>= \uCD1D\uCD9C\uAE08\uC561</span><span>${fmtK(total)} KRW</span></div>
       </div>`;
     } else if (isDividend) {
-      const divKRW = toKRW(fd.dividend || fd.price || 0);
-      const taxKRW = toKRW(fd.tax || 0);
-      const net    = Math.floor(divKRW) - Math.floor(taxKRW);
+      const divKRW   = toKRW(fd.dividend || fd.price || 0);
+      const taxKRW   = fd.taxDisplayKRW > 0 ? fd.taxDisplayKRW : toKRW(fd.tax || 0);
+      const net      = Math.floor(divKRW) - Math.floor(taxKRW);
+      const taxLabel = fd.taxDisplayKRW > 0 ? '- Tax (KRW \uC9C1\uC811\uC785\uB825)' : '- Tax';
       resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uBC30\uB2F9\uAE08</div><div class="pv-result-rows">
         <div class="pv-result-row"><span>\uBC30\uB2F9\uAE08</span><span>${fmtK(divKRW)} KRW</span></div>
-        ${fd.tax ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        ${(fd.tax || fd.taxDisplayKRW) ? `<div class="pv-result-row"><span>${taxLabel}</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
         <div class="pv-result-total"><span>= \uC21C\uBC30\uB2F9\uAE08</span><span>${fmtK(net)} KRW</span></div>
       </div>`;
     } else if (isDivStock) {
-      const divKRW = toKRW(fd.dividend || 0);
-      const taxKRW = toKRW(fd.tax || 0);
-      const net    = Math.floor(divKRW) - Math.floor(taxKRW);
+      const divKRW   = toKRW(fd.dividend || 0);
+      const taxKRW   = fd.taxDisplayKRW > 0 ? fd.taxDisplayKRW : toKRW(fd.tax || 0);
+      const net      = Math.floor(divKRW) - Math.floor(taxKRW);
+      const taxLabel = fd.taxDisplayKRW > 0 ? '- Tax (KRW \uC9C1\uC811\uC785\uB825)' : '- Tax';
       resHtml = `<div class="pv-result-title">\uD83D\uDCCB \uC21C\uBC30\uB2F9\uAE08 (\uC8FC\uC2DD \uC7AC\uCDE8\uB4DD)</div><div class="pv-result-rows">
         <div class="pv-result-row"><span>\uBC30\uB2F9\uAE08</span><span>${fmtK(divKRW)} KRW</span></div>
-        ${fd.tax ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
+        ${(fd.tax || fd.taxDisplayKRW) ? `<div class="pv-result-row"><span>${taxLabel}</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
         <div class="pv-result-total"><span>= \uC21C\uBC30\uB2F9\uAE08</span><span>${fmtK(net)} KRW</span></div>
         <div class="pv-result-row" style="margin-top:4px;color:#718096;font-size:0.8em;"><span>\uC7AC\uCDE8\uB4DD \uC8FC\uC2DD\uC218</span><span>+${fmtN(fd.quantity)} \uC8FC</span></div>
       </div>`;
@@ -2770,6 +2831,14 @@
     document.getElementById('purchaseNote').textContent   = '';
     _purchaseKRW = 0;
     _purchaseFX  = 0;
+    // Tax KRW \uBAA8\uB4DC \uB9AC\uC14B
+    taxIsKRW = false;
+    document.getElementById('taxKrwToggleBtn').classList.add('hidden');
+    document.getElementById('taxKrwToggleBtn').classList.remove('active');
+    document.getElementById('taxCurrency').classList.remove('hidden');
+    document.getElementById('tax').placeholder = '0';
+    document.getElementById('taxUsdNote').classList.add('hidden');
+    document.getElementById('taxUsdNote').textContent = '';
     // \uD658\uC804 \uC139\uC158 \uCD08\uAE30\uD654
     document.getElementById('exchangeSection').classList.add('hidden');
     document.getElementById('exchangePreview').classList.add('hidden');
@@ -2789,6 +2858,13 @@
     document.getElementById('purchaseNote').textContent = '';
     _purchaseKRW = 0;
     _purchaseFX  = 0;
+    // Tax KRW 모드 리셋
+    taxIsKRW = false;
+    document.getElementById('taxKrwToggleBtn').classList.remove('active');
+    document.getElementById('taxCurrency').classList.remove('hidden');
+    document.getElementById('tax').placeholder = '0';
+    document.getElementById('taxUsdNote').classList.add('hidden');
+    document.getElementById('taxUsdNote').textContent = '';
     ['priceKrw','divKrw','taxKrw','chargeKrw'].forEach(id => {
       document.getElementById(id).classList.add('hidden');
       document.getElementById(id).textContent = '';
