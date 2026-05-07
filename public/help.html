@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FiMa-Inv 도움말</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    /* ── 헤더 ── */
+    .header {
+      background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%);
+      padding: 28px 32px 24px;
+      color: white;
+    }
+    .header-inner { max-width: 900px; margin: 0 auto; }
+    .header h1 { font-size: 1.7rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .header p  { font-size: 0.95rem; color: #90cdf4; margin-top: 6px; }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: #90cdf4; font-size: 0.85rem; text-decoration: none;
+      margin-bottom: 14px; transition: color 0.15s;
+    }
+    .back-link:hover { color: white; }
+
+    /* ── 사이드바 + 본문 레이아웃 ── */
+    .layout { max-width: 900px; margin: 32px auto 60px; padding: 0 20px; display: flex; gap: 28px; align-items: flex-start; }
+
+    /* 사이드바 */
+    .sidebar {
+      width: 200px; flex-shrink: 0;
+      background: white; border-radius: 12px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      padding: 16px 0; position: sticky; top: 24px;
+    }
+    .sidebar-title { font-size: 0.72rem; font-weight: 700; color: #a0aec0; letter-spacing: .8px; padding: 0 16px 8px; text-transform: uppercase; }
+    .sidebar a {
+      display: block; padding: 8px 16px;
+      font-size: 0.85rem; color: #4a5568; text-decoration: none;
+      border-left: 3px solid transparent; transition: all .15s;
+    }
+    .sidebar a:hover { background: #ebf8ff; color: #2b6cb0; border-left-color: #2b6cb0; }
+    .sidebar a.active { background: #ebf8ff; color: #2b6cb0; border-left-color: #2b6cb0; font-weight: 700; }
+    .sidebar-divider { border: none; border-top: 1px solid #e2e8f0; margin: 8px 0; }
+
+    /* 본문 */
+    .content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+
+    /* 섹션 카드 */
+    .section {
+      background: white; border-radius: 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .section-header {
+      padding: 18px 24px 14px;
+      border-bottom: 1px solid #edf2f7;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-icon { font-size: 1.4rem; }
+    .section-header h2 { font-size: 1.1rem; font-weight: 700; color: #1a365d; }
+    .section-header .badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; margin-left: 4px;
+    }
+    .badge-view    { background: #ebf8ff; color: #2b6cb0; }
+    .badge-manage  { background: #f0fff4; color: #276749; }
+    .section-body  { padding: 20px 24px; }
+
+    /* 서브섹션 */
+    .sub { margin-top: 20px; }
+    .sub:first-child { margin-top: 0; }
+    .sub-title {
+      font-size: 0.92rem; font-weight: 700; color: #2d3748;
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+
+    /* 설명 텍스트 */
+    p { font-size: 0.88rem; line-height: 1.75; color: #4a5568; }
+    p + p { margin-top: 8px; }
+
+    /* 인포 리스트 */
+    .info-list { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+    .info-list li {
+      display: flex; gap: 10px; align-items: flex-start;
+      font-size: 0.87rem; color: #4a5568; line-height: 1.6;
+    }
+    .info-list li .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #3182ce; flex-shrink: 0; margin-top: 7px;
+    }
+
+    /* 필드 테이블 */
+    .field-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.84rem; }
+    .field-table th {
+      text-align: left; padding: 7px 10px;
+      background: #edf2f7; color: #4a5568; font-weight: 700;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .field-table th:first-child { border-radius: 6px 0 0 0; }
+    .field-table th:last-child  { border-radius: 0 6px 0 0; }
+    .field-table td { padding: 7px 10px; border-bottom: 1px solid #f0f4f8; color: #4a5568; vertical-align: top; }
+    .field-table tr:last-child td { border-bottom: none; }
+    .field-table tr:hover td { background: #f7fafc; }
+    .req { color: #e53e3e; font-weight: 700; margin-left: 2px; }
+    .opt { color: #a0aec0; font-size: 0.78rem; }
+
+    /* 팁 박스 */
+    .tip {
+      background: #fffaf0; border: 1px solid #fbd38d;
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 0.84rem; color: #744210; margin-top: 14px;
+      display: flex; gap: 8px; align-items: flex-start; line-height: 1.65;
+    }
+    .tip-icon { flex-shrink: 0; font-size: 1rem; margin-top: 1px; }
+
+    .note {
+      background: #ebf8ff; border: 1px solid #bee3f8;
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 0.84rem; color: #2c5282; margin-top: 14px;
+      display: flex; gap: 8px; align-items: flex-start; line-height: 1.65;
+    }
+    .note-icon { flex-shrink: 0; }
+
+    /* 트레이드 타입 칩 */
+    .trade-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .trade-chip {
+      padding: 6px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;
+    }
+    .chip-buy    { background: #ebf8ff; color: #2b6cb0; }
+    .chip-sell   { background: #fff5f5; color: #c53030; }
+    .chip-div    { background: #f0fff4; color: #276749; }
+    .chip-dep    { background: #faf5ff; color: #553c9a; }
+    .chip-other  { background: #f7fafc; color: #4a5568; }
+
+    /* 스크린샷 대체 박스 */
+    .screen-mock {
+      background: #f7fafc; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; padding: 14px 18px; margin-top: 12px;
+      font-size: 0.82rem; color: #718096;
+    }
+    .screen-mock strong { color: #2d3748; }
+
+    /* 반응형 */
+    @media (max-width: 680px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; position: static; }
+      .sidebar a { display: inline-block; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-inner">
+    <a href="/fima.html" class="back-link">← FiMa-Inv 앱으로 돌아가기</a>
+    <h1>📖 FiMa-Inv 도움말</h1>
+    <p>Financial Management Inventory · 투자 포트폴리오 관리 앱</p>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- 사이드바 -->
+  <nav class="sidebar">
+    <div class="sidebar-title">목차</div>
+    <a href="#login">🔐 로그인</a>
+    <a href="#overview">📊 조회 &gt; 현황</a>
+    <a href="#query">🔍 조회 &gt; 거래 조회</a>
+    <a href="#portfolio">📈 조회 &gt; 리포트</a>
+    <a href="#rebalance">⚖️ 조회 &gt; 리밸런싱</a>
+    <a href="#watchlist">👀 조회 &gt; 관심종목</a>
+    <hr class="sidebar-divider">
+    <a href="#input">✏️ 입력관리 &gt; 거래 입력</a>
+    <hr class="sidebar-divider">
+    <a href="#stockpopup">🪟 종목 정보 팝업</a>
+    <a href="#settings">⚙️ 정보변경</a>
+  </nav>
+
+  <!-- 본문 -->
+  <div class="content">
+
+    <!-- 로그인 -->
+    <div class="section" id="login">
+      <div class="section-header">
+        <span class="section-icon">🔐</span>
+        <h2>로그인 화면</h2>
+      </div>
+      <div class="section-body">
+        <p>앱 접속 시 가장 먼저 표시되는 화면입니다. Account Owner(이름)와 PIN을 입력하여 입장합니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">✏️ 입력 항목</div>
+          <table class="field-table">
+            <tr><th>항목</th><th>설명</th></tr>
+            <tr><td><b>Account Owner</b></td><td>등록된 이름을 입력합니다 (예: Lz, Eric). 대소문자 구분.</td></tr>
+            <tr><td><b>PIN</b></td><td>설정한 PIN 번호. PIN 없이 등록된 경우 빈칸으로 입력.</td></tr>
+          </table>
+        </div>
+
+        <div class="tip">
+          <span class="tip-icon">💡</span>
+          <span><b>샘플 보기</b> 버튼을 누르면 PIN 없이 샘플 데이터로 앱을 둘러볼 수 있습니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 현황 -->
+    <div class="section" id="overview">
+      <div class="section-header">
+        <span class="section-icon">📊</span>
+        <h2>조회 &gt; 현황 <span class="badge badge-view">조회 탭</span></h2>
+      </div>
+      <div class="section-body">
+        <p>보유 자산의 현재 상태를 한눈에 확인하는 메인 화면입니다. 상단 <b>새로고침</b> 버튼을 누르면 최신 시세를 반영한 평가액을 조회합니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">🔎 조회 조건</div>
+          <ul class="info-list">
+            <li><span class="dot"></span><b>Account Owner</b> — 복수의 계좌 소유자가 있을 때 특정 소유자만 필터링합니다.</li>
+            <li><span class="dot"></span><b>Account</b> — 일반, 연금, IRP 등 계좌 유형별로 필터링합니다.</li>
+          </ul>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">💰 현금 / 입출금 현황</div>
+          <p>계좌별 순투자액(입금 − 출금)과 현금 잔액을 표시합니다.</p>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📋 Stock(ETF) 현황 테이블</div>
+          <table class="field-table">
+            <tr><th>컬럼</th><th>설명</th></tr>
+            <tr><td><b>종목명 / 티커</b></td><td>클릭하면 <a href="#stockpopup">종목 정보 팝업</a>이 열립니다.</td></tr>
+            <tr><td><b>매입단가</b></td><td>평균 매입단가. 두 번째 줄: 매입단가 기준 연배당률.</td></tr>
+            <tr><td><b>현재가</b></td><td>Yahoo Finance 실시간 시세. 두 번째 줄: 현재가 기준 연배당률.</td></tr>
+            <tr><td><b>수량</b></td><td>현재 보유 수량.</td></tr>
+            <tr><td><b>매입금액</b></td><td>총 매입금액 (KRW 환산).</td></tr>
+            <tr><td><b>평가금액</b></td><td>현재가 × 수량 (KRW 환산).</td></tr>
+            <tr><td><b>손익 / 수익률</b></td><td>평가금액 − 매입금액 및 수익률(%).</td></tr>
+            <tr><td><b>누적배당금</b></td><td>해당 종목의 수령한 배당금 합계 (KRW).</td></tr>
+          </table>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">🏦 Bond(채권) 현황 테이블</div>
+          <p>채권 종목은 표면이율·만기일 기준으로 만기수령액, 만기손익, 만기수익률을 추가로 표시합니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 거래 조회 -->
+    <div class="section" id="query">
+      <div class="section-header">
+        <span class="section-icon">🔍</span>
+        <h2>조회 &gt; 거래 조회 <span class="badge badge-view">조회 탭</span></h2>
+      </div>
+      <div class="section-body">
+        <p>Google Sheets Ledger에 기록된 거래 내역을 조회·수정·삭제하는 화면입니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">🔎 조회 조건</div>
+          <ul class="info-list">
+            <li><span class="dot"></span><b>기간</b> — 시작일 / 종료일로 범위 지정.</li>
+            <li><span class="dot"></span><b>Account</b> — 계좌 유형 필터.</li>
+            <li><span class="dot"></span><b>Ticker</b> — 특정 종목코드로 검색.</li>
+            <li><span class="dot"></span><b>Trade</b> — Buy / Sell / Dividend 등 거래 유형 필터.</li>
+          </ul>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">✏️ 수정 / 🗑 삭제</div>
+          <p>조회 결과 각 행의 <b>수정</b> 버튼을 누르면 수정 모달이 열립니다. 모든 필드를 직접 편집할 수 있으며, 해외 거래의 경우 Tax 필드 아래에 <b>💱 세금 KRW로 입력</b> 버튼이 표시되어 KRW로 출금된 세금을 직접 입력할 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 리포트 -->
+    <div class="section" id="portfolio">
+      <div class="section-header">
+        <span class="section-icon">📈</span>
+        <h2>조회 &gt; 리포트 <span class="badge badge-view">조회 탭</span></h2>
+      </div>
+      <div class="section-body">
+        <p>포트폴리오 성과를 다양한 차트와 테이블로 분석하는 화면입니다. Account Owner별로 확인할 수 있습니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">🗂 포트폴리오 요약 카드</div>
+          <ul class="info-list">
+            <li><span class="dot"></span><b>순 투자액</b> — 입금액 − 출금액 합계.</li>
+            <li><span class="dot"></span><b>평가액</b> — 현재 보유 자산 시장가치 합계 (KRW).</li>
+            <li><span class="dot"></span><b>평가 손익 / 수익률</b> — 평가액 − 순투자액.</li>
+          </ul>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📅 기간별 손익 (YTD / MTD / Daily)</div>
+          <ul class="info-list">
+            <li><span class="dot"></span><b>YTD</b> — 연초(1월 1일) 이후 손익.</li>
+            <li><span class="dot"></span><b>MTD</b> — 월초(1일) 이후 손익.</li>
+            <li><span class="dot"></span><b>Daily</b> — 전일 종가 대비 손익.</li>
+          </ul>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📉 월별 누적 수익률 비교 차트</div>
+          <p>포트폴리오와 KOSPI·S&P500·NASDAQ을 분석 시작 첫 월 기준 누적 등락률로 비교합니다. 우상단 버튼으로 각 라인을 표시/숨김 토글할 수 있습니다.</p>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">💰 월별 수익금액 차트</div>
+          <p>매월 손익 변동금액(만원 단위)을 바 차트로 표시합니다. 파란색: 수익, 빨간색: 손실.</p>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">🎁 월별 배당금 현황</div>
+          <p>연도별·월별 수령 배당금을 표시합니다. 올해 미수령 달은 <b>예상 배당 행</b>에 Yahoo Finance 주당월배당 × 현재수량으로 예측값(보라색 이탤릭)을 표시합니다.</p>
+          <div class="note">
+            <span class="note-icon">ℹ️</span>
+            <span>한국 ETF의 경우 Yahoo Finance에 기준일(record date) 기준으로 배당 데이터가 저장되어 있어, 실제 지급월(기준일 +2개월)로 자동 보정됩니다.</span>
+          </div>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📋 보유 종목별 수익률 테이블</div>
+          <table class="field-table">
+            <tr><th>컬럼</th><th>설명</th></tr>
+            <tr><td><b>종목명 / 티커</b></td><td>클릭 시 종목 정보 팝업 열림.</td></tr>
+            <tr><td><b>매입금액</b></td><td>총 매입금액. 두 번째 줄: 매입단가 × 수량.</td></tr>
+            <tr><td><b>평가금액</b></td><td>현재 평가금액. 두 번째 줄: 현재가 × 수량.</td></tr>
+            <tr><td><b>투자수익률</b></td><td>매입 이후 전체 수익률.</td></tr>
+            <tr><td><b>YTD (연간수익률)</b></td><td>연초 대비 수익률. 두 번째 줄: 매입단가 − 연초가 (수식 표시).</td></tr>
+            <tr><td><b>MTD (월간수익률)</b></td><td>월초 대비 수익률. 두 번째 줄: 매입단가 − 월초가 (수식 표시).</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 리밸런싱 -->
+    <div class="section" id="rebalance">
+      <div class="section-header">
+        <span class="section-icon">⚖️</span>
+        <h2>조회 &gt; 리밸런싱 <span class="badge badge-view">조회 탭</span></h2>
+      </div>
+      <div class="section-body">
+        <p>현재 포트폴리오와 목표 비중을 비교하여 매수/매도가 필요한 금액을 계산해주는 화면입니다.</p>
+        <ul class="info-list" style="margin-top:10px;">
+          <li><span class="dot"></span>각 종목의 <b>목표 비중(%)</b>을 직접 입력하면 현재 평가금액 기준으로 필요한 조정금액을 계산합니다.</li>
+          <li><span class="dot"></span><b>추가투자 금액</b>을 입력하면 추가 자금 투입 시 필요한 매수금액까지 함께 계산합니다.</li>
+          <li><span class="dot"></span>결과는 양수(매수 필요) / 음수(매도 필요)로 색상 구분하여 표시합니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 관심종목 -->
+    <div class="section" id="watchlist">
+      <div class="section-header">
+        <span class="section-icon">👀</span>
+        <h2>조회 &gt; 관심종목 <span class="badge badge-view">조회 탭</span></h2>
+      </div>
+      <div class="section-body">
+        <p>보유 여부와 관계없이 관심 있는 종목의 시세를 실시간으로 모니터링하는 화면입니다.</p>
+        <ul class="info-list" style="margin-top:10px;">
+          <li><span class="dot"></span>Google Sheets <b>WatchList</b> 시트에 티커를 등록하면 자동으로 불러옵니다.</li>
+          <li><span class="dot"></span>현재가, 등락률, 52주 고가/저가, 배당률(TTM) 등을 표시합니다.</li>
+          <li><span class="dot"></span>종목명 클릭 시 <a href="#stockpopup">종목 정보 팝업</a>이 열립니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 거래 입력 -->
+    <div class="section" id="input">
+      <div class="section-header">
+        <span class="section-icon">✏️</span>
+        <h2>입력관리 &gt; 거래 입력 <span class="badge badge-manage">입력관리 탭</span></h2>
+      </div>
+      <div class="section-body">
+        <p>새로운 거래를 Google Sheets Ledger에 기록하는 화면입니다. 입력 후 <b>미리보기</b>에서 내용을 확인하고 <b>확인 저장</b>을 눌러야 실제로 저장됩니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">📋 거래 유형 (Trade)</div>
+          <div class="trade-grid">
+            <span class="trade-chip chip-buy">Buy — 매수</span>
+            <span class="trade-chip chip-sell">Sell — 매도</span>
+            <span class="trade-chip chip-div">Dividend — 배당금 수령</span>
+            <span class="trade-chip chip-div">Dividend-Stock — 배당 주식 재취득</span>
+            <span class="trade-chip chip-dep">Deposit — 입금</span>
+            <span class="trade-chip chip-dep">Withdraw — 출금</span>
+            <span class="trade-chip chip-other">Split — 액면분할</span>
+            <span class="trade-chip chip-other">Merge / Reverse-Split — 액면병합</span>
+          </div>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📝 주요 입력 필드</div>
+          <table class="field-table">
+            <tr><th>필드</th><th>설명</th><th>해당 거래</th></tr>
+            <tr><td><b>Date</b> <span class="req">*</span></td><td>거래 일자</td><td>전체</td></tr>
+            <tr><td><b>Trade</b> <span class="req">*</span></td><td>거래 유형</td><td>전체</td></tr>
+            <tr><td><b>Account</b> <span class="req">*</span></td><td>계좌 (일반/연금/IRP 등)</td><td>전체</td></tr>
+            <tr><td><b>Region</b> <span class="req">*</span></td><td>국가/통화 (예: USA (USD), Korea)</td><td>전체</td></tr>
+            <tr><td><b>Asset Type</b> <span class="req">*</span></td><td>Stock / ETF / Bond / Cash 등</td><td>전체</td></tr>
+            <tr><td><b>Ticker</b> <span class="req">*</span></td><td>종목코드 (자동완성 지원)</td><td>전체</td></tr>
+            <tr><td><b>Price</b></td><td>체결가격 (거래 통화 기준)</td><td>Buy / Sell</td></tr>
+            <tr><td><b>Currency (환율)</b></td><td>1 외화 = ? KRW (해외 거래 전용)</td><td>해외 거래</td></tr>
+            <tr><td><b>Quantity</b></td><td>체결 수량</td><td>Buy / Sell</td></tr>
+            <tr><td><b>Dividend</b></td><td>주당 배당금 (거래 통화 기준)</td><td>Dividend</td></tr>
+            <tr><td><b>Tax</b></td><td>세금. 해외 거래 시 <b>💱 세금 KRW로 입력</b> 버튼으로 KRW 직접 입력 가능</td><td>전체</td></tr>
+            <tr><td><b>Charge</b></td><td>수수료</td><td>전체</td></tr>
+            <tr><td><b>Comment</b> <span class="opt">선택</span></td><td>메모</td><td>전체</td></tr>
+          </table>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">💱 세금 KRW 직접 입력 (해외 배당)</div>
+          <p>해외 배당 수령 시 배당금은 외화(USD 등)로 입금되지만, 세금(원천징수)은 KRW로 출금되는 경우가 있습니다.</p>
+          <p>이런 경우 Tax 필드 아래 <b>💱 세금 KRW로 입력</b> 버튼을 클릭하면:</p>
+          <ul class="info-list" style="margin-top:8px;">
+            <li><span class="dot"></span>Tax 필드가 KRW 직접 입력 모드로 전환됩니다.</li>
+            <li><span class="dot"></span>입력 중 "≈ X.XXXX USD (저장값)"으로 환율 역산값을 실시간 표시합니다.</li>
+            <li><span class="dot"></span>저장 시 자동으로 Currency(환율)로 나누어 USD 기준값으로 변환 저장됩니다.</li>
+          </ul>
+          <div class="tip">
+            <span class="tip-icon">💡</span>
+            <span><b>예시</b> — TLT 배당: Dividend 31.53 USD, Tax 7,070 KRW, 환율 1,456.8 입력 시 Tax는 7,070 ÷ 1,456.8 ≈ 4.8531 USD로 자동 변환됩니다.</span>
+          </div>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">💱 해외 Buy 환전 방법</div>
+          <p>해외 주식 매수(Buy) 시 환전 방법을 선택할 수 있습니다:</p>
+          <ul class="info-list" style="margin-top:8px;">
+            <li><span class="dot"></span><b>전체 자동환전</b> — 매입 대금 전액을 원화에서 환전하여 매수. Buy 1건 + Withdraw(원화) 1건 자동 생성.</li>
+            <li><span class="dot"></span><b>일부 자동환전</b> — 보유 외화 일부 사용, 나머지만 환전. 보유 외화 사용금액 직접 입력.</li>
+            <li><span class="dot"></span><b>환전 없음</b> — 기보유 외화로 전액 매입. Buy 1건만 기록.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 종목 정보 팝업 -->
+    <div class="section" id="stockpopup">
+      <div class="section-header">
+        <span class="section-icon">🪟</span>
+        <h2>종목 정보 팝업</h2>
+      </div>
+      <div class="section-body">
+        <p>현황, 리포트, 관심종목 화면에서 종목명을 클릭하면 열리는 상세 정보 팝업입니다. Yahoo Finance 데이터를 실시간으로 조회합니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">📊 표시 정보</div>
+          <table class="field-table">
+            <tr><th>항목</th><th>설명</th></tr>
+            <tr><td><b>현재가 / 등락</b></td><td>당일 현재가 및 전일 대비 등락금액·등락률.</td></tr>
+            <tr><td><b>52주 고가 / 저가</b></td><td>최근 52주 기준 최고가·최저가.</td></tr>
+            <tr><td><b>YTD 차트</b></td><td>연초(1월 1일) 이후 일별 종가 추이.</td></tr>
+            <tr><td><b>MTD 차트</b></td><td>월초(1일) 이후 일별 종가 추이.</td></tr>
+            <tr><td><b>배당 정보</b></td><td>FWD 연배당(예상), TTM 연배당(실적), 배당률, 최근 1년 배당 이력.</td></tr>
+          </table>
+        </div>
+
+        <div class="note">
+          <span class="note-icon">ℹ️</span>
+          <span>KRX 한국 종목은 티커 뒤에 <b>.KS</b>(코스피) 또는 <b>.KQ</b>(코스닥)를 자동으로 시도하여 조회합니다. 예: <code>005930</code> → <code>005930.KS</code></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 정보변경 -->
+    <div class="section" id="settings">
+      <div class="section-header">
+        <span class="section-icon">⚙️</span>
+        <h2>정보변경</h2>
+      </div>
+      <div class="section-body">
+        <p>우상단 <b>⚙️ 정보변경</b> 버튼을 누르면 열리는 설정 화면입니다.</p>
+        <ul class="info-list" style="margin-top:10px;">
+          <li><span class="dot"></span><b>PIN 변경</b> — 현재 PIN 확인 후 새 PIN으로 변경.</li>
+          <li><span class="dot"></span><b>이메일 변경</b> — 일일 포트폴리오 리포트 수신 이메일 주소 변경.</li>
+        </ul>
+        <div class="tip">
+          <span class="tip-icon">💡</span>
+          <span>매일 오전 자동으로 포트폴리오 리포트 이메일이 발송됩니다. 이메일 수신을 원하지 않는 경우 Google Sheets Master 시트의 <b>EmailRecv</b> 컬럼을 <code>N</code>으로 설정하세요.</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /layout -->
+
+<script>
+  // 스크롤 시 사이드바 활성 메뉴 업데이트
+  var sections = document.querySelectorAll('.section[id]');
+  var navLinks  = document.querySelectorAll('.sidebar a');
+  window.addEventListener('scroll', function() {
+    var scrollY = window.scrollY + 100;
+    sections.forEach(function(sec) {
+      if (sec.offsetTop <= scrollY && sec.offsetTop + sec.offsetHeight > scrollY) {
+        navLinks.forEach(function(a) { a.classList.remove('active'); });
+        var active = document.querySelector('.sidebar a[href="#' + sec.id + '"]');
+        if (active) active.classList.add('active');
+      }
+    });
+  });
+</script>
+</body>
+</html>
