@@ -3248,14 +3248,20 @@
 
       const avgStr = item.avgPrice > 0
         ? fmtAmt(item.avgPrice, isK) + ' ' + cur
-          + (avgDivYield > 0 ? '<div style="font-size:0.75em;color:#276749;margin-top:1px;">' + avgDivYield.toFixed(2) + '%</div>' : '')
+          + (avgDivYield > 0 ? '<div style="font-size:0.75em;color:#276749;margin-top:1px;">배당: ' + avgDivYield.toFixed(2) + '%</div>' : '')
         : 'N/A';
       const curStr = item.currentPrice > 0
         ? fmtAmt(item.currentPrice, isK) + ' ' + cur
-          + (curDivYield > 0 ? '<div style="font-size:0.75em;color:#276749;margin-top:1px;">' + curDivYield.toFixed(2) + '%</div>' : '')
+          + (curDivYield > 0 ? '<div style="font-size:0.75em;color:#276749;margin-top:1px;">배당: ' + curDivYield.toFixed(2) + '%</div>' : '')
         : 'N/A';
-      const purStr = fmtAmt(item.purchaseAmtFX, isK) + ' ' + cur;
-      const mktStr = item.currentPrice > 0 ? fmtAmt(item.marketValueFX, isK) + ' ' + cur : 'N/A';
+      const purWeight = totalPurchase > 0 ? (item.purchaseAmt / totalPurchase * 100).toFixed(1) : '0.0';
+      const purStr = fmtAmt(item.purchaseAmtFX, isK) + ' ' + cur
+        + '<div style="font-size:0.75em;color:#718096;margin-top:1px;">비중: ' + purWeight + '%</div>';
+      const mktWeight = totalMarket > 0 ? (item.marketValue / totalMarket * 100).toFixed(1) : '0.0';
+      const mktStr = item.currentPrice > 0
+        ? fmtAmt(item.marketValueFX, isK) + ' ' + cur
+          + '<div style="font-size:0.75em;color:#718096;margin-top:1px;">비중: ' + mktWeight + '%</div>'
+        : 'N/A';
       const pnlStr = item.currentPrice > 0
         ? (item.pnlFX >= 0 ? '+' : '') + fmtAmt(item.pnlFX, isK) + ' ' + cur : 'N/A';
       const pctStr = item.currentPrice > 0 ? fmtPct(item.pnlPct) : 'N/A';
