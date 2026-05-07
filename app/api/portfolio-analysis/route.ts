@@ -497,10 +497,9 @@ export async function POST(req: NextRequest) {
       }
       const data = r.value as Record<string, any>;
       const lastTradeDate = String(data.baseDate || '').slice(0, 10);
+      const isTicker = t.split('.')[0];
 
       // 한국 주식(채권 제외): 오늘 KST에 거래가 없으면 Daily = 0 (휴장/주말)
-      // → Naver localTradedAt 기준이므로 KST 날짜와 직접 비교 가능
-      const isTicker = t.split('.')[0];
       if (!isKoreanBondISIN(isTicker) && isKoreanCode(isTicker)) {
         if (lastTradeDate !== todayKST) {
           yesterdayPrice[t] = currentPrice[t] || 0;
@@ -508,8 +507,11 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 해외 주식 / 채권: 주가는 현재가 고정 (Daily = FX 변동만), yesterdayPrice는 사용 안 함
-      yesterdayPrice[t] = currentPrice[t] || 0;
+      // 한국 주식(오늘 거래) 및 해외 주식:
+      //   Naver → data.yesterday(전일종가), Yahoo → data.yesterday(chartPreviousClose)
+      //   조회 실패 시 currentPrice 폴백 (Daily = 0)
+      const prevClose = Number(data.yesterday) || 0;
+      yesterdayPrice[t] = prevClose > 0 ? prevClose : (currentPrice[t] || 0);
     });
 
     // ── 요약 ──────────────────────────────────────────────────────
@@ -588,8 +590,8 @@ export async function POST(req: NextRequest) {
         // 한국 주식: 전일가 × 현재 환율 (= ×1)
         yesterdayValueKRW += (yesterdayPrice[t] || cp) * p.qty * resolveRate(p.region);
       } else {
-        // 해외 주식/채권: 현재가 × 어제 환율 → FX 변동만 Daily에 기여
-        yesterdayValueKRW += cp * p.qty * resolveYesterdayRate(p.region);
+        // 해외 주식/채권: 전일가 × 어제 환율 → 주가 변동 + FX 변동 모두 반영
+        yesterdayValueKRW += (yesterdayPrice[t] || cp) * p.qty * resolveYesterdayRate(p.region);
       }
     });
 
