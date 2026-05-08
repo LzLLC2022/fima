@@ -1349,6 +1349,13 @@
           <div id="pfAmtChart"></div>
         </div>
 
+        <!-- 월별 자산총액 차트 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">🏦 월별 자산총액</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 평가액 (KRW)</div>
+          <div id="pfAssetChart"></div>
+        </div>
+
         <!-- 월별 배당 현황 -->
         <div class="card" style="margin-bottom:20px;">
           <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">&#x1F4CA; 월별 배당 현황</div>
@@ -3798,6 +3805,7 @@
       pfSeriesVisible = { portfolio: true, KOSPI: true, SP500: true, NASDAQ: true };
       renderPfChart(pfChartMonthly, pfChartIndices);
       renderPfAmtChart(pfChartMonthly, data.basePnl || 0);
+      renderPfAssetChart(pfChartMonthly);
       renderPfDivChart(data.dividends || [], data.stocks || [], data.divDetail || {}, data.tickerMonthlyDivKRW || {});
 
       // ── 종목 테이블 ───────────────────────────────────────
@@ -4158,6 +4166,121 @@
       if (ty < mt - 5 || ty > mt + ch + 5) return;
       var label = (tv >= 0 ? '+' : '') + tv.toFixed(tv % 1 === 0 ? 0 : 1);
       svg += '<text x="' + (ml - 6) + '" y="' + (ty + 4).toFixed(1) + '">' + label + '</text>';
+    });
+    svg += '</g>';
+
+    // 단위 표시
+    svg += '<text x="' + (ml - 6) + '" y="' + (mt - 4) + '" text-anchor="end" font-size="10" fill="#a0aec0" font-family="inherit">(' + unitLabel + ')</text>';
+
+    // X축 레이블
+    svg += '<g font-size="11" fill="#718096" text-anchor="middle" font-family="inherit">';
+    data.forEach(function(d, i) {
+      if (n > 7 && i % 2 !== 0) return;
+      svg += '<text x="' + xPos(i).toFixed(1) + '" y="' + (mt + ch + 16) + '">' + d.month.slice(2) + '</text>';
+    });
+    svg += '</g>';
+
+    svg += '</svg>';
+    el.innerHTML = svg;
+  }
+
+  // ── 월별 자산총액 영역 차트 ───────────────────────────────────────────
+  function renderPfAssetChart(monthly) {
+    var el = document.getElementById('pfAssetChart');
+    if (!monthly || monthly.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:40px;">데이터 없음</div>';
+      return;
+    }
+
+    var data = monthly.map(function(m) {
+      return { month: m.month, val: m.marketValueKRW };
+    });
+
+    // Y축 단위 (억 or 만)
+    var maxVal  = Math.max.apply(null, data.map(function(d) { return d.val; }));
+    var useOk   = maxVal >= 100000000;
+    var unitDiv = useOk ? 100000000 : 10000;
+    var unitLabel = useOk ? '억원' : '만원';
+
+    function fmtV(v) {
+      var n = v / unitDiv;
+      var s = n.toFixed(useOk ? 2 : 0);
+      var parts = s.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return parts.join('.');
+    }
+
+    var W = 820, H = 240;
+    var ml = 72, mr = 24, mt = 18, mb = 36;
+    var cw = W - ml - mr, ch = H - mt - mb;
+    var n = data.length;
+
+    var vals = data.map(function(d) { return d.val / unitDiv; });
+    var minV = Math.min.apply(null, vals);
+    var maxV = Math.max.apply(null, vals);
+    var pad  = Math.max(0.1, (maxV - minV) * 0.15);
+    minV = Math.max(0, minV - pad);
+    maxV = maxV + pad;
+
+    var hPad = 20;
+    function xPos(i) {
+      return n <= 1 ? ml + cw / 2 : ml + hPad + i / (n - 1) * (cw - hPad * 2);
+    }
+    function yPos(v) { return mt + ch - (v - minV) / (maxV - minV) * ch; }
+
+    // Y축 눈금
+    var range  = maxV - minV || 1;
+    var rawStp = range / 5;
+    var mag    = Math.pow(10, Math.floor(Math.log10(Math.abs(rawStp) || 1)));
+    var nice   = [1, 2, 2.5, 5, 10].find(function(x) { return x * mag >= rawStp; }) || 10;
+    var step   = nice * mag;
+    var ticks  = [];
+    for (var tv = Math.floor(minV / step) * step; tv <= maxV + step * 0.01; tv = Math.round((tv + step) * 1e6) / 1e6) {
+      ticks.push(tv);
+      if (ticks.length > 12) break;
+    }
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;overflow:visible;">';
+
+    // 그리드
+    svg += '<g stroke="#edf2f7" stroke-width="1">';
+    ticks.forEach(function(tv) {
+      var ty = yPos(tv);
+      if (ty < mt - 2 || ty > mt + ch + 2) return;
+      svg += '<line x1="' + ml + '" y1="' + ty.toFixed(1) + '" x2="' + (ml + cw) + '" y2="' + ty.toFixed(1) + '"/>';
+    });
+    svg += '</g>';
+
+    // 차트 테두리
+    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+
+    // 영역 채우기
+    var pts = data.map(function(d, i) { return xPos(i).toFixed(1) + ',' + yPos(d.val / unitDiv).toFixed(1); });
+    var yBase = yPos(minV);
+    var areaPath = 'M' + pts[0] + ' ' + pts.slice(1).map(function(p) { return 'L' + p; }).join(' ')
+      + ' L' + xPos(n - 1).toFixed(1) + ',' + yBase.toFixed(1)
+      + ' L' + xPos(0).toFixed(1) + ',' + yBase.toFixed(1) + ' Z';
+    svg += '<defs><linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3182ce" stop-opacity="0.2"/><stop offset="100%" stop-color="#3182ce" stop-opacity="0.02"/></linearGradient></defs>';
+    svg += '<path d="' + areaPath + '" fill="url(#assetGrad)"/>';
+
+    // 라인
+    svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#3182ce" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+    // 데이터 포인트 + 값 레이블
+    data.forEach(function(d, i) {
+      var cx = xPos(i), cy = yPos(d.val / unitDiv);
+      svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.5" fill="#3182ce" stroke="white" stroke-width="1.5"/>';
+      if (n <= 13 || i % 2 === 0 || i === n - 1) {
+        svg += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" text-anchor="middle" font-size="9" fill="#3182ce" font-family="inherit" font-weight="700">' + fmtV(d.val) + '</text>';
+      }
+    });
+
+    // Y축 레이블
+    svg += '<g font-size="11" fill="#718096" text-anchor="end" font-family="inherit">';
+    ticks.forEach(function(tv) {
+      var ty = yPos(tv);
+      if (ty < mt - 5 || ty > mt + ch + 5) return;
+      svg += '<text x="' + (ml - 6) + '" y="' + (ty + 4).toFixed(1) + '">' + fmtV(tv * unitDiv) + '</text>';
     });
     svg += '</g>';
 
