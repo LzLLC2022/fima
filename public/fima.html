@@ -766,6 +766,16 @@
       cursor: pointer; font-family: inherit; transition: all 0.15s;
     }
     .sample-btn:hover { background: #edf2f7; border-color: #cbd5e0; }
+    /* ---- 앱 하단 footer ---- */
+    .app-footer {
+      text-align: center; padding: 18px 0 10px;
+      border-top: 1px solid #e2e8f0; margin-top: 24px;
+    }
+    .app-footer-link {
+      font-size: 0.78rem; color: #a0aec0; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s;
+    }
+    .app-footer-link:hover { color: #4a5568; }
 
     .nav-logout-btn {
       background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
@@ -907,6 +917,12 @@
       <button class="sample-btn" onclick="doSampleLogin()">👀 샘플 보기</button>
       <p style="font-size:0.72rem;color:#a0aec0;margin-top:6px;">Account Owner 없이 샘플 데이터로 둘러보기</p>
     </div>
+    <div style="margin-top:20px; border-top:1px solid #e2e8f0; padding-top:14px;">
+      <a href="/help.html" target="_blank"
+         style="font-size:0.76rem; color:#718096; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+        📋 화면구성안내
+      </a>
+    </div>
   </div>
 </div>
 
@@ -926,7 +942,6 @@
         <option value="">-- 선택 --</option>
       </select>
       <button class="nav-pin-btn" onclick="openPinModal()">⚙️ 정보변경</button>
-      <a href="/help.html" target="_blank" class="nav-logout-btn" style="text-decoration:none;">❓ 도움말</a>
       <button class="nav-logout-btn" onclick="doLogout()">로그아웃</button>
     </div>
   </div>
@@ -1574,6 +1589,11 @@
     </div><!-- /tab-query -->
 
   </div><!-- /tab-wrapper -->
+
+  <div class="app-footer">
+    <a href="/help.html" target="_blank" class="app-footer-link">📋 화면구성안내</a>
+  </div>
+
 </div>
 
 <div id="loadingOverlay" class="loading-overlay hidden">
