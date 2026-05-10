@@ -506,6 +506,7 @@ export async function getTrialBalance(spreadsheetId: string, p: any): Promise<an
         category : cleanCategory(String(r[1] || '')),
         fsName   : cleanFsName(String(r[2] || '')),
         catRaw   : String(r[1] || '').trim(),
+        ntsName  : String(r[6] || '').trim(),   // G열: 국세청계정과목
         drTotal  : 0,
         crTotal  : 0,
       };
