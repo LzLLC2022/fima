@@ -492,7 +492,8 @@ export async function getTrialBalance(spreadsheetId: string, p: any): Promise<an
   rows.forEach(r => {
     const jangbu      = String(r[5] || '').trim();
     const catUpperRaw = String(r[3] || '').trim();
-    const catUpper    = cleanFsName(catUpperRaw);
+    // D열(계정과목상)이 비어있으면 F열(계정과목장부)을 표시명으로 사용
+    const catUpper    = cleanFsName(catUpperRaw) || jangbu;
     if (!catUpper) return;
 
     const t = jangbu ? (totals[jangbu] || { dr: 0, cr: 0 }) : { dr: 0, cr: 0 };
