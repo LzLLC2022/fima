@@ -63,6 +63,16 @@ export function cleanCategory(v: any): string {
 export function safeFormatDate(rawVal: any): string {
   if (!rawVal && rawVal !== 0) return '';
   try {
+    // Google Sheets 날짜 시리얼 숫자 처리 (USER_ENTERED로 저장된 날짜)
+    // Sheets 기준점: 1899-12-30 (Excel 호환 방식)
+    if (typeof rawVal === 'number' && rawVal > 1000) {
+      const sheetsEpoch = Date.UTC(1899, 11, 30); // 1899-12-30 UTC
+      const d = new Date(sheetsEpoch + rawVal * 86400000);
+      const y   = d.getUTCFullYear();
+      const m   = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
     const d = rawVal instanceof Date ? rawVal : new Date(rawVal);
     if (isNaN(d.getTime())) return String(rawVal);
     const y   = d.getFullYear();

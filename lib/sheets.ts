@@ -64,7 +64,7 @@ export async function appendRow(spreadsheetId: string, sheetName: string, values
   await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: sheetName,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',   // 날짜 문자열이 시리얼로 변환되지 않도록 RAW 사용
     requestBody: { values: [formatted] },
   });
 }
