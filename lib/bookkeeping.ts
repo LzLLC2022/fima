@@ -472,7 +472,7 @@ export async function getLedgerData(spreadsheetId: string, p: any): Promise<any[
 // ============================================================
 //  합계잔액시산표 (소득세법 서식 기준)
 // ============================================================
-export async function getTrialBalance(spreadsheetId: string, p: any): Promise<any> {
+export async function getTrialBalance(spreadsheetId: string, p: any): Promise<any[]> {
   const txList = await getTransactions(spreadsheetId, p && p.year ? { year: p.year } : {});
   const totals: Record<string, { dr: number; cr: number }> = {};
 
@@ -553,20 +553,34 @@ export async function getTrialBalance(spreadsheetId: string, p: any): Promise<an
 
 // ============================================================
 //  전기이월 (carryForward)
+//  ※ 유동성매도가능증권은 종목별 별도 거래로 생성 (적요: 전기이월(종목명))
 // ============================================================
 export async function carryForward(spreadsheetId: string, p: any): Promise<any> {
   const year     = p.year ? parseInt(p.year) : new Date().getFullYear();
   const prevYear = year - 1;
+  const AVS_NAME = '유동성매도가능증권';  // 종목별 별도 처리 계정
 
   const accountMap = await buildAccountMap(spreadsheetId);
   const txList     = await getTransactions(spreadsheetId, { year: String(prevYear) });
 
   const totals: Record<string, { dr: number; cr: number }> = {};
-  txList.forEach(tx => {
+  const avsTickerMap: Record<string, { dr: number; cr: number }> = {};
+
+  txList.forEach((tx: any) => {
+    const desc = (tx.description || '').trim();
     tx.entries.forEach((e: any) => {
       if (!totals[e.account]) totals[e.account] = { dr: 0, cr: 0 };
       if (e.side === '차변') totals[e.account].dr += e.amount;
       else                    totals[e.account].cr += e.amount;
+
+      // 유동성매도가능증권: 적요에서 종목명 추출 후 별도 집계
+      if (e.account === AVS_NAME) {
+        const m = desc.match(/\(([A-Za-z]+)/);
+        const ticker = m ? m[1] : '기타';
+        if (!avsTickerMap[ticker]) avsTickerMap[ticker] = { dr: 0, cr: 0 };
+        if (e.side === '차변') avsTickerMap[ticker].dr += e.amount;
+        else                    avsTickerMap[ticker].cr += e.amount;
+      }
     });
   });
 
@@ -575,6 +589,7 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   const crEntries : any[] = [];
 
   Object.keys(totals).forEach(name => {
+    if (name === AVS_NAME) return;  // 종목별 별도 처리
     const acct   = accountMap[name] || {};
     const cat    = acct.category || '기타';
     if (!bsCats.has(cat)) return;
@@ -593,13 +608,26 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     }
   });
 
-  if (!drEntries.length && !crEntries.length) {
+  // AVS 종목별 잔액 계산 (유동자산 → 차변 기준)
+  const avsAcct = accountMap[AVS_NAME] || {};
+  const avsItems: { ticker: string; side: string; amount: number }[] = [];
+  Object.entries(avsTickerMap).forEach(([ticker, { dr, cr }]) => {
+    const balance = dr - cr;
+    if (balance === 0) return;
+    if (balance > 0) avsItems.push({ ticker, side: '차변', amount:  balance });
+    else             avsItems.push({ ticker, side: '대변', amount: -balance });
+  });
+
+  if (!drEntries.length && !crEntries.length && !avsItems.length) {
     return { success: false, error: `${prevYear}년 이월할 잔액이 없습니다.` };
   }
 
-  const drSum = drEntries.reduce((s, e) => s + e.amount, 0);
-  const crSum = crEntries.reduce((s, e) => s + e.amount, 0);
-  const diff  = drSum - crSum;
+  // 이익잉여금 조정 — AVS 잔액 포함한 전체 BS 균형 맞춤
+  const avsNetDr = avsItems.filter(e => e.side === '차변').reduce((s, e) => s + e.amount, 0);
+  const avsNetCr = avsItems.filter(e => e.side === '대변').reduce((s, e) => s + e.amount, 0);
+  const drSum    = drEntries.reduce((s, e) => s + e.amount, 0) + avsNetDr;
+  const crSum    = crEntries.reduce((s, e) => s + e.amount, 0) + avsNetCr;
+  const diff     = drSum - crSum;
 
   if (diff !== 0) {
     const adjAcct = accountMap['이익잉여금'] || {};
@@ -607,29 +635,54 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     else          drEntries.push({ side: '차변', account: '이익잉여금', amount: -diff, acct: adjAcct });
   }
 
-  const allEntries = [...drEntries, ...crEntries];
-  const cfTxId     = 'CF' + String(year);
+  const allMainEntries = [...drEntries, ...crEntries];
+  const cfTxId      = 'CF' + String(year);
+  const cfAvsPrefix = 'CF' + String(year) + 'AVS_';
+  const cfDate      = `${year}-01-01`;
+  const now         = new Date().toISOString();
 
-  // 기존 전기이월 삭제 후 재생성
+  // 기존 주 전기이월 삭제
   await deleteTransaction(spreadsheetId, cfTxId);
 
-  const cfDate = `${year}-01-01`;
-  const now    = new Date().toISOString();
+  // 기존 AVS 종목별 전기이월 삭제 (CF{year}AVS_{ticker} 패턴)
+  const txSheet = await getSheetValues(spreadsheetId, BOOK_SHEETS.TRANSACTION);
+  const avsToDelete = txSheet.slice(1)
+    .map((row: any[]) => String(row[0]))
+    .filter((id: string) => id.startsWith(cfAvsPrefix));
+  for (const txId of avsToDelete) {
+    await deleteTransaction(spreadsheetId, txId);
+  }
 
-  await appendRow(spreadsheetId, BOOK_SHEETS.TRANSACTION, [
-    cfTxId, cfDate, '전기이월', '', 'X', 0, 0, 0, now, now,
-  ]);
+  // 주 전기이월 거래 생성 (AVS 제외)
+  if (allMainEntries.length) {
+    await appendRow(spreadsheetId, BOOK_SHEETS.TRANSACTION, [
+      cfTxId, cfDate, '전기이월', '', 'X', 0, 0, 0, now, now,
+    ]);
+    for (let idx = 0; idx < allMainEntries.length; idx++) {
+      const e = allMainEntries[idx];
+      await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
+        `JE${cfTxId}${idx}`, cfTxId, idx + 1,
+        e.side, e.account, e.acct.fsName || '', e.amount, e.acct.element || '',
+      ]);
+    }
+  }
 
-  for (let idx = 0; idx < allEntries.length; idx++) {
-    const e = allEntries[idx];
+  // AVS 종목별 전기이월 거래 생성 (각 종목 1행 분개)
+  for (const e of avsItems) {
+    const txId   = cfAvsPrefix + e.ticker;
+    const txDesc = `전기이월(${e.ticker})`;
+    await appendRow(spreadsheetId, BOOK_SHEETS.TRANSACTION, [
+      txId, cfDate, txDesc, '', 'X', 0, 0, 0, now, now,
+    ]);
     await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
-      `JE${cfTxId}${idx}`, cfTxId, idx + 1,
-      e.side, e.account, e.acct.fsName || '', e.amount, e.acct.element || '',
+      `JE${txId}0`, txId, 1,
+      e.side, AVS_NAME, avsAcct.fsName || '', e.amount, avsAcct.element || '',
     ]);
   }
 
-  const finalDr = allEntries.filter(e => e.side === '차변').reduce((s, e) => s + e.amount, 0);
-  const finalCr = allEntries.filter(e => e.side === '대변').reduce((s, e) => s + e.amount, 0);
+  const totalEntries = allMainEntries.length + avsItems.length;
+  const finalDr = allMainEntries.filter(e => e.side === '차변').reduce((s, e) => s + e.amount, 0) + avsNetDr;
+  const finalCr = allMainEntries.filter(e => e.side === '대변').reduce((s, e) => s + e.amount, 0) + avsNetCr;
 
-  return { success: true, year, entriesCount: allEntries.length, drTotal: finalDr, crTotal: finalCr };
+  return { success: true, year, entriesCount: totalEntries, drTotal: finalDr, crTotal: finalCr };
 }
