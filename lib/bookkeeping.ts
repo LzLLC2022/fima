@@ -558,38 +558,52 @@ export async function getTrialBalance(spreadsheetId: string, p: any): Promise<an
 export async function carryForward(spreadsheetId: string, p: any): Promise<any> {
   const year     = p.year ? parseInt(p.year) : new Date().getFullYear();
   const prevYear = year - 1;
-  const AVS_NAME = '유동성매도가능증권';  // 종목별 별도 처리 계정
+  const AVS_KW   = '유동성매도가능증권';  // 계정명 포함 여부로 판단 (정확 일치 대신 includes 사용)
 
   const accountMap = await buildAccountMap(spreadsheetId);
   const txList     = await getTransactions(spreadsheetId, { year: String(prevYear) });
 
+  console.log(`[carryForward] year=${year}, prevYear=${prevYear}, txList=${txList.length}건`);
+
   const totals: Record<string, { dr: number; cr: number }> = {};
   const avsTickerMap: Record<string, { dr: number; cr: number }> = {};
+
+  // AVS 계정의 실제 저장 계정명 추적 (첫 발견 값 사용)
+  let avsRealName = '';
 
   txList.forEach((tx: any) => {
     const desc = (tx.description || '').trim();
     tx.entries.forEach((e: any) => {
-      if (!totals[e.account]) totals[e.account] = { dr: 0, cr: 0 };
-      if (e.side === '차변') totals[e.account].dr += e.amount;
-      else                    totals[e.account].cr += e.amount;
+      const acctName: string = String(e.account || '');
+      if (!totals[acctName]) totals[acctName] = { dr: 0, cr: 0 };
+      if (e.side === '차변') totals[acctName].dr += Number(e.amount) || 0;
+      else                    totals[acctName].cr += Number(e.amount) || 0;
 
-      // 유동성매도가능증권: 적요에서 종목명 추출 후 별도 집계
-      if (e.account === AVS_NAME) {
+      // 유동성매도가능증권 계정 감지 (includes로 유연하게)
+      if (acctName.includes(AVS_KW)) {
+        if (!avsRealName) avsRealName = acctName;
         const m = desc.match(/\(([A-Za-z]+)/);
         const ticker = m ? m[1] : '기타';
         if (!avsTickerMap[ticker]) avsTickerMap[ticker] = { dr: 0, cr: 0 };
-        if (e.side === '차변') avsTickerMap[ticker].dr += e.amount;
-        else                    avsTickerMap[ticker].cr += e.amount;
+        if (e.side === '차변') avsTickerMap[ticker].dr += Number(e.amount) || 0;
+        else                    avsTickerMap[ticker].cr += Number(e.amount) || 0;
       }
     });
   });
+
+  // AVS 계정명 로그
+  const avsAcctNamesInTotals = Object.keys(totals).filter(n => n.includes(AVS_KW));
+  console.log(`[carryForward] AVS 계정명(totals): ${JSON.stringify(avsAcctNamesInTotals)}`);
+  console.log(`[carryForward] avsTickerMap: ${JSON.stringify(avsTickerMap)}`);
 
   const bsCats    = new Set(['유동자산','비유동자산','유동부채','비유동부채','자본']);
   const drEntries : any[] = [];
   const crEntries : any[] = [];
 
   Object.keys(totals).forEach(name => {
-    if (name === AVS_NAME) return;  // 종목별 별도 처리
+    // AVS 계정은 종목별 별도 처리 — includes로 판단
+    if (name.includes(AVS_KW)) return;
+
     const acct   = accountMap[name] || {};
     const cat    = acct.category || '기타';
     if (!bsCats.has(cat)) return;
@@ -609,8 +623,11 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   });
 
   // AVS 종목별 잔액 계산 (유동자산 → 차변 기준)
-  const avsAcct = accountMap[AVS_NAME] || {};
+  // avsRealName이 있으면 그걸 사용, 없으면 AVS_KW 사용
+  const avsStoredName = avsRealName || AVS_KW;
+  const avsAcct = accountMap[avsStoredName] || accountMap[AVS_KW] || {};
   const avsItems: { ticker: string; side: string; amount: number }[] = [];
+
   Object.entries(avsTickerMap).forEach(([ticker, { dr, cr }]) => {
     const balance = dr - cr;
     if (balance === 0) return;
@@ -618,15 +635,17 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     else             avsItems.push({ ticker, side: '대변', amount: -balance });
   });
 
+  console.log(`[carryForward] avsItems: ${JSON.stringify(avsItems)}, avsStoredName="${avsStoredName}"`);
+
   if (!drEntries.length && !crEntries.length && !avsItems.length) {
     return { success: false, error: `${prevYear}년 이월할 잔액이 없습니다.` };
   }
 
   // 이익잉여금 조정 — AVS 잔액 포함한 전체 BS 균형 맞춤
-  const avsNetDr = avsItems.filter(e => e.side === '차변').reduce((s, e) => s + e.amount, 0);
-  const avsNetCr = avsItems.filter(e => e.side === '대변').reduce((s, e) => s + e.amount, 0);
-  const drSum    = drEntries.reduce((s, e) => s + e.amount, 0) + avsNetDr;
-  const crSum    = crEntries.reduce((s, e) => s + e.amount, 0) + avsNetCr;
+  const avsNetDr = avsItems.filter(e => e.side === '차변').reduce((s: number, e) => s + e.amount, 0);
+  const avsNetCr = avsItems.filter(e => e.side === '대변').reduce((s: number, e) => s + e.amount, 0);
+  const drSum    = drEntries.reduce((s: number, e: any) => s + e.amount, 0) + avsNetDr;
+  const crSum    = crEntries.reduce((s: number, e: any) => s + e.amount, 0) + avsNetCr;
   const diff     = drSum - crSum;
 
   if (diff !== 0) {
@@ -676,13 +695,16 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     ]);
     await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
       `JE${txId}0`, txId, 1,
-      e.side, AVS_NAME, avsAcct.fsName || '', e.amount, avsAcct.element || '',
+      e.side, avsStoredName, avsAcct.fsName || '', e.amount, avsAcct.element || '',
     ]);
   }
 
   const totalEntries = allMainEntries.length + avsItems.length;
-  const finalDr = allMainEntries.filter(e => e.side === '차변').reduce((s, e) => s + e.amount, 0) + avsNetDr;
-  const finalCr = allMainEntries.filter(e => e.side === '대변').reduce((s, e) => s + e.amount, 0) + avsNetCr;
+  const finalDr = allMainEntries.filter((e: any) => e.side === '차변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetDr;
+  const finalCr = allMainEntries.filter((e: any) => e.side === '대변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetCr;
 
-  return { success: true, year, entriesCount: totalEntries, drTotal: finalDr, crTotal: finalCr };
+  return {
+    success: true, year, entriesCount: totalEntries, drTotal: finalDr, crTotal: finalCr,
+    avsDebug: { avsStoredName, tickers: avsItems.map(e => `${e.ticker}(${e.side}:${e.amount})`) },
+  };
 }
