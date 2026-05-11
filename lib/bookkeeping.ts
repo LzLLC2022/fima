@@ -647,7 +647,18 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   console.log(`[carryForward] avsItems: ${JSON.stringify(avsItems)}, avsStoredName="${avsStoredName}"`);
 
   if (!drEntries.length && !crEntries.length && !avsItems.length) {
-    return { success: false, error: `${prevYear}년 이월할 잔액이 없습니다.` };
+    // 진단 정보 포함한 에러 반환
+    const acctKeys  = Object.keys(totals);
+    const bsCount   = acctKeys.filter(n => {
+      const cat = (accountMap[n] || {}).category || '기타';
+      return ['유동자산','비유동자산','유동부채','비유동부채','자본'].includes(cat);
+    }).length;
+    return {
+      success: false,
+      error: `${prevYear}년 이월할 잔액이 없습니다. `
+           + `[거래:${txList.length}건 / 계정:${acctKeys.length}개 / BS계정:${bsCount}개 / `
+           + `계정과목맵:${Object.keys(accountMap).length}개]`,
+    };
   }
 
   // 이익잉여금 조정 — AVS 제외한 non-AVS 항목만으로 주 거래 균형 맞춤
