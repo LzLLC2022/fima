@@ -730,8 +730,15 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   const finalDr = allMainEntries.filter((e: any) => e.side === '차변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetDr;
   const finalCr = allMainEntries.filter((e: any) => e.side === '대변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetCr;
 
+  // 작성 후 실제 저장된 날짜값 읽기 검증 (진단용)
+  const verifySheet = await getSheetValues(spreadsheetId, BOOK_SHEETS.TRANSACTION);
+  const cfRow = verifySheet.slice(1).find((r: any[]) => String(r[0]) === cfTxId);
+  const rawDateStored = cfRow ? cfRow[1] : null;
+  const parsedDate = cfRow ? safeFormatDate(cfRow[1]) : null;
+
   return {
     success: true, year, entriesCount: totalEntries, drTotal: finalDr, crTotal: finalCr,
     avsDebug: { avsStoredName, tickers: avsItems.map(e => `${e.ticker}(${e.side}:${e.amount})`) },
+    dateDebug: { rawDateStored, parsedDate, cfTxId },
   };
 }
