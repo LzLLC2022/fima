@@ -61,9 +61,19 @@ export async function appendRow(spreadsheetId: string, sheetName: string, values
     if (v === null || v === undefined) return '';
     return v;
   });
-  await sheets.spreadsheets.values.append({
+
+  // values.append 의 "테이블 감지" 방식은 빈 행이 섞인 경우 잘못된 위치에 쓸 수 있음.
+  // 열 A의 실제 마지막 행 번호를 직접 조회 후 그 다음 행에 update 방식으로 기록.
+  const colARes = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: sheetName,
+    range: `${sheetName}!A:A`,
+    valueRenderOption: 'UNFORMATTED_VALUE',
+  });
+  const nextRow = (colARes.data.values?.length ?? 0) + 1;
+  const lastCol = String.fromCharCode(64 + Math.min(values.length, 26)); // A~Z
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${sheetName}!A${nextRow}:${lastCol}${nextRow}`,
     valueInputOption: 'RAW',   // 날짜 문자열이 시리얼로 변환되지 않도록 RAW 사용
     requestBody: { values: [formatted] },
   });
