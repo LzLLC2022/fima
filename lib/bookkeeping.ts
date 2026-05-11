@@ -472,7 +472,7 @@ export async function getLedgerData(spreadsheetId: string, p: any): Promise<any[
 // ============================================================
 //  합계잔액시산표 (소득세법 서식 기준)
 // ============================================================
-export async function getTrialBalance(spreadsheetId: string, p: any): Promise<any[]> {
+export async function getTrialBalance(spreadsheetId: string, p: any): Promise<any> {
   const txList = await getTransactions(spreadsheetId, p && p.year ? { year: p.year } : {});
   const totals: Record<string, { dr: number; cr: number }> = {};
 
