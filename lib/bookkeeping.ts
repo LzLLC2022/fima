@@ -11,7 +11,7 @@
  * ============================================================
  */
 
-import { getSheets, getSheetValues, appendRow, updateRow, deleteRow } from '@/lib/sheets';
+import { getSheets, getSheetValues, appendRow, updateRow, deleteRow, bulkDeleteRows } from '@/lib/sheets';
 import { getOwnerSheetId, MASTER_SHEET_NAME } from '@/lib/config';
 
 // ── 시트명 ────────────────────────────────────────────────────
@@ -679,25 +679,38 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   const cfDate      = `${year}-01-01`;
   const now         = new Date().toISOString();
 
-  // 기존 전기이월 관련 거래 전체 삭제:
-  //  ① CF{year} (carryForward 생성 주 거래)
-  //  ② CF{year}AVS_{ticker} (종목별 거래)
-  //  ③ year-01-01 날짜이고 적요에 '전기이월'이 포함된 수동 입력 거래
+  // ── 기존 전기이월 행 일괄 삭제 (API 호출 최소화) ───────────────
+  //  대상: ① CF{year}  ② CF{year}AVS_*  ③ year-01-01 + '전기이월' 수동 입력
   const txSheet = await getSheetValues(spreadsheetId, BOOK_SHEETS.TRANSACTION);
-  const toDelete: string[] = txSheet.slice(1)
-    .filter((row: any[]) => {
-      const id   = String(row[0] || '');
-      const date = safeFormatDate(row[1]);
-      const desc = String(row[2] || '');
-      return id === cfTxId                          // CF2026
-          || id.startsWith(cfAvsPrefix)             // CF2026AVS_*
-          || (date === cfDate && desc.includes('전기이월'));  // 수동 입력 포함
-    })
-    .map((row: any[]) => String(row[0]));
-  console.log(`[carryForward] 삭제 대상: ${JSON.stringify(toDelete)}`);
-  for (const txId of toDelete) {
-    await deleteTransaction(spreadsheetId, txId);
-  }
+  const eSheet  = await getSheetValues(spreadsheetId, BOOK_SHEETS.ENTRY);
+
+  // 삭제 대상 txId 집합 및 TRANSACTION 행 번호 수집
+  const deleteIds = new Set<string>();
+  const txRowNums: number[] = [];
+  txSheet.slice(1).forEach((row: any[], idx: number) => {
+    const id   = String(row[0] || '');
+    const date = safeFormatDate(row[1]);
+    const desc = String(row[2] || '');
+    if (id === cfTxId || id.startsWith(cfAvsPrefix)
+        || (date === cfDate && desc.includes('전기이월'))) {
+      if (id) deleteIds.add(id);
+      txRowNums.push(idx + 2);  // 1-indexed + header
+    }
+  });
+
+  // 삭제 대상 ENTRY 행 번호 수집
+  const eRowNums: number[] = [];
+  eSheet.slice(1).forEach((row: any[], idx: number) => {
+    if (deleteIds.has(String(row[1] || ''))) {
+      eRowNums.push(idx + 2);
+    }
+  });
+
+  console.log(`[carryForward] TX삭제 ${txRowNums.length}행, ENTRY삭제 ${eRowNums.length}행`);
+
+  // ENTRY → TRANSACTION 순서로 일괄 삭제 (각 1회 API 호출)
+  if (eRowNums.length)  await bulkDeleteRows(spreadsheetId, BOOK_SHEETS.ENTRY,       eRowNums);
+  if (txRowNums.length) await bulkDeleteRows(spreadsheetId, BOOK_SHEETS.TRANSACTION, txRowNums);
 
   // 주 전기이월 거래 생성 (AVS 제외)
   if (allMainEntries.length) {

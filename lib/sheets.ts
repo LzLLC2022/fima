@@ -127,21 +127,36 @@ export async function batchUpdateCells(
  * 특정 행 삭제 (sheetRowNumber: 1-indexed 시트 행 번호)
  */
 export async function deleteRow(spreadsheetId: string, sheetName: string, sheetRowNumber: number): Promise<void> {
-  const sheets = await getSheets();
+  await bulkDeleteRows(spreadsheetId, sheetName, [sheetRowNumber]);
+}
+
+/**
+ * 여러 행을 한 번의 batchUpdate로 일괄 삭제 (API 호출 최소화)
+ * rowNumbers: 1-indexed 시트 행 번호 배열 (순서 무관 — 내부에서 내림차순 정렬)
+ */
+export async function bulkDeleteRows(
+  spreadsheetId: string,
+  sheetName: string,
+  rowNumbers: number[],
+): Promise<void> {
+  if (!rowNumbers.length) return;
+  const sheets  = await getSheets();
   const sheetId = await getSheetTabId(spreadsheetId, sheetName);
+  // 높은 행번호부터 삭제해야 이전 삭제로 인한 행번호 이동 영향 없음
+  const sorted = [...rowNumbers].sort((a, b) => b - a);
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId,
     requestBody: {
-      requests: [{
+      requests: sorted.map(rowNum => ({
         deleteDimension: {
           range: {
             sheetId,
             dimension: 'ROWS',
-            startIndex: sheetRowNumber - 1,
-            endIndex: sheetRowNumber,
+            startIndex: rowNum - 1,
+            endIndex: rowNum,
           },
         },
-      }],
+      })),
     },
   });
 }
