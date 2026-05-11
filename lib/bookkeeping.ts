@@ -641,15 +641,16 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     return { success: false, error: `${prevYear}년 이월할 잔액이 없습니다.` };
   }
 
-  // 이익잉여금 조정 — AVS 잔액 포함한 전체 BS 균형 맞춤
-  const avsNetDr = avsItems.filter(e => e.side === '차변').reduce((s: number, e) => s + e.amount, 0);
-  const avsNetCr = avsItems.filter(e => e.side === '대변').reduce((s: number, e) => s + e.amount, 0);
-  const drSum    = drEntries.reduce((s: number, e: any) => s + e.amount, 0) + avsNetDr;
-  const crSum    = crEntries.reduce((s: number, e: any) => s + e.amount, 0) + avsNetCr;
-  const diff     = drSum - crSum;
+  // 이익잉여금 조정 — AVS 제외한 non-AVS 항목만으로 주 거래 균형 맞춤
+  // (AVS 종목별 거래는 각각 이익잉여금 상대 분개로 개별 균형 처리)
+  const avsNetDr   = avsItems.filter(e => e.side === '차변').reduce((s: number, e) => s + e.amount, 0);
+  const avsNetCr   = avsItems.filter(e => e.side === '대변').reduce((s: number, e) => s + e.amount, 0);
+  const drSumNoAvs = drEntries.reduce((s: number, e: any) => s + e.amount, 0);
+  const crSumNoAvs = crEntries.reduce((s: number, e: any) => s + e.amount, 0);
+  const diff       = drSumNoAvs - crSumNoAvs;
 
+  const adjAcct = accountMap['이익잉여금'] || {};
   if (diff !== 0) {
-    const adjAcct = accountMap['이익잉여금'] || {};
     if (diff > 0) crEntries.push({ side: '대변', account: '이익잉여금', amount: diff,  acct: adjAcct });
     else          drEntries.push({ side: '차변', account: '이익잉여금', amount: -diff, acct: adjAcct });
   }
@@ -694,20 +695,28 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     }
   }
 
-  // AVS 종목별 전기이월 거래 생성 (각 종목 1행 분개)
+  // AVS 종목별 전기이월 거래 생성
+  // — 각 종목: AVS 분개 + 이익잉여금 상대 분개 (대차 균형)
   for (const e of avsItems) {
-    const txId   = cfAvsPrefix + e.ticker;
-    const txDesc = `전기이월(${e.ticker})`;
+    const txId    = cfAvsPrefix + e.ticker;
+    const txDesc  = `전기이월(${e.ticker})`;
+    const adjSide = e.side === '차변' ? '대변' : '차변';   // 이익잉여금 반대 방향
     await appendRow(spreadsheetId, BOOK_SHEETS.TRANSACTION, [
       txId, cfDate, txDesc, '', 'X', 0, 0, 0, now, now,
     ]);
+    // AVS 계정 분개
     await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
       `JE${txId}0`, txId, 1,
       e.side, avsStoredName, avsAcct.fsName || '', e.amount, avsAcct.element || '',
     ]);
+    // 이익잉여금 상대 분개 (대차 균형 맞춤)
+    await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
+      `JE${txId}1`, txId, 2,
+      adjSide, '이익잉여금', adjAcct.fsName || '', e.amount, adjAcct.element || '',
+    ]);
   }
 
-  const totalEntries = allMainEntries.length + avsItems.length;
+  const totalEntries = allMainEntries.length + avsItems.length * 2;  // AVS 각 2분개
   const finalDr = allMainEntries.filter((e: any) => e.side === '차변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetDr;
   const finalCr = allMainEntries.filter((e: any) => e.side === '대변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetCr;
 
