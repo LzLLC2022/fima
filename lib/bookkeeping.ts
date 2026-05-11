@@ -515,7 +515,40 @@ export async function getTrialBalance(spreadsheetId: string, p: any): Promise<an
     accMap[catUpper].crTotal += t.cr;
   });
 
-  return order.map(name => accMap[name]);
+  // ── G열(국세청계정과목) 기준 집계 — BS/IS 렌더링용 ──────────────
+  // D열 집계는 하나의 row에 여러 G값이 섞여 ntsName이 첫 번째 값으로만 저장됨.
+  // G열 기준으로 재집계하면 각 NTS 코드별 정확한 금액을 얻을 수 있음.
+  const ntsOrder: string[] = [];
+  const ntsMap: Record<string, any> = {};
+
+  rows.forEach(r => {
+    const jangbu  = String(r[5] || '').trim();
+    const ntsName = String(r[6] || '').trim();
+    const key     = ntsName || jangbu; // G열 우선, 없으면 F열(장부)
+    if (!key) return;
+
+    const t = jangbu ? (totals[jangbu] || { dr: 0, cr: 0 }) : { dr: 0, cr: 0 };
+
+    if (!ntsMap[key]) {
+      ntsOrder.push(key);
+      ntsMap[key] = {
+        name     : cleanFsName(String(r[3] || '').trim()) || jangbu,
+        ntsName  : ntsName,
+        category : cleanCategory(String(r[1] || '')),
+        fsName   : cleanFsName(String(r[2] || '')),
+        catRaw   : String(r[1] || '').trim(),
+        drTotal  : 0,
+        crTotal  : 0,
+      };
+    }
+    ntsMap[key].drTotal += t.dr;
+    ntsMap[key].crTotal += t.cr;
+  });
+
+  return {
+    items   : order.map(name => accMap[name]),    // D열 기준 (TB 렌더링용)
+    ntsList : ntsOrder.map(key => ntsMap[key]),   // G열 기준 (BS/IS 렌더링용)
+  };
 }
 
 // ============================================================
