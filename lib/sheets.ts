@@ -62,26 +62,14 @@ export async function appendRow(spreadsheetId: string, sheetName: string, values
     return v;
   });
 
-  // A열을 직접 읽어 마지막 비어있지 않은 행 번호를 계산 후 values.update로 기록.
-  // values.append 의 table-detection 방식은 빈 행이 섞이면 잘못된 위치에 쓸 수 있음.
-  // RAW: 날짜 문자열("2026-01-01")이 시리얼 숫자로 변환되지 않도록 RAW 사용.
-  const colAResp = await sheets.spreadsheets.values.get({
+  // range를 '시트명!A:A'로 고정: A열 기준으로 테이블 감지하여 L열 오기입 방지
+  // INSERT_ROWS: 시트 행이 꽉 차도 자동으로 새 행을 삽입 (grid limit 초과 방지)
+  // RAW: 날짜 문자열("2026-01-01")이 시리얼 숫자로 변환되지 않도록
+  await sheets.spreadsheets.values.append({
     spreadsheetId,
     range: `${sheetName}!A:A`,
-    valueRenderOption: 'UNFORMATTED_VALUE',
-  });
-  const colAVals: string[][] = (colAResp.data.values as string[][] | null) ?? [];
-  // 마지막 비어있지 않은 A셀 인덱스 (0-based) — 후행 빈 행 무시
-  let lastIdx = colAVals.length - 1;
-  while (lastIdx >= 0 && !String(colAVals[lastIdx]?.[0] ?? '').trim()) {
-    lastIdx--;
-  }
-  const nextRow = lastIdx + 2; // 0-based → 1-indexed 후 +1행
-  const lastCol = String.fromCharCode(64 + Math.min(formatted.length, 26));
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${sheetName}!A${nextRow}:${lastCol}${nextRow}`,
     valueInputOption: 'RAW',
+    insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [formatted] },
   });
 }
