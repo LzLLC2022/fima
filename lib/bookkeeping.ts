@@ -703,27 +703,20 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   }
 
   // AVS 종목별 전기이월 거래 생성
-  // — 각 종목: AVS 분개 + 이익잉여금 상대 분개 (대차 균형)
+  // — 각 종목: AVS 계정 분개 1건만 (차변 또는 대변 한쪽만, 이익잉여금 상대분개 없음)
   for (const e of avsItems) {
-    const txId    = cfAvsPrefix + e.ticker;
-    const txDesc  = `전기이월(${e.ticker})`;
-    const adjSide = e.side === '차변' ? '대변' : '차변';   // 이익잉여금 반대 방향
+    const txId   = cfAvsPrefix + e.ticker;
+    const txDesc = `전기이월(${e.ticker})`;
     await appendRow(spreadsheetId, BOOK_SHEETS.TRANSACTION, [
       txId, cfDate, txDesc, '', 'X', 0, 0, 0, now, now,
     ]);
-    // AVS 계정 분개
     await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
       `JE${txId}0`, txId, 1,
       e.side, avsStoredName, avsAcct.fsName || '', e.amount, avsAcct.element || '',
     ]);
-    // 이익잉여금 상대 분개 (대차 균형 맞춤)
-    await appendRow(spreadsheetId, BOOK_SHEETS.ENTRY, [
-      `JE${txId}1`, txId, 2,
-      adjSide, '이익잉여금', adjAcct.fsName || '', e.amount, adjAcct.element || '',
-    ]);
   }
 
-  const totalEntries = allMainEntries.length + avsItems.length * 2;  // AVS 각 2분개
+  const totalEntries = allMainEntries.length + avsItems.length;  // AVS 각 1분개
 
   return {
     success: true,
