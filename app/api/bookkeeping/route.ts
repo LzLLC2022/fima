@@ -28,6 +28,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerSheetId } from '@/lib/config';
+import { getSheetValues } from '@/lib/sheets';
 import {
   loginUser,
   getAccounts,
@@ -107,6 +108,13 @@ export async function GET(req: NextRequest) {
 
       case 'carryForward':
         return ok(await carryForward(spreadsheetId, p));
+
+      // ── 진단: 거래 시트 원시 데이터 조회 (최근 N행) ──
+      case 'debugTx': {
+        const raw = await getSheetValues(spreadsheetId, '거래');
+        const n   = Math.min(parseInt(p.n || '30'), 200);
+        return ok({ totalRows: raw.length, last: raw.slice(Math.max(0, raw.length - n)) });
+      }
 
       default:
         return err('Unknown action: ' + action);
