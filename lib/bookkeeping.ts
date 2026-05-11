@@ -11,7 +11,6 @@
  * ============================================================
  */
 
-import { google } from 'googleapis';
 import { getSheets, getSheetValues, appendRow, updateRow, deleteRow } from '@/lib/sheets';
 import { getOwnerSheetId, MASTER_SHEET_NAME } from '@/lib/config';
 
@@ -653,8 +652,6 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
 
   // 이익잉여금 조정 — AVS 제외한 non-AVS 항목만으로 주 거래 균형 맞춤
   // (AVS 종목별 거래는 각각 이익잉여금 상대 분개로 개별 균형 처리)
-  const avsNetDr   = avsItems.filter(e => e.side === '차변').reduce((s: number, e) => s + e.amount, 0);
-  const avsNetCr   = avsItems.filter(e => e.side === '대변').reduce((s: number, e) => s + e.amount, 0);
   const drSumNoAvs = drEntries.reduce((s: number, e: any) => s + e.amount, 0);
   const crSumNoAvs = crEntries.reduce((s: number, e: any) => s + e.amount, 0);
   const diff       = drSumNoAvs - crSumNoAvs;
@@ -727,31 +724,10 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
   }
 
   const totalEntries = allMainEntries.length + avsItems.length * 2;  // AVS 각 2분개
-  const finalDr = allMainEntries.filter((e: any) => e.side === '차변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetDr;
-  const finalCr = allMainEntries.filter((e: any) => e.side === '대변').reduce((s: number, e: any) => s + e.amount, 0) + avsNetCr;
-
-  // 작성 후 실제 저장된 날짜값 읽기 검증 (진단용)
-  const verifySheet = await getSheetValues(spreadsheetId, BOOK_SHEETS.TRANSACTION);
-  const allRows = verifySheet.slice(1);
-  const cfRow = allRows.find((r: any[]) => String(r[0]) === cfTxId);
-  const cfAvsRows = allRows.filter((r: any[]) => String(r[0]).startsWith(cfAvsPrefix));
-  const rawDateStored = cfRow ? cfRow[1] : null;
-  const parsedDate = cfRow ? safeFormatDate(cfRow[1]) : null;
 
   return {
-    success: true, year, entriesCount: totalEntries, drTotal: finalDr, crTotal: finalCr,
-    avsDebug: { avsStoredName, tickers: avsItems.map(e => `${e.ticker}(${e.side}:${e.amount})`) },
-    dateDebug: {
-      cfTxId,
-      rawDateStored,
-      parsedDate,
-      totalTxRows: allRows.length,
-      cfFound: !!cfRow,
-      cfAvsCount: cfAvsRows.length,
-      cfAvsIds: cfAvsRows.map((r: any[]) => String(r[0])),
-      mainEntriesLen: allMainEntries.length,
-      avsItemsLen: avsItems.length,
-      last5TxIds: allRows.slice(-5).map((r: any[]) => String(r[0])),
-    },
+    success: true,
+    year,
+    entriesCount: totalEntries,
   };
 }
