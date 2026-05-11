@@ -661,18 +661,6 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     };
   }
 
-  // 이익잉여금 조정 — AVS 제외한 non-AVS 항목만으로 주 거래 균형 맞춤
-  // (AVS 종목별 거래는 각각 이익잉여금 상대 분개로 개별 균형 처리)
-  const drSumNoAvs = drEntries.reduce((s: number, e: any) => s + e.amount, 0);
-  const crSumNoAvs = crEntries.reduce((s: number, e: any) => s + e.amount, 0);
-  const diff       = drSumNoAvs - crSumNoAvs;
-
-  const adjAcct = accountMap['이익잉여금'] || {};
-  if (diff !== 0) {
-    if (diff > 0) crEntries.push({ side: '대변', account: '이익잉여금', amount: diff,  acct: adjAcct });
-    else          drEntries.push({ side: '차변', account: '이익잉여금', amount: -diff, acct: adjAcct });
-  }
-
   const allMainEntries = [...drEntries, ...crEntries];
   const cfTxId      = 'CF' + String(year);
   const cfAvsPrefix = 'CF' + String(year) + 'AVS_';
