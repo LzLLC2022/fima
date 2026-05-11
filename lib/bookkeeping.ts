@@ -732,13 +732,26 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
 
   // 작성 후 실제 저장된 날짜값 읽기 검증 (진단용)
   const verifySheet = await getSheetValues(spreadsheetId, BOOK_SHEETS.TRANSACTION);
-  const cfRow = verifySheet.slice(1).find((r: any[]) => String(r[0]) === cfTxId);
+  const allRows = verifySheet.slice(1);
+  const cfRow = allRows.find((r: any[]) => String(r[0]) === cfTxId);
+  const cfAvsRows = allRows.filter((r: any[]) => String(r[0]).startsWith(cfAvsPrefix));
   const rawDateStored = cfRow ? cfRow[1] : null;
   const parsedDate = cfRow ? safeFormatDate(cfRow[1]) : null;
 
   return {
     success: true, year, entriesCount: totalEntries, drTotal: finalDr, crTotal: finalCr,
     avsDebug: { avsStoredName, tickers: avsItems.map(e => `${e.ticker}(${e.side}:${e.amount})`) },
-    dateDebug: { rawDateStored, parsedDate, cfTxId },
+    dateDebug: {
+      cfTxId,
+      rawDateStored,
+      parsedDate,
+      totalTxRows: allRows.length,
+      cfFound: !!cfRow,
+      cfAvsCount: cfAvsRows.length,
+      cfAvsIds: cfAvsRows.map((r: any[]) => String(r[0])),
+      mainEntriesLen: allMainEntries.length,
+      avsItemsLen: avsItems.length,
+      last5TxIds: allRows.slice(-5).map((r: any[]) => String(r[0])),
+    },
   };
 }
