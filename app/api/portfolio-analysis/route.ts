@@ -626,9 +626,10 @@ export async function POST(req: NextRequest) {
       const marketValueFX = cp * p.qty;   // 평가금액 (현지통화)
       const buyCostFX     = p.buyCostFX;  // 매입금액 (현지통화)
 
-      // 인앱 현황(조회 > 현황)과 동일: KRW 기준 수익률 (가격 변동 + 환율 효과 포함)
-      // mktVal = cp × qty × currentRate(KRW), p.buyCostKRW = 매수 시점 환율 기준 누적 매입금액(KRW)
-      const pnlPct = p.buyCostKRW > 0 ? (mktVal - p.buyCostKRW) / p.buyCostKRW * 100 : null;
+      // 현지통화 기준 수익률 (가격 변동만 반영, 환율 효과 제외)
+      // avgPriceFX = 매입평균단가(현지통화), cp = 현재가(현지통화)
+      const avgPriceFX = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+      const pnlPct = avgPriceFX > 0 && cp > 0 ? (cp - avgPriceFX) / avgPriceFX * 100 : null;
 
       return {
         ticker: t, name: p.name,
