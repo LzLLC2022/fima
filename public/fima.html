@@ -10,17 +10,17 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
-      background: #f0f4f8;
+      background: #f9f7ff;
       min-height: 100vh;
       padding: 24px 16px;
-      color: #1a202c;
+      color: #1e1e2e;
     }
 
     .container { max-width: 1400px; margin: 0 auto; }
 
     /* 헤더 */
     .header {
-      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      background: linear-gradient(135deg, #3d2f7f 0%, #6b5cc4 100%);
       border-radius: 16px;
       padding: 20px 28px;
       margin-bottom: 0;
@@ -34,7 +34,7 @@
     /* 그룹 탭 (1단계) */
     .group-tabs {
       display: flex;
-      background: #0f2236;
+      background: #1e1535;
       padding: 0 20px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
@@ -53,12 +53,12 @@
       text-transform: uppercase;
     }
     .group-tab-btn:hover { color: rgba(255,255,255,0.8); }
-    .group-tab-btn.active { color: #90cdf4; border-bottom-color: #90cdf4; }
+    .group-tab-btn.active { color: #ddd8ff; border-bottom-color: #ddd8ff; }
 
     /* 서브 탭 (2단계) */
     .tabs {
       display: flex;
-      background: #1a3353;
+      background: #2d2060;
       border-radius: 0;
       padding: 0 20px;
     }
@@ -77,7 +77,7 @@
     .tab-btn:hover { color: rgba(255,255,255,0.9); }
     .tab-btn.active {
       color: white;
-      border-bottom-color: #63b3ed;
+      border-bottom-color: #c4b5fd;
     }
 
     /* 탭 콘텐츠 래퍼 */
@@ -93,11 +93,11 @@
 
     /* 카드 */
     .card {
-      background: #f8fafc;
+      background: #f8f5ff;
       border-radius: 12px;
       padding: 20px 22px;
       margin-bottom: 14px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #e5e1f5;
     }
     .card-title {
       font-size: 0.72rem;
@@ -107,7 +107,7 @@
       color: #718096;
       margin-bottom: 14px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e5e1f5;
     }
 
     /* 그리드 */
@@ -122,20 +122,20 @@
     input, select, textarea {
       width: 100%;
       padding: 9px 12px;
-      border: 1.5px solid #e2e8f0;
+      border: 1.5px solid #e5e1f5;
       border-radius: 8px;
       font-size: 0.9rem;
-      color: #2d3748;
+      color: #2d2747;
       background: #fff;
       transition: border-color 0.15s, box-shadow 0.15s;
       outline: none;
       font-family: inherit;
     }
     input:focus, select:focus, textarea:focus {
-      border-color: #3182ce;
+      border-color: #9b87f5;
       box-shadow: 0 0 0 3px rgba(49,130,206,0.12);
     }
-    input[readonly] { background: #f7fafc; color: #718096; cursor: default; }
+    input[readonly] { background: #f5f3ff; color: #718096; cursor: default; }
     textarea { resize: vertical; min-height: 70px; }
 
     /* 통화 뱃지 */
@@ -144,7 +144,7 @@
     .currency-badge {
       position: absolute; right: 10px;
       font-size: 0.72rem; font-weight: 700;
-      color: #3182ce; background: #ebf8ff;
+      color: #9b87f5; background: #ede9fe;
       padding: 2px 6px; border-radius: 5px;
       pointer-events: none; letter-spacing: 0.5px;
     }
@@ -152,13 +152,13 @@
     /* 세금 KRW 토글 버튼 */
     .tax-krw-btn {
       display: inline-block; font-size: 0.72rem; font-weight: 700;
-      color: #805ad5; background: #faf5ff;
-      border: 1.5px solid #d6bcfa; border-radius: 5px;
+      color: #9b87f5; background: #f5f3ff;
+      border: 1.5px solid #ddd8ff; border-radius: 5px;
       padding: 3px 9px; cursor: pointer; margin-top: 4px;
       transition: all 0.15s; font-family: inherit;
     }
-    .tax-krw-btn:hover { background: #e9d8fd; }
-    .tax-krw-btn.active { background: #805ad5; color: white; border-color: #805ad5; }
+    .tax-krw-btn:hover { background: #ede9fe; }
+    .tax-krw-btn.active { background: #9b87f5; color: white; border-color: #9b87f5; }
 
     /* 환율 안내 */
     .currency-hint { font-size: 0.75rem; color: #718096; margin-top: 3px; }
@@ -173,34 +173,34 @@
 
     /* 총액 박스 */
     .total-box {
-      background: #fff; border: 1.5px solid #e2e8f0;
+      background: #fff; border: 1.5px solid #e5e1f5;
       border-radius: 8px; padding: 10px 14px;
       display: flex; align-items: baseline;
       gap: 12px; flex-wrap: wrap; min-height: 40px;
     }
-    #totalForeign { font-size: 1.05rem; font-weight: 700; color: #2d3748; }
+    #totalForeign { font-size: 1.05rem; font-weight: 700; color: #2d2747; }
     .total-krw    { font-size: 0.85rem; color: #2f855a; font-weight: 600; }
 
     /* Ticker 콤보 */
     .ticker-wrap { position: relative; }
     .ticker-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-      background: white; border: 1.5px solid #3182ce;
+      background: white; border: 1.5px solid #9b87f5;
       border-radius: 8px; max-height: 240px; overflow-y: auto;
       z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     }
     .ticker-drop-header {
       padding: 6px 12px; font-size: 0.72rem; font-weight: 700;
       color: #a0aec0; letter-spacing: 0.4px; text-transform: uppercase;
-      background: #f7fafc; border-bottom: 1px solid #e2e8f0;
+      background: #f5f3ff; border-bottom: 1px solid #e5e1f5;
       border-radius: 8px 8px 0 0;
     }
     .ticker-option {
       padding: 8px 12px; cursor: pointer; font-size: 0.87rem;
       display: flex; gap: 10px; align-items: center;
     }
-    .ticker-option:hover { background: #ebf8ff; }
-    .ticker-option .t-code { font-weight: 700; color: #2b6cb0; min-width: 70px; }
+    .ticker-option:hover { background: #ede9fe; }
+    .ticker-option .t-code { font-weight: 700; color: #7c6ce0; min-width: 70px; }
     .ticker-option .t-name { color: #718096; font-size: 0.8rem; }
 
     /* 버튼 */
@@ -210,14 +210,14 @@
       font-weight: 600; border: none; cursor: pointer;
       transition: all 0.15s; font-family: inherit;
     }
-    .btn-primary { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; }
+    .btn-primary { background: linear-gradient(135deg, #7c6ce0, #5b4fa0); color: white; }
     .btn-primary:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn-secondary { background: #edf2f7; color: #4a5568; }
-    .btn-secondary:hover { background: #e2e8f0; }
-    .btn-search { background: linear-gradient(135deg, #2563eb, #1e40af); color: white; padding: 10px 32px; }
+    .btn-secondary { background: #ede9fe; color: #4a5568; }
+    .btn-secondary:hover { background: #e5e1f5; }
+    .btn-search { background: linear-gradient(135deg, #7c6ce0, #5b4fa0); color: white; padding: 10px 32px; }
     .btn-search:hover { filter: brightness(1.1); }
-    .btn-reset-filter { background: #edf2f7; color: #4a5568; }
+    .btn-reset-filter { background: #ede9fe; color: #4a5568; }
 
     /* 알림 */
     .alert {
@@ -243,22 +243,22 @@
     .result-info {
       font-size: 0.82rem; color: #718096;
     }
-    .result-info strong { color: #2d3748; }
-    .btn-export { padding:7px 14px; background:#2d6a9f; color:white; border:none; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; }
+    .result-info strong { color: #2d2747; }
+    .btn-export { padding:7px 14px; background:#6b5cc4; color:white; border:none; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; }
     .btn-export:hover { filter: brightness(1.12); }
     .btn-export:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .table-wrap {
       overflow-x: auto;
       border-radius: 10px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #e5e1f5;
     }
     /* 거래조회 전용: 높이 제한 + 헤더 sticky */
     .table-wrap-scroll {
       overflow: auto;
       max-height: calc(100vh - 260px);
       border-radius: 10px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #e5e1f5;
     }
     .table-wrap-scroll thead th {
       position: sticky;
@@ -278,21 +278,21 @@
       font-size: 0.83rem;
       white-space: nowrap;
     }
-    thead tr { background: #1e3a5f; color: white; }
+    thead tr { background: #3d2f7f; color: white; }
     thead th {
       padding: 10px 14px;
       text-align: left;
       font-weight: 600;
       letter-spacing: 0.3px;
     }
-    tbody tr { border-bottom: 1px solid #edf2f7; }
+    tbody tr { border-bottom: 1px solid #ede9fe; }
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: #f7fafc; }
-    tbody td { padding: 9px 14px; color: #2d3748; }
+    tbody tr:hover { background: #f5f3ff; }
+    tbody td { padding: 9px 14px; color: #2d2747; }
     tbody td.num { text-align: right; }
     thead th.num { text-align: right; }
     tbody td.trade-buy  { color: #c53030; font-weight: 600; }
-    tbody td.trade-sell { color: #2b6cb0; font-weight: 600; }
+    tbody td.trade-sell { color: #7c6ce0; font-weight: 600; }
 
     .empty-state {
       text-align: center; padding: 48px 24px;
@@ -309,8 +309,8 @@
     }
     .spinner {
       width: 40px; height: 40px;
-      border: 4px solid #e2e8f0;
-      border-top-color: #3182ce;
+      border: 4px solid #e5e1f5;
+      border-top-color: #9b87f5;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -322,7 +322,7 @@
     .gauge-cell { min-width: 100px; }
     .gauge-wrap {
       margin-top: 4px; height: 5px; border-radius: 3px;
-      background: #e2e8f0; position: relative; overflow: hidden;
+      background: #e5e1f5; position: relative; overflow: hidden;
     }
     .gauge-center {
       position: absolute; left: 50%; top: 0;
@@ -344,23 +344,23 @@
       position: sticky; left: 0; z-index: 3;
       background: white;
     }
-    thead .sticky-left { background: #1e3a5f; z-index: 4; }
-    tbody tr:hover .sticky-left { background: #f7fafc; }
+    thead .sticky-left { background: #3d2f7f; z-index: 4; }
+    tbody tr:hover .sticky-left { background: #f5f3ff; }
     .sticky-right {
       position: sticky; right: 0; z-index: 3;
       background: white;
       box-shadow: -2px 0 6px rgba(0,0,0,0.06);
     }
-    thead .sticky-right { background: #1e3a5f; z-index: 4; }
-    tbody tr:hover .sticky-right { background: #f7fafc; }
+    thead .sticky-right { background: #3d2f7f; z-index: 4; }
+    tbody tr:hover .sticky-right { background: #f5f3ff; }
 
     /* ---- 수정/삭제 버튼 ---- */
     .btn-edit {
       padding: 3px 9px; font-size: 0.72rem; border-radius: 5px; border: none;
-      background: #ebf8ff; color: #2b6cb0; cursor: pointer; font-weight: 600;
+      background: #ede9fe; color: #7c6ce0; cursor: pointer; font-weight: 600;
       margin-right: 4px; transition: background 0.15s;
     }
-    .btn-edit:hover { background: #bee3f8; }
+    .btn-edit:hover { background: #ddd8ff; }
     .btn-del {
       padding: 3px 9px; font-size: 0.72rem; border-radius: 5px; border: none;
       background: #fff5f5; color: #c53030; cursor: pointer; font-weight: 600;
@@ -380,38 +380,38 @@
       box-shadow: 0 8px 40px rgba(0,0,0,0.2);
     }
     .edit-modal h3 {
-      font-size: 1.05rem; font-weight: 700; color: #1e3a5f;
-      margin-bottom: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;
+      font-size: 1.05rem; font-weight: 700; color: #3d2f7f;
+      margin-bottom: 18px; border-bottom: 1px solid #e5e1f5; padding-bottom: 10px;
     }
     .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .edit-field { display: flex; flex-direction: column; gap: 4px; }
     .edit-field.full { grid-column: 1 / -1; }
     .edit-field label { font-size: 0.75rem; font-weight: 600; color: #4a5568; }
     .edit-field input, .edit-field select {
-      border: 1px solid #cbd5e0; border-radius: 7px; padding: 7px 10px;
-      font-size: 0.85rem; font-family: inherit; color: #2d3748;
+      border: 1px solid #c4b5fd; border-radius: 7px; padding: 7px 10px;
+      font-size: 0.85rem; font-family: inherit; color: #2d2747;
     }
     .edit-field input:focus, .edit-field select:focus {
-      outline: none; border-color: #63b3ed; box-shadow: 0 0 0 2px rgba(99,179,237,0.2);
+      outline: none; border-color: #c4b5fd; box-shadow: 0 0 0 2px rgba(99,179,237,0.2);
     }
     .edit-modal-footer {
       display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
-      border-top: 1px solid #e2e8f0; padding-top: 16px;
+      border-top: 1px solid #e5e1f5; padding-top: 16px;
     }
     .btn-cancel-edit {
-      padding: 8px 20px; border-radius: 8px; border: 1px solid #cbd5e0;
+      padding: 8px 20px; border-radius: 8px; border: 1px solid #c4b5fd;
       background: white; color: #4a5568; cursor: pointer; font-size: 0.875rem; font-weight: 600;
     }
     .btn-save-edit {
       padding: 8px 20px; border-radius: 8px; border: none;
-      background: #2b6cb0; color: white; cursor: pointer; font-size: 0.875rem; font-weight: 600;
+      background: #7c6ce0; color: white; cursor: pointer; font-size: 0.875rem; font-weight: 600;
     }
-    .btn-save-edit:hover { background: #2c5282; }
-    .btn-save-edit:disabled { background: #90cdf4; cursor: not-allowed; }
+    .btn-save-edit:hover { background: #4a3d8f; }
+    .btn-save-edit:disabled { background: #ddd8ff; cursor: not-allowed; }
 
     /* ---- 현황 탭 ---- */
     .total-asset-box {
-      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      background: linear-gradient(135deg, #3d2f7f 0%, #6b5cc4 100%);
       border-radius: 12px; padding: 22px 24px;
       margin-bottom: 14px; color: white; text-align: center;
     }
@@ -432,21 +432,21 @@
       gap: 12px;
     }
     .cash-item {
-      background: white; border: 1.5px solid #e2e8f0;
+      background: white; border: 1.5px solid #e5e1f5;
       border-radius: 10px; padding: 14px 16px;
     }
     .cash-item-label { font-size: 0.72rem; font-weight: 700; color: #718096;
       text-transform: uppercase; letter-spacing: 0.5px; }
-    .cash-item-amount { font-size: 1.05rem; font-weight: 700; color: #2d3748; margin-top: 4px; }
+    .cash-item-amount { font-size: 1.05rem; font-weight: 700; color: #2d2747; margin-top: 4px; }
     .cash-item-krw { font-size: 0.76rem; color: #718096; margin-top: 2px; }
     .pnl-pos  { color: #c53030; font-weight: 600; }
-    .pnl-neg  { color: #2b6cb0; font-weight: 600; }
+    .pnl-neg  { color: #7c6ce0; font-weight: 600; }
     .pnl-zero { color: #718096; }
     .section-total {
       font-size: 0.82rem; color: #718096;
       margin-bottom: 8px; text-align: right;
     }
-    .section-total strong { color: #2d3748; }
+    .section-total strong { color: #2d2747; }
     .ov-empty { text-align: center; padding: 24px; color: #a0aec0; font-size: 0.88rem; }
     .ov-refresh-row {
       display: flex; justify-content: space-between;
@@ -454,11 +454,11 @@
     }
     .ov-note { font-size: 0.76rem; color: #a0aec0; }
     .btn-refresh {
-      background: #edf2f7; border: none; padding: 7px 16px;
+      background: #ede9fe; border: none; padding: 7px 16px;
       border-radius: 8px; font-size: 0.82rem; font-weight: 600;
       cursor: pointer; color: #4a5568; font-family: inherit;
     }
-    .btn-refresh:hover { background: #e2e8f0; }
+    .btn-refresh:hover { background: #e5e1f5; }
     /* 네비게이션 Account Owner 선택 */
     .nav-owner-wrap {
       margin-left: auto;
@@ -481,7 +481,7 @@
       transition: border-color 0.15s;
       margin-right: 8px;
     }
-    .nav-owner-select option { color: #1a202c; background: white; }
+    .nav-owner-select option { color: #1e1e2e; background: white; }
     .nav-owner-select:focus { border-color: rgba(255,255,255,0.6); }
 
     /* 현황 필터 행 */
@@ -508,32 +508,32 @@
     .ov-filter-badge {
       margin-top: 10px;
       padding: 6px 12px;
-      background: #ebf8ff;
-      border: 1px solid #90cdf4;
+      background: #ede9fe;
+      border: 1px solid #ddd8ff;
       border-radius: 6px;
       font-size: 0.78rem;
-      color: #2c5282;
+      color: #4a3d8f;
       font-weight: 600;
     }
     /* 환전 방법 선택 박스 (해외 Buy 전용) */
     .exchange-box {
-      background: #f0f7ff; border: 1px solid #90cdf4;
+      background: #f5f3ff; border: 1px solid #ddd8ff;
       border-radius: 8px; padding: 14px 16px;
     }
     .exchange-title {
-      font-size: 0.78rem; font-weight: 700; color: #2c5282; margin-bottom: 10px;
+      font-size: 0.78rem; font-weight: 700; color: #4a3d8f; margin-bottom: 10px;
     }
     .exchange-radios { display: flex; flex-direction: column; gap: 8px; }
     .exchange-radio-label {
       display: flex; align-items: center; gap: 8px;
-      cursor: pointer; font-size: 0.87rem; font-weight: 600; color: #2d3748;
+      cursor: pointer; font-size: 0.87rem; font-weight: 600; color: #2d2747;
     }
     .exchange-radio-label input[type="radio"] { width:auto; cursor:pointer; }
     .radio-desc { font-size: 0.74rem; font-weight: 400; color: #718096; }
     .exchange-preview {
-      margin-top: 10px; background: #fff; border: 1px solid #bee3f8;
+      margin-top: 10px; background: #fff; border: 1px solid #ddd8ff;
       border-radius: 6px; padding: 9px 12px;
-      font-size: 0.78rem; color: #2d3748; line-height: 1.9;
+      font-size: 0.78rem; color: #2d2747; line-height: 1.9;
     }
 
     /* 매입 정보 박스 (Sell 전용) */
@@ -681,18 +681,18 @@
     .modal-header {
       display: flex; justify-content: space-between; align-items: center;
       padding: 18px 24px 14px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e5e1f5;
     }
-    .modal-header span { font-weight: 700; font-size: 1rem; color: #1e3a5f; }
+    .modal-header span { font-weight: 700; font-size: 1rem; color: #3d2f7f; }
     .modal-close {
       background: none; border: none; font-size: 1.1rem;
       cursor: pointer; color: #718096;
       padding: 4px 8px; border-radius: 6px; line-height: 1;
     }
-    .modal-close:hover { background: #edf2f7; }
+    .modal-close:hover { background: #ede9fe; }
     .modal-body { overflow-y: auto; padding: 20px 24px; flex: 1; }
     .modal-footer {
-      padding: 14px 24px; border-top: 1px solid #e2e8f0;
+      padding: 14px 24px; border-top: 1px solid #e5e1f5;
       display: flex; justify-content: flex-end; gap: 10px;
     }
     .pv-section { margin-bottom: 20px; }
@@ -700,18 +700,18 @@
       font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.8px; color: #718096;
       margin-bottom: 10px; padding-bottom: 6px;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e5e1f5;
     }
     .pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
     .pv-row { display: flex; flex-direction: column; gap: 3px; }
     .pv-full { grid-column: span 2; display: flex; flex-direction: column; gap: 3px; }
     .pv-label { font-size: 0.72rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
-    .pv-value { font-size: 0.88rem; color: #2d3748; font-weight: 500; word-break: break-word; }
+    .pv-value { font-size: 0.88rem; color: #2d2747; font-weight: 500; word-break: break-word; }
     .pv-result {
-      background: #f8fafc; border: 1.5px solid #e2e8f0;
+      background: #f8f5ff; border: 1.5px solid #e5e1f5;
       border-radius: 10px; padding: 16px 18px; margin-top: 4px;
     }
-    .pv-result-title { font-size: 0.8rem; font-weight: 700; color: #1e3a5f; margin-bottom: 10px; }
+    .pv-result-title { font-size: 0.8rem; font-weight: 700; color: #3d2f7f; margin-bottom: 10px; }
     .pv-result-rows { display: flex; flex-direction: column; gap: 6px; }
     .pv-result-row {
       display: flex; justify-content: space-between;
@@ -719,12 +719,12 @@
     }
     .pv-result-total {
       display: flex; justify-content: space-between;
-      font-size: 0.95rem; font-weight: 700; color: #1e3a5f;
+      font-size: 0.95rem; font-weight: 700; color: #3d2f7f;
       margin-top: 8px; padding-top: 8px;
-      border-top: 1.5px solid #cbd5e0;
+      border-top: 1.5px solid #c4b5fd;
     }
     .pv-result-total.pnl-pos { color: #c53030; }
-    .pv-result-total.pnl-neg { color: #2b6cb0; }
+    .pv-result-total.pnl-neg { color: #7c6ce0; }
     @media (max-width: 480px) {
       .pv-grid { grid-template-columns: 1fr; }
       .pv-full { grid-column: span 1; }
@@ -733,7 +733,7 @@
     /* ---- 로그인 오버레이 ---- */
     .login-overlay {
       position: fixed; inset: 0;
-      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      background: linear-gradient(135deg, #3d2f7f 0%, #6b5cc4 100%);
       display: flex; align-items: center; justify-content: center;
       z-index: 9999;
     }
@@ -748,12 +748,12 @@
     .login-field { text-align: left; margin-bottom: 14px; }
     .login-field label { font-size: 0.78rem; font-weight: 600; color: #4a5568; display: block; margin-bottom: 5px; }
     .login-field select, .login-field input {
-      width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0;
-      border-radius: 8px; font-size: 0.9rem; color: #2d3748; font-family: inherit; outline: none;
+      width: 100%; padding: 10px 14px; border: 1.5px solid #e5e1f5;
+      border-radius: 8px; font-size: 0.9rem; color: #2d2747; font-family: inherit; outline: none;
     }
-    .login-field select:focus, .login-field input:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.12); }
+    .login-field select:focus, .login-field input:focus { border-color: #9b87f5; box-shadow: 0 0 0 3px rgba(49,130,206,0.12); }
     .login-btn {
-      width: 100%; padding: 12px; background: linear-gradient(135deg, #2563eb, #1e40af);
+      width: 100%; padding: 12px; background: linear-gradient(135deg, #7c6ce0, #5b4fa0);
       color: white; border: none; border-radius: 9px; font-size: 0.95rem;
       font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit; transition: filter 0.15s;
     }
@@ -761,15 +761,15 @@
     .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .login-error { color: #c53030; font-size: 0.82rem; margin-top: 10px; min-height: 20px; }
     .sample-btn {
-      width: 100%; padding: 10px; background: #f7fafc; border: 1.5px solid #e2e8f0;
+      width: 100%; padding: 10px; background: #f5f3ff; border: 1.5px solid #e5e1f5;
       border-radius: 9px; font-size: 0.88rem; font-weight: 600; color: #4a5568;
       cursor: pointer; font-family: inherit; transition: all 0.15s;
     }
-    .sample-btn:hover { background: #edf2f7; border-color: #cbd5e0; }
+    .sample-btn:hover { background: #ede9fe; border-color: #c4b5fd; }
     /* ---- 앱 하단 footer ---- */
     .app-footer {
       text-align: center; padding: 18px 0 10px;
-      border-top: 1px solid #e2e8f0; margin-top: 24px;
+      border-top: 1px solid #e5e1f5; margin-top: 24px;
     }
     .app-footer-link {
       font-size: 0.78rem; color: #a0aec0; text-decoration: none;
@@ -802,37 +802,37 @@
       width: 400px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
       box-shadow: 0 12px 40px rgba(0,0,0,0.22);
     }
-    .pin-modal h3 { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 18px; }
+    .pin-modal h3 { font-size: 1rem; font-weight: 700; color: #2d2747; margin-bottom: 18px; }
     .pin-modal .info-section-title {
-      font-size: 0.82rem; font-weight: 700; color: #2b6cb0;
+      font-size: 0.82rem; font-weight: 700; color: #7c6ce0;
       margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
     }
     .pin-modal .info-divider {
-      border: none; border-top: 1px solid #e2e8f0; margin: 18px 0;
+      border: none; border-top: 1px solid #e5e1f5; margin: 18px 0;
     }
     .pin-modal .pin-field { margin-bottom: 14px; }
     .pin-modal .pin-field label { display: block; font-size: 0.8rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; }
     .pin-modal .pin-field input {
-      width: 100%; padding: 9px 12px; border: 1px solid #e2e8f0;
+      width: 100%; padding: 9px 12px; border: 1px solid #e5e1f5;
       border-radius: 7px; font-size: 0.9rem; font-family: inherit; outline: none;
       transition: border-color 0.15s; box-sizing: border-box;
     }
-    .pin-modal .pin-field input:focus { border-color: #63b3ed; }
+    .pin-modal .pin-field input:focus { border-color: #c4b5fd; }
     .pin-modal .pin-error { color: #e53e3e; font-size: 0.8rem; min-height: 18px; margin-bottom: 10px; }
     .pin-modal .pin-success { color: #38a169; font-size: 0.8rem; min-height: 18px; margin-bottom: 10px; }
     .pin-modal .pin-btns { display: flex; gap: 8px; justify-content: flex-end; }
     .pin-modal .pin-btns-close { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
     .pin-modal .pin-btn-cancel {
-      padding: 8px 18px; border: 1px solid #e2e8f0; border-radius: 7px;
-      background: #f7fafc; color: #4a5568; font-size: 0.87rem; font-weight: 600;
+      padding: 8px 18px; border: 1px solid #e5e1f5; border-radius: 7px;
+      background: #f5f3ff; color: #4a5568; font-size: 0.87rem; font-weight: 600;
       cursor: pointer; font-family: inherit;
     }
     .pin-modal .pin-btn-ok {
       padding: 8px 18px; border: none; border-radius: 7px;
-      background: #2b6cb0; color: #fff; font-size: 0.87rem; font-weight: 600;
+      background: #7c6ce0; color: #fff; font-size: 0.87rem; font-weight: 600;
       cursor: pointer; font-family: inherit; transition: background 0.15s;
     }
-    .pin-modal .pin-btn-ok:hover { background: #2c5282; }
+    .pin-modal .pin-btn-ok:hover { background: #4a3d8f; }
     .pin-modal .pin-btn-ok:disabled { background: #a0aec0; cursor: not-allowed; }
   </style>
 </head>
@@ -870,7 +870,7 @@
       <input type="email" id="emailNew" placeholder="이메일 주소 입력" maxlength="100" />
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;">
-      <input type="checkbox" id="emailRecvCheck" style="width:16px;height:16px;cursor:pointer;accent-color:#3182ce;" />
+      <input type="checkbox" id="emailRecvCheck" style="width:16px;height:16px;cursor:pointer;accent-color:#9b87f5;" />
       <label for="emailRecvCheck" style="font-size:13px;color:#4a5568;cursor:pointer;user-select:none;">메일 수신</label>
     </div>
     <p id="emailModalMsg" class="pin-error"></p>
@@ -886,9 +886,9 @@
 
 <!-- ===================== 종목 상세 팝업 (body 최상단 — 어느 탭에서도 표시) ===================== -->
 <div id="rbStockBackdrop" style="display:none;position:fixed;inset:0;z-index:9998;" onclick="closeStockDetail()"></div>
-<div id="rbStockPopup" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid #e2e8f0;width:660px;max-width:96vw;max-height:80vh;overflow-y:scroll;">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:#f7fafc;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:1;border-radius:10px 10px 0 0;">
-    <span id="rbPopupTitle" style="font-weight:700;font-size:0.92rem;color:#2d3748;">📊 종목 상세</span>
+<div id="rbStockPopup" style="display:none;position:fixed;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);border:1px solid #e5e1f5;width:660px;max-width:96vw;max-height:80vh;overflow-y:scroll;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:#f5f3ff;border-bottom:1px solid #e5e1f5;position:sticky;top:0;z-index:1;border-radius:10px 10px 0 0;">
+    <span id="rbPopupTitle" style="font-weight:700;font-size:0.92rem;color:#2d2747;">📊 종목 상세</span>
     <button onclick="closeStockDetail()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#a0aec0;line-height:1;">✕</button>
   </div>
   <div id="rbPopupBody" style="padding:12px 14px;">
@@ -913,16 +913,16 @@
     </div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">입장</button>
     <p id="loginError" class="login-error"></p>
-    <div id="sampleBtnWrap" class="hidden" style="margin-top:14px; border-top:1px solid #e2e8f0; padding-top:14px;">
+    <div id="sampleBtnWrap" class="hidden" style="margin-top:14px; border-top:1px solid #e5e1f5; padding-top:14px;">
       <button class="sample-btn" onclick="doSampleLogin()">👀 샘플 보기</button>
       <p style="font-size:0.72rem;color:#a0aec0;margin-top:6px;">Account Owner 없이 샘플 데이터로 둘러보기</p>
     </div>
-    <div style="margin-top:20px; border-top:1px solid #e2e8f0; padding-top:14px;">
+    <div style="margin-top:20px; border-top:1px solid #e5e1f5; padding-top:14px;">
       <a href="/help.html" target="_blank"
          style="font-size:0.76rem; color:#718096; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
         📋 화면구성안내
       </a>
-      <p style="font-size:0.7rem; color:#cbd5e0; margin-top:8px;">© 2022 Lz LLC · All rights reserved</p>
+      <p style="font-size:0.7rem; color:#c4b5fd; margin-top:8px;">© 2022 Lz LLC · All rights reserved</p>
     </div>
   </div>
 </div>
@@ -1143,7 +1143,7 @@
                       onclick="toggleTaxCurrency()">💱 세금 KRW로 입력</button>
               <span class="krw-display hidden" id="taxKrw"></span>
               <span class="krw-display hidden" id="taxUsdNote"
-                    style="color:#805ad5;background:#faf5ff;border-color:#d6bcfa;"></span>
+                    style="color:#9b87f5;background:#f5f3ff;border-color:#ddd8ff;"></span>
             </div>
 
             <div class="field" id="chargeField">
@@ -1232,11 +1232,11 @@
           </div>
           <div class="field">
             <label>시작월</label>
-            <input type="month" id="pfStartMonth" style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.87rem;color:#2d3748;width:100%;" />
+            <input type="month" id="pfStartMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
           </div>
           <div class="field">
             <label>종료월</label>
-            <input type="month" id="pfEndMonth" style="padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.87rem;color:#2d3748;width:100%;" />
+            <input type="month" id="pfEndMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
           </div>
           <div class="field pf-btn-field">
             <label class="lbl-hidden">&nbsp;</label>
@@ -1254,39 +1254,39 @@
       <div id="pfContent" style="display:none;">
 
         <!-- 기준값 디버그 패널 -->
-        <div class="card" style="margin-bottom:14px;padding:10px 16px;background:#f7fafc;border:1px dashed #bee3f8;">
-          <div style="font-size:0.72rem;font-weight:700;color:#90cdf4;margin-bottom:10px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액 / 순투자액 / 평가손익</div>
+        <div class="card" style="margin-bottom:14px;padding:10px 16px;background:#f5f3ff;border:1px dashed #ddd8ff;">
+          <div style="font-size:0.72rem;font-weight:700;color:#ddd8ff;margin-bottom:10px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액 / 순투자액 / 평가손익</div>
           <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
             <thead>
               <tr>
                 <th style="text-align:left;color:#a0aec0;font-weight:600;padding:3px 8px 6px 0;width:72px;"></th>
-                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e2e8f0;">전년 12월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(YTD 기준)</span></th>
-                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e2e8f0;">전월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(MTD 기준)</span></th>
-                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e2e8f0;">전일<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(Daily 기준)</span></th>
-                <th style="text-align:right;color:#4a5568;font-weight:700;padding:3px 8px 6px;border-bottom:2px solid #4a5568;border-left:2px solid #e2e8f0;">현재일</th>
+                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전년 12월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(YTD 기준)</span></th>
+                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(MTD 기준)</span></th>
+                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전일<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(Daily 기준)</span></th>
+                <th style="text-align:right;color:#4a5568;font-weight:700;padding:3px 8px 6px;border-bottom:2px solid #4a5568;border-left:2px solid #e5e1f5;">현재일</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td style="color:#a0aec0;padding:4px 8px 3px 0;font-size:0.72rem;">평가액</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;" id="pfDbgYtdVal">-</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;" id="pfDbgMtdVal">-</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;" id="pfDbgDailyVal">-</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d3748;font-weight:700;border-left:2px solid #e2e8f0;" id="pfDbgCurVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgYtdVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgMtdVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgDailyVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="pfDbgCurVal">-</td>
               </tr>
               <tr>
                 <td style="color:#a0aec0;padding:3px 8px 3px 0;font-size:0.72rem;">순투자액</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d3748;" id="pfDbgYtdNetInv">-</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d3748;" id="pfDbgMtdNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="pfDbgYtdNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="pfDbgMtdNetInv">-</td>
                 <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#718096;" id="pfDbgDailyNetInv">-</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d3748;font-weight:700;border-left:2px solid #e2e8f0;" id="pfDbgCurNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="pfDbgCurNetInv">-</td>
               </tr>
               <tr>
-                <td style="color:#a0aec0;padding:3px 8px 4px 0;font-size:0.72rem;border-top:1px solid #edf2f7;">평가손익</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;" id="pfDbgYtdPnl">-</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;" id="pfDbgMtdPnl">-</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;" id="pfDbgDailyPnl">-</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #edf2f7;border-left:2px solid #e2e8f0;" id="pfDbgCurPnl">-</td>
+                <td style="color:#a0aec0;padding:3px 8px 4px 0;font-size:0.72rem;border-top:1px solid #ede9fe;">평가손익</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgYtdPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgMtdPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgDailyPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;border-left:2px solid #e5e1f5;" id="pfDbgCurPnl">-</td>
               </tr>
             </tbody>
           </table>
@@ -1296,11 +1296,11 @@
         <div class="pf-summary-grid">
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">순 투자액</div>
-            <div id="pfNetInv" style="font-size:1.3rem;font-weight:700;color:#2d3748;">-</div>
+            <div id="pfNetInv" style="font-size:1.3rem;font-weight:700;color:#2d2747;">-</div>
           </div>
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">평가액</div>
-            <div id="pfMarket" style="font-size:1.3rem;font-weight:700;color:#2d3748;">-</div>
+            <div id="pfMarket" style="font-size:1.3rem;font-weight:700;color:#2d2747;">-</div>
           </div>
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">평가 손익</div>
@@ -1316,25 +1316,25 @@
         <div class="pf-period-grid">
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">YTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(연초 이후)</span></div>
-            <div id="pfYtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
-            <div id="pfYtdPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
+            <div id="pfYtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d2747;">-</div>
+            <div id="pfYtdPct" style="font-size:0.9rem;font-weight:600;color:#2d2747;">-</div>
           </div>
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">MTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(월초 이후)</span></div>
-            <div id="pfMtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
-            <div id="pfMtdPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
+            <div id="pfMtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d2747;">-</div>
+            <div id="pfMtdPct" style="font-size:0.9rem;font-weight:600;color:#2d2747;">-</div>
           </div>
           <div class="card" style="text-align:center;">
             <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">Daily 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(전일 대비)</span></div>
-            <div id="pfDailyPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d3748;">-</div>
-            <div id="pfDailyPct" style="font-size:0.9rem;font-weight:600;color:#2d3748;">-</div>
+            <div id="pfDailyPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d2747;">-</div>
+            <div id="pfDailyPct" style="font-size:0.9rem;font-weight:600;color:#2d2747;">-</div>
           </div>
         </div>
 
         <!-- 월별 수익률 차트 -->
         <div class="card" style="margin-bottom:20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-            <div style="font-weight:700;color:#2d3748;">📈 월별 누적 수익률 비교</div>
+            <div style="font-weight:700;color:#2d2747;">📈 월별 누적 수익률 비교</div>
             <div id="pfChartToggles" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
           </div>
           <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 포트폴리오·지수 모두 분석 시작 시점(첫 월) 대비 누적 등락률</div>
@@ -1344,21 +1344,21 @@
 
         <!-- 월별 수익금액 차트 -->
         <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">💰 월별 수익금액</div>
+          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">💰 월별 수익금액</div>
           <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 (평가액 − 순투자액)</div>
           <div id="pfAmtChart"></div>
         </div>
 
         <!-- 월별 자산총액 차트 -->
         <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">🏦 월별 자산총액</div>
+          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">🏦 월별 자산총액</div>
           <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 평가액 (KRW)</div>
           <div id="pfAssetChart"></div>
         </div>
 
         <!-- 월별 배당 현황 -->
         <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d3748;margin-bottom:10px;">&#x1F4CA; 월별 배당 현황</div>
+          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">&#x1F4CA; 월별 배당 현황</div>
           <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">&#x203B; 세금&#xB7;수수료 차감 후 KRW 환산 기준</div>
           <div id="pfDivChart"></div>
           <div id="pfDivTable" style="margin-top:16px;overflow-x:auto;"></div>
@@ -1367,7 +1367,7 @@
 
         <!-- 종목별 수익률 테이블 -->
         <div class="card">
-          <div style="font-weight:700;color:#2d3748;margin-bottom:12px;">📋 보유 종목별 수익률</div>
+          <div style="font-weight:700;color:#2d2747;margin-bottom:12px;">📋 보유 종목별 수익률</div>
           <div class="table-wrap">
             <table id="pfStockTable">
               <thead><tr>
@@ -1431,22 +1431,22 @@
           <div style="display:flex;align-items:center;gap:12px;">
             <span id="rbWeightBadge" style="font-size:0.85rem;"></span>
             <button class="btn btn-reset-filter" style="padding:5px 12px;font-size:0.82rem;" onclick="resetRbTargets()">비중 초기화</button>
-            <button id="rbSaveBtn" class="btn" style="display:none;padding:5px 14px;font-size:0.82rem;background:#2b6cb0;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="saveRbTargets()">💾 저장</button>
+            <button id="rbSaveBtn" class="btn" style="display:none;padding:5px 14px;font-size:0.82rem;background:#7c6ce0;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="saveRbTargets()">💾 저장</button>
           </div>
         </div>
         <div style="overflow-x:auto;margin-top:4px;">
           <table style="width:100%;border-collapse:collapse;font-size:0.88rem;" id="rbTable">
             <thead>
-              <tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;color:#2d3748;">
+              <tr style="background:#f5f3ff;border-bottom:2px solid #e5e1f5;color:#2d2747;">
                 <th style="padding:8px 10px;text-align:left;">종목명</th>
 
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">매입단가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재비중</th>
-                <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#553c9a;">목표비중</th>
+                <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#6b5cc4;">목표비중</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">배분금액</th>
                 <th id="rbDivYieldTh" style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;cursor:pointer;user-select:none;" onclick="toggleRbDivSort()" title="배당율 기준 정렬">예상 연배당 <span id="rbDivSortIcon"></span></th>
-                <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#2b6cb0;">매수/매도</th>
+                <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#7c6ce0;">매수/매도</th>
               </tr>
             </thead>
             <tbody id="rbTbody"></tbody>
@@ -1464,27 +1464,27 @@
             <div>
               <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Ticker</label>
               <input id="rbAddTickerInput" type="text" placeholder="예: AAPL / 005930.KS"
-                style="width:140px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;"
+                style="width:140px;padding:6px 8px;border:1px solid #c4b5fd;border-radius:5px;font-size:0.87rem;"
                 oninput="this.value=this.value.toUpperCase()" onblur="rbAutoFillName(this.value)">
             </div>
             <div>
               <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">종목명</label>
               <input id="rbAddNameInput" type="text" placeholder="종목명"
-                style="width:150px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;">
+                style="width:150px;padding:6px 8px;border:1px solid #c4b5fd;border-radius:5px;font-size:0.87rem;">
             </div>
             <div>
               <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">목표비중(%)</label>
               <div style="display:flex;align-items:center;gap:3px;">
                 <input id="rbAddPctInput" type="number" step="0.01" min="0" max="100" value="0"
-                  style="width:62px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;text-align:right;">
-                <span style="color:#553c9a;font-weight:600;">%</span>
+                  style="width:62px;padding:6px 8px;border:1px solid #c4b5fd;border-radius:5px;font-size:0.87rem;text-align:right;">
+                <span style="color:#6b5cc4;font-weight:600;">%</span>
               </div>
             </div>
             <div style="display:flex;gap:6px;padding-bottom:1px;">
               <button onclick="confirmRbAddItem()"
                 style="padding:6px 16px;font-size:0.85rem;background:#276749;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">추가</button>
               <button onclick="hideRbAddForm()"
-                style="padding:6px 12px;font-size:0.85rem;background:#edf2f7;color:#4a5568;border:1px solid #cbd5e0;border-radius:6px;cursor:pointer;">취소</button>
+                style="padding:6px 12px;font-size:0.85rem;background:#ede9fe;color:#4a5568;border:1px solid #c4b5fd;border-radius:6px;cursor:pointer;">취소</button>
             </div>
           </div>
         </div>
@@ -1504,7 +1504,7 @@
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <span>⭐ 관심종목</span>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button onclick="loadWatchlistData(true)" style="padding:5px 12px;font-size:0.82rem;background:#ebf8ff;color:#2b6cb0;border:1px solid #bee3f8;border-radius:6px;cursor:pointer;font-weight:600;">🔄 새로고침</button>
+            <button onclick="loadWatchlistData(true)" style="padding:5px 12px;font-size:0.82rem;background:#ede9fe;color:#7c6ce0;border:1px solid #ddd8ff;border-radius:6px;cursor:pointer;font-weight:600;">🔄 새로고침</button>
             <button onclick="showWlAddForm()" id="wlAddBtn" style="padding:5px 13px;font-size:0.82rem;background:#fffaf0;color:#c05621;border:1px solid #fbd38d;border-radius:6px;cursor:pointer;font-weight:600;">➕ 종목 추가</button>
           </div>
         </div>
@@ -1516,13 +1516,13 @@
             <div>
               <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Group</label>
               <input id="wlAddGroupInput" type="text" placeholder="예: 미국ETF" list="wlGroupList"
-                style="width:120px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;">
+                style="width:120px;padding:6px 8px;border:1px solid #c4b5fd;border-radius:5px;font-size:0.87rem;">
               <datalist id="wlGroupList"></datalist>
             </div>
             <div>
               <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Region</label>
               <select id="wlAddRegionSelect"
-                style="width:105px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;">
+                style="width:105px;padding:6px 8px;border:1px solid #c4b5fd;border-radius:5px;font-size:0.87rem;">
                 <option value="">-- 선택 --</option>
                 <option value="KOREA">KOREA</option>
                 <option value="USA">USA</option>
@@ -1531,7 +1531,7 @@
             <div>
               <label style="font-size:0.78rem;color:#4a5568;margin-bottom:3px;display:block;">Ticker</label>
               <input id="wlAddTickerInput" type="text" placeholder="예: AAPL / 005930.KS"
-                style="width:155px;padding:6px 8px;border:1px solid #cbd5e0;border-radius:5px;font-size:0.87rem;"
+                style="width:155px;padding:6px 8px;border:1px solid #c4b5fd;border-radius:5px;font-size:0.87rem;"
                 oninput="this.value=this.value.toUpperCase()"
                 onkeydown="if(event.key==='Enter')confirmWlAddItem()">
             </div>
@@ -1539,7 +1539,7 @@
               <button onclick="confirmWlAddItem()"
                 style="padding:6px 16px;font-size:0.85rem;background:#c05621;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">추가</button>
               <button onclick="hideWlAddForm()"
-                style="padding:6px 12px;font-size:0.85rem;background:#edf2f7;color:#4a5568;border:1px solid #cbd5e0;border-radius:6px;cursor:pointer;">취소</button>
+                style="padding:6px 12px;font-size:0.85rem;background:#ede9fe;color:#4a5568;border:1px solid #c4b5fd;border-radius:6px;cursor:pointer;">취소</button>
             </div>
           </div>
         </div>
@@ -1600,7 +1600,7 @@
 
   <div class="app-footer">
     <a href="/help.html" target="_blank" class="app-footer-link">📋 화면구성안내</a>
-    <span style="color:#e2e8f0;margin:0 8px;">·</span>
+    <span style="color:#e5e1f5;margin:0 8px;">·</span>
     <span style="font-size:0.78rem;color:#a0aec0;">© 2022 Lz LLC · All rights reserved</span>
   </div>
 
@@ -1643,7 +1643,7 @@
         <input type="number" step="any" id="ef_tax" placeholder="0" oninput="efUpdateTaxNote()">
         <button type="button" id="ef_taxKrwBtn" class="tax-krw-btn hidden"
                 onclick="toggleEditTaxKrw()">💱 세금 KRW로 입력</button>
-        <span id="ef_taxNote" style="font-size:0.75rem;color:#805ad5;display:none;margin-top:2px;"></span>
+        <span id="ef_taxNote" style="font-size:0.75rem;color:#9b87f5;display:none;margin-top:2px;"></span>
       </div>
       <div class="edit-field"><label>Charge</label><input type="number" step="any" id="ef_charge"></div>
       <div class="edit-field"><label>Purchase</label><input type="number" step="any" id="ef_purchase"></div>
@@ -3317,14 +3317,14 @@
       const safeTicker = item.ticker.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       let row = `<tr>
         <td data-ticker="${safeTicker}" style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail(this.dataset.ticker,event)">
-          <span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="${safeName}">${safeName}</span>
+          <span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="${safeName}">${safeName}</span>
           <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${safeTicker}</div>
         </td>
         <td class="num">${fmtN(item.quantity, 0)}</td>
         <td class="num">${avgStr}</td>
         <td class="num" style="color:#4a5568;">${purStr}</td>
         <td class="num">${curStr}</td>
-        <td class="num" style="font-weight:600;color:#2d3748;">${mktStr}</td>
+        <td class="num" style="font-weight:600;color:#2d2747;">${mktStr}</td>
         <td class="num ${pc}">${pnlStr}</td>
         <td class="num ${pc} gauge-cell">${pctStr}${gaugeHtml}</td>`;
       if (showDividend) {
@@ -3338,8 +3338,8 @@
           const matPnlStr = (me.maturityPnlFX >= 0 ? '+' : '') + fmtAmt(me.maturityPnlFX, isK) + ' ' + cur;
           const matPctStr = fmtPct(me.maturityPnlPct);
           const tooltipMsg = '\uC561\uBA74\uAC00(' + fmtAmt(me.faceValue, isK) + ')\xD7\uC218\uB7C9(' + fmtN(item.quantity, 0) + ') + \uC794\uC5EC\uCFE0\uD3F0 ' + me.remainingCoupons + '\uD68C(' + fmtAmt(me.couponPerUnit, isK) + '\xD7\uC218\uB7C9) | \uB9CC\uAE30\uAE4C\uC9C0 ' + me.daysLeft + '\uC77C';
-          row += `<td class="num" style="color:#553c9a;white-space:nowrap;">${me.maturityDate}</td>`;
-          row += `<td class="num" style="color:#553c9a;" title="${tooltipMsg}">${matValStr}</td>`;
+          row += `<td class="num" style="color:#6b5cc4;white-space:nowrap;">${me.maturityDate}</td>`;
+          row += `<td class="num" style="color:#6b5cc4;" title="${tooltipMsg}">${matValStr}</td>`;
           row += `<td class="num ${mpc}">${matPnlStr}</td>`;
           row += `<td class="num ${mpc}">${matPctStr}</td>`;
         } else {
@@ -3721,7 +3721,7 @@
       // ── 요약 카드 ────────────────────────────────────────
       var fmtK   = function(v) { return Math.floor(v).toLocaleString('ko-KR'); };
       var fmtPct = function(v) { return (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%'; };
-      var pnlCol = function(v) { return v > 0 ? '#2f855a' : v < 0 ? '#c53030' : '#2d3748'; };
+      var pnlCol = function(v) { return v > 0 ? '#2f855a' : v < 0 ? '#c53030' : '#2d2747'; };
 
       var s = data.summary;
       document.getElementById('pfNetInv').textContent  = fmtK(s.netInvestmentKRW) + ' KRW';
@@ -3866,7 +3866,7 @@
           var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           return '<tr>'
             + '<td data-ticker="' + safePfTicker + '" style="cursor:pointer;white-space:nowrap;" onclick="showStockDetail(this.dataset.ticker,event)">'
-            + '<span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
+            + '<span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
             + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
@@ -3914,13 +3914,13 @@
     });
 
     var allSeries = [
-      { key: 'portfolio', label: '포트폴리오', color: '#3182ce',
+      { key: 'portfolio', label: '포트폴리오', color: '#9b87f5',
         data: pfData },
       { key: 'KOSPI',  label: 'KOSPI',   color: '#e53e3e',
         data: ((indices || {}).KOSPI  || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
       { key: 'SP500',  label: 'S&P500',  color: '#38a169',
         data: ((indices || {}).SP500  || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
-      { key: 'NASDAQ', label: 'NASDAQ',  color: '#805ad5',
+      { key: 'NASDAQ', label: 'NASDAQ',  color: '#9b87f5',
         data: ((indices || {}).NASDAQ || []).map(function(m) { return { month: m.month, v: m.returnPct }; }) },
     ].filter(function(s) { return s.data.length > 0; });
 
@@ -4001,7 +4001,7 @@
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;overflow:visible;">';
 
     // 그리드
-    svg += '<g stroke="#edf2f7" stroke-width="1">';
+    svg += '<g stroke="#ede9fe" stroke-width="1">';
     ticks.forEach(function(tv) {
       var ty = yPos(tv);
       if (ty < mt - 2 || ty > mt + ch + 2) return;
@@ -4014,7 +4014,7 @@
     svg += '<line x1="' + ml + '" y1="' + y0.toFixed(1) + '" x2="' + (ml + cw) + '" y2="' + y0.toFixed(1) + '" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>';
 
     // 차트 테두리
-    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e5e1f5" stroke-width="1"/>';
 
     // 라인 + 점
     series.forEach(function(s) {
@@ -4121,7 +4121,7 @@
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;overflow:visible;">';
 
     // 그리드
-    svg += '<g stroke="#edf2f7" stroke-width="1">';
+    svg += '<g stroke="#ede9fe" stroke-width="1">';
     ticks.forEach(function(tv) {
       var ty = yPos(tv);
       if (ty < mt - 2 || ty > mt + ch + 2) return;
@@ -4134,7 +4134,7 @@
     svg += '<line x1="' + ml + '" y1="' + y0.toFixed(1) + '" x2="' + (ml + cw) + '" y2="' + y0.toFixed(1) + '" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>';
 
     // 차트 테두리
-    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e5e1f5" stroke-width="1"/>';
 
     // 바
     data.forEach(function(d, i) {
@@ -4144,8 +4144,8 @@
       var by = v >= 0 ? yPos(v) : y0;
       var bh = Math.abs(yPos(v) - y0);
       if (bh < 1) bh = 1;
-      var color  = v >= 0 ? '#3182ce' : '#e53e3e';
-      var lightC = v >= 0 ? '#90cdf4' : '#feb2b2';
+      var color  = v >= 0 ? '#9b87f5' : '#e53e3e';
+      var lightC = v >= 0 ? '#ddd8ff' : '#feb2b2';
       svg += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + color + '" rx="2"/>';
       // 값 레이블: 항상 표시 (작은 바는 0선 기준 최소 오프셋 적용)
       var labelY;
@@ -4243,7 +4243,7 @@
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;overflow:visible;">';
 
     // 그리드
-    svg += '<g stroke="#edf2f7" stroke-width="1">';
+    svg += '<g stroke="#ede9fe" stroke-width="1">';
     ticks.forEach(function(tv) {
       var ty = yPos(tv);
       if (ty < mt - 2 || ty > mt + ch + 2) return;
@@ -4252,7 +4252,7 @@
     svg += '</g>';
 
     // 차트 테두리
-    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e5e1f5" stroke-width="1"/>';
 
     // 영역 채우기
     var pts = data.map(function(d, i) { return xPos(i).toFixed(1) + ',' + yPos(d.val / unitDiv).toFixed(1); });
@@ -4260,18 +4260,18 @@
     var areaPath = 'M' + pts[0] + ' ' + pts.slice(1).map(function(p) { return 'L' + p; }).join(' ')
       + ' L' + xPos(n - 1).toFixed(1) + ',' + yBase.toFixed(1)
       + ' L' + xPos(0).toFixed(1) + ',' + yBase.toFixed(1) + ' Z';
-    svg += '<defs><linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3182ce" stop-opacity="0.2"/><stop offset="100%" stop-color="#3182ce" stop-opacity="0.02"/></linearGradient></defs>';
+    svg += '<defs><linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9b87f5" stop-opacity="0.2"/><stop offset="100%" stop-color="#9b87f5" stop-opacity="0.02"/></linearGradient></defs>';
     svg += '<path d="' + areaPath + '" fill="url(#assetGrad)"/>';
 
     // 라인
-    svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#3182ce" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
+    svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#9b87f5" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>';
 
     // 데이터 포인트 + 값 레이블
     data.forEach(function(d, i) {
       var cx = xPos(i), cy = yPos(d.val / unitDiv);
-      svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.5" fill="#3182ce" stroke="white" stroke-width="1.5"/>';
+      svg += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.5" fill="#9b87f5" stroke="white" stroke-width="1.5"/>';
       if (n <= 13 || i % 2 === 0 || i === n - 1) {
-        svg += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" text-anchor="middle" font-size="9" fill="#3182ce" font-family="inherit" font-weight="700">' + fmtV(d.val) + '</text>';
+        svg += '<text x="' + cx.toFixed(1) + '" y="' + (cy - 8).toFixed(1) + '" text-anchor="middle" font-size="9" fill="#9b87f5" font-family="inherit" font-weight="700">' + fmtV(d.val) + '</text>';
       }
     });
 
@@ -4310,7 +4310,7 @@
     }
 
     // 색상 팔레트 (연도별)
-    var palette = ['#3182ce','#e53e3e','#38a169','#d69e2e','#805ad5','#dd6b20','#319795','#c53030','#2b6cb0','#276749'];
+    var palette = ['#9b87f5','#e53e3e','#38a169','#d69e2e','#9b87f5','#dd6b20','#319795','#c53030','#7c6ce0','#276749'];
 
     var ALL_MONTHS = ['01','02','03','04','05','06','07','08','09','10','11','12'];
     var MONTH_KO   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -4370,7 +4370,7 @@
 
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;overflow:visible;">';
 
-    svg += '<g stroke="#edf2f7" stroke-width="1">';
+    svg += '<g stroke="#ede9fe" stroke-width="1">';
     ticks.forEach(function(tv) {
       var ty = yPos(tv);
       svg += '<line x1="' + ml + '" y1="' + ty.toFixed(1) + '" x2="' + (ml+cw) + '" y2="' + ty.toFixed(1) + '"/>';
@@ -4417,30 +4417,30 @@
     });
     svg += '</g>';
 
-    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+    svg += '<rect x="' + ml + '" y="' + mt + '" width="' + cw + '" height="' + ch + '" fill="none" stroke="#e5e1f5" stroke-width="1"/>';
     svg += '</svg>';
     if (chartEl) chartEl.innerHTML = svg;
 
     // 데이터 테이블
     var tblHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">';
-    tblHtml += '<thead><tr style="background:#f7fafc;">';
-    tblHtml += '<th style="padding:6px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-weight:700;color:#2d3748;">연도</th>';
+    tblHtml += '<thead><tr style="background:#f5f3ff;">';
+    tblHtml += '<th style="padding:6px 10px;text-align:left;border-bottom:2px solid #e5e1f5;font-weight:700;color:#2d2747;">연도</th>';
     MONTH_KO.forEach(function(mo) {
-      tblHtml += '<th style="padding:6px 6px;text-align:right;border-bottom:2px solid #e2e8f0;font-weight:700;color:#2d3748;white-space:nowrap;">' + mo + '</th>';
+      tblHtml += '<th style="padding:6px 6px;text-align:right;border-bottom:2px solid #e5e1f5;font-weight:700;color:#2d2747;white-space:nowrap;">' + mo + '</th>';
     });
-    tblHtml += '<th style="padding:6px 10px;text-align:right;border-bottom:2px solid #e2e8f0;font-weight:700;color:#2d3748;">합계</th>';
+    tblHtml += '<th style="padding:6px 10px;text-align:right;border-bottom:2px solid #e5e1f5;font-weight:700;color:#2d2747;">합계</th>';
     tblHtml += '</tr></thead><tbody>';
 
     dividends.forEach(function(d, yi) {
-      var rowBg = yi % 2 === 0 ? '#fff' : '#f7fafc';
+      var rowBg = yi % 2 === 0 ? '#fff' : '#f5f3ff';
       var color = palette[yi % palette.length];
       tblHtml += '<tr style="background:' + rowBg + ';">';
-      tblHtml += '<td style="padding:6px 10px;font-weight:700;color:' + color + ';border-bottom:1px solid #edf2f7;">' + d.year + '</td>';
+      tblHtml += '<td style="padding:6px 10px;font-weight:700;color:' + color + ';border-bottom:1px solid #ede9fe;">' + d.year + '</td>';
       ALL_MONTHS.forEach(function(mo) {
         var v = d.months[mo] || 0;
-        tblHtml += '<td style="padding:6px 6px;text-align:right;border-bottom:1px solid #edf2f7;color:' + (v > 0 ? '#2d3748' : '#a0aec0') + ';">' + (v > 0 ? fmtKRW(v) : '-') + '</td>';
+        tblHtml += '<td style="padding:6px 6px;text-align:right;border-bottom:1px solid #ede9fe;color:' + (v > 0 ? '#2d2747' : '#a0aec0') + ';">' + (v > 0 ? fmtKRW(v) : '-') + '</td>';
       });
-      tblHtml += '<td style="padding:6px 10px;text-align:right;font-weight:700;border-bottom:1px solid #edf2f7;color:#2d3748;">' + fmtKRW(d.total) + '</td>';
+      tblHtml += '<td style="padding:6px 10px;text-align:right;font-weight:700;border-bottom:1px solid #ede9fe;color:#2d2747;">' + fmtKRW(d.total) + '</td>';
       tblHtml += '</tr>';
     });
 
@@ -4479,19 +4479,19 @@
       });
 
       if (hasEstimate) {
-        tblHtml += '<tr style="background:#faf5ff;">';
-        tblHtml += '<td style="padding:6px 10px;font-weight:700;color:#805ad5;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;">예상 (' + thisYear + ')<div style="font-size:0.75em;font-weight:400;color:#b794f4;margin-top:1px;">주당월배당 × 현재수량</div></td>';
+        tblHtml += '<tr style="background:#f5f3ff;">';
+        tblHtml += '<td style="padding:6px 10px;font-weight:700;color:#9b87f5;border-top:2px solid #ede9fe;border-bottom:1px solid #ede9fe;">예상 (' + thisYear + ')<div style="font-size:0.75em;font-weight:400;color:#c4b5fd;margin-top:1px;">주당월배당 × 현재수량</div></td>';
         ALL_MONTHS.forEach(function(mo) {
           var cell = expCells[mo];
           if (!cell) {
-            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#a0aec0;">-</td>';
+            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #ede9fe;border-bottom:1px solid #ede9fe;color:#a0aec0;">-</td>';
           } else if (!cell.est) {
-            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#553c9a;font-weight:600;">' + fmtKRW(cell.val) + '</td>';
+            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #ede9fe;border-bottom:1px solid #ede9fe;color:#6b5cc4;font-weight:600;">' + fmtKRW(cell.val) + '</td>';
           } else {
-            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#b794f4;font-style:italic;">' + fmtKRW(cell.val) + '</td>';
+            tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #ede9fe;border-bottom:1px solid #ede9fe;color:#c4b5fd;font-style:italic;">' + fmtKRW(cell.val) + '</td>';
           }
         });
-        tblHtml += '<td style="padding:6px 10px;text-align:right;font-weight:700;border-top:2px solid #e9d8fd;border-bottom:1px solid #e9d8fd;color:#805ad5;">' + fmtKRW(expTotal) + '</td>';
+        tblHtml += '<td style="padding:6px 10px;text-align:right;font-weight:700;border-top:2px solid #ede9fe;border-bottom:1px solid #ede9fe;color:#9b87f5;">' + fmtKRW(expTotal) + '</td>';
         tblHtml += '</tr>';
       }
     }
@@ -4500,12 +4500,12 @@
       return dividends.reduce(function(s, d) { return s + (d.months[mo] || 0); }, 0);
     });
     var grandTotal = moTotals.reduce(function(s, v) { return s + v; }, 0);
-    tblHtml += '<tr style="background:#ebf4ff;font-weight:700;">';
-    tblHtml += '<td style="padding:6px 10px;border-top:2px solid #bee3f8;color:#2b6cb0;">합계</td>';
+    tblHtml += '<tr style="background:#ede9fe;font-weight:700;">';
+    tblHtml += '<td style="padding:6px 10px;border-top:2px solid #ddd8ff;color:#7c6ce0;">합계</td>';
     moTotals.forEach(function(v) {
-      tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #bee3f8;color:' + (v > 0 ? '#2b6cb0' : '#a0aec0') + ';">' + (v > 0 ? fmtKRW(v) : '-') + '</td>';
+      tblHtml += '<td style="padding:6px 6px;text-align:right;border-top:2px solid #ddd8ff;color:' + (v > 0 ? '#7c6ce0' : '#a0aec0') + ';">' + (v > 0 ? fmtKRW(v) : '-') + '</td>';
     });
-    tblHtml += '<td style="padding:6px 10px;text-align:right;border-top:2px solid #bee3f8;color:#2b6cb0;">' + fmtKRW(grandTotal) + '</td>';
+    tblHtml += '<td style="padding:6px 10px;text-align:right;border-top:2px solid #ddd8ff;color:#7c6ce0;">' + fmtKRW(grandTotal) + '</td>';
     tblHtml += '</tr>';
 
     tblHtml += '</tbody></table>';
@@ -4584,14 +4584,14 @@
       html += '<div style="margin-bottom:22px;">';
       html += '<div onclick="toggleWlGroup(\'' + gId + '\',this)" ' +
               'style="font-weight:700;color:#4a5568;font-size:0.82rem;padding:5px 4px 5px;' +
-              'border-bottom:2px solid #e2e8f0;margin-bottom:2px;letter-spacing:0.03em;' +
+              'border-bottom:2px solid #e5e1f5;margin-bottom:2px;letter-spacing:0.03em;' +
               'cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;">' +
               '<span>📁 ' + groupName + ' <span style="color:#a0aec0;font-weight:400;font-size:0.85em;">(' + items.length + ')</span></span>' +
               '<span class="wl-toggle-icon" style="font-size:0.9em;color:#a0aec0;transition:transform 0.2s;">▼</span>' +
               '</div>';
       html += '<div id="' + gId + '">';
       html += '<table style="width:100%;border-collapse:collapse;font-size:0.87rem;">';
-      html += '<thead><tr style="background:#f7fafc;color:#4a5568;border-bottom:1px solid #e2e8f0;">' +
+      html += '<thead><tr style="background:#f5f3ff;color:#4a5568;border-bottom:1px solid #e5e1f5;">' +
         '<th style="padding:7px 10px;text-align:left;">종목</th>' +
         '<th style="padding:7px 8px;text-align:center;white-space:nowrap;">지역</th>' +
         '<th style="padding:7px 10px;text-align:right;white-space:nowrap;">현재가</th>' +
@@ -4630,11 +4630,11 @@
         var tkSafe  = it.ticker.replace(/'/g, "\\'");
         var grpSafe = (it.group || '').replace(/'/g, "\\'");
 
-        html += '<tr style="border-bottom:1px solid #edf2f7;">' +
+        html += '<tr style="border-bottom:1px solid #ede9fe;">' +
           '<td style="padding:8px 10px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">' +
               '<div style="cursor:pointer;" onclick="showStockDetail(\'' + tkSafe + '\',event,\'\')">' +
-                '<span style="color:#2b6cb0;text-decoration:underline dotted;font-weight:500;">' + (it.name || it.ticker) + '</span>' +
+                '<span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:500;">' + (it.name || it.ticker) + '</span>' +
                 '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + it.ticker + '</div>' +
               '</div>' +
               '<button onclick="event.stopPropagation();wlDeleteItem(\'' + tkSafe + '\',\'' + grpSafe + '\')" ' +
@@ -4642,7 +4642,7 @@
             '</div>' +
           '</td>' +
           '<td style="padding:8px 8px;text-align:center;">' +
-            '<span style="font-size:0.78em;color:#718096;background:#edf2f7;padding:2px 7px;border-radius:10px;">' + (it.region || '') + '</span>' +
+            '<span style="font-size:0.78em;color:#718096;background:#ede9fe;padding:2px 7px;border-radius:10px;">' + (it.region || '') + '</span>' +
           '</td>' +
           '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + priceStr + '</td>' +
           '<td style="padding:8px 10px;text-align:right;white-space:nowrap;">' + changeStr + '</td>' +
@@ -5199,7 +5199,7 @@
       // 배분금액 셀
       var allocHtml = (rbIsUSD ? fmtU(tgtBase, 2) : fmtK(tgtBase));
       if (livePrice > 0 && tgtBase > 0) {
-        allocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty,0) + '주</div>';
+        allocHtml += '<div style="font-size:0.8em;color:#6b5cc4;">' + fmtN(allocQty,0) + '주</div>';
       }
 
       // 매수/매도: allocQty - 현보유수량으로 계산 (금액나눗셈 오차 방지)
@@ -5218,11 +5218,11 @@
         }
       }
 
-      return '<tr style="border-bottom:1px solid #edf2f7;">' +
-        '<td style="padding:8px 10px;font-size:0.88em;color:#2d3748;">' +
+      return '<tr style="border-bottom:1px solid #ede9fe;">' +
+        '<td style="padding:8px 10px;font-size:0.88em;color:#2d2747;">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">' +
             '<div style="cursor:pointer;flex:1;min-width:0;" onclick="showStockDetail(\'' + item.ticker.replace(/'/g,"\\'") + '\',event,\'' + (item.divCycle||'').replace(/'/g,"\\'") + '\')">' +
-              '<span style="color:#2b6cb0;text-decoration:underline dotted;">' + item.name + '</span>' +
+              '<span style="color:#7c6ce0;text-decoration:underline dotted;">' + item.name + '</span>' +
               '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + (item.divCycle ? ' (' + item.divCycle + ')' : '') + '</div>' +
             '</div>' +
             '<button onclick="event.stopPropagation();rbDeleteItem(\'' + item.ticker.replace(/'/g,"\\'") + '\')" title="목록에서 제거" style="background:none;border:none;cursor:pointer;color:#fc8181;font-size:1em;padding:0 2px;line-height:1;flex-shrink:0;opacity:0.65;">🗑</button>' +
@@ -5235,7 +5235,7 @@
           '<input class="rb-tgt" type="number" step="0.01" min="0" max="100"' +
           ' data-ticker="' + item.ticker + '" value="' + tgtPct.toFixed(2) + '"' +
           ' oninput="onRbTargetInput()"' +
-          ' style="width:50px;text-align:right;padding:4px 5px;border:1px solid #cbd5e0;border-radius:4px;font-size:0.9em;color:#553c9a;font-weight:600;">%' +
+          ' style="width:50px;text-align:right;padding:4px 5px;border:1px solid #c4b5fd;border-radius:4px;font-size:0.9em;color:#6b5cc4;font-weight:600;">%' +
         '</td>' +
         '<td class="rb-tgt-amt" style="padding:8px 10px;text-align:right;white-space:nowrap;">' + allocHtml + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;">' + estDiv + '</td>' +
@@ -5268,7 +5268,7 @@
       : '-';
 
     rows.push(
-      '<tr style="background:#f7fafc;font-weight:700;border-top:2px solid #cbd5e0;">' +
+      '<tr style="background:#f5f3ff;font-weight:700;border-top:2px solid #c4b5fd;">' +
       '<td colspan="2" style="padding:9px 10px;text-align:right;color:#4a5568;">합계</td>' +
       '<td style="padding:9px 10px;"></td>' +
       '<td style="padding:9px 10px;text-align:right;">100.00%</td>' +
@@ -5403,7 +5403,7 @@
       if (amtTd) {
         var rAllocHtml = rbIsUSD ? fmtU(tgtBase, 2) : fmtK(tgtBase);
         if (rLivePrice > 0 && tgtBase > 0 && allocQty > 0) {
-          rAllocHtml += '<div style="font-size:0.8em;color:#553c9a;">' + fmtN(allocQty, 0) + '주</div>';
+          rAllocHtml += '<div style="font-size:0.8em;color:#6b5cc4;">' + fmtN(allocQty, 0) + '주</div>';
         }
         amtTd.innerHTML = rAllocHtml;
       }
@@ -5614,13 +5614,13 @@
 
     function buildSection(title, items) {
       var s = '<div style="margin-bottom:14px;">';
-      if (title) s += '<div style="font-size:0.72rem;font-weight:700;color:#90cdf4;margin-bottom:8px;letter-spacing:0.06em;">' + title + '</div>';
+      if (title) s += '<div style="font-size:0.72rem;font-weight:700;color:#ddd8ff;margin-bottom:8px;letter-spacing:0.06em;">' + title + '</div>';
       s += '<table style="width:100%;border-collapse:collapse;">';
       items.forEach(function(r, i) {
-        var bg = i % 2 === 0 ? '#f7fafc' : '#fff';
+        var bg = i % 2 === 0 ? '#f5f3ff' : '#fff';
         s += '<tr style="background:' + bg + ';">'
           +  '<td style="padding:7px 10px;font-size:0.8rem;color:#718096;width:160px;white-space:nowrap;">' + r.label + '</td>'
-          +  '<td style="padding:7px 10px;font-size:0.88rem;font-weight:600;color:#2d3748;font-family:monospace;">' + r.val + '</td>'
+          +  '<td style="padding:7px 10px;font-size:0.88rem;font-weight:600;color:#2d2747;font-family:monospace;">' + r.val + '</td>'
           +  '</tr>';
       });
       s += '</table></div>';
@@ -5689,21 +5689,21 @@
 
     // ── 기본 정보 ──
     var basicHtml =
-      '<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;padding-bottom:10px;border-bottom:1px solid #edf2f7;margin-bottom:12px;">' +
-        '<span style="font-size:1.3rem;font-weight:700;color:#2d3748;">' + fmtP(d.price) + ' <span style="font-size:0.68em;font-weight:400;">' + cur + '</span></span>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;padding-bottom:10px;border-bottom:1px solid #ede9fe;margin-bottom:12px;">' +
+        '<span style="font-size:1.3rem;font-weight:700;color:#2d2747;">' + fmtP(d.price) + ' <span style="font-size:0.68em;font-weight:400;">' + cur + '</span></span>' +
         '<span style="color:' + changeColor + ';font-weight:600;">' + changeSign + fmtD(d.change) + ' (' + changeSign + d.changePct + '%)</span>' +
         '<span style="color:#718096;font-size:0.83em;">거래량 ' + fmtV(d.volume) + '</span>' +
-        '<span style="color:#718096;font-size:0.83em;">52주 최고 <b style="color:#2d3748;">' + fmtP(d.high52) + '</b></span>' +
-        '<span style="color:#718096;font-size:0.83em;">52주 최저 <b style="color:#2d3748;">' + fmtP(d.low52) + '</b></span>' +
+        '<span style="color:#718096;font-size:0.83em;">52주 최고 <b style="color:#2d2747;">' + fmtP(d.high52) + '</b></span>' +
+        '<span style="color:#718096;font-size:0.83em;">52주 최저 <b style="color:#2d2747;">' + fmtP(d.low52) + '</b></span>' +
       '</div>';
 
     // ── YTD / MTD ──
     function periodCol(label, pd) {
       var c = pd.changePct >= 0 ? '#276749' : '#c53030';
       var s = pd.changePct >= 0 ? '+' : '';
-      return '<div style="background:#f7fafc;border-radius:7px;padding:9px 12px;">' +
-        '<div style="font-weight:700;color:#2d3748;font-size:0.85em;margin-bottom:4px;">' + label + '</div>' +
-        '<div style="font-size:0.8em;color:#718096;margin-bottom:3px;">최고 <b style="color:#2d3748;">' + fmtP(pd.high) + '</b>&nbsp; 최저 <b style="color:#2d3748;">' + fmtP(pd.low) + '</b></div>' +
+      return '<div style="background:#f5f3ff;border-radius:7px;padding:9px 12px;">' +
+        '<div style="font-weight:700;color:#2d2747;font-size:0.85em;margin-bottom:4px;">' + label + '</div>' +
+        '<div style="font-size:0.8em;color:#718096;margin-bottom:3px;">최고 <b style="color:#2d2747;">' + fmtP(pd.high) + '</b>&nbsp; 최저 <b style="color:#2d2747;">' + fmtP(pd.low) + '</b></div>' +
         '<div style="margin:4px 0;">' + miniLineChart(pd.prices, 220, 64) + '</div>' +
         '<div style="font-size:0.82em;color:' + c + ';font-weight:600;">' + s + fmtD(pd.change) + ' (' + s + pd.changePct + '%)</div>' +
       '</div>';
@@ -5714,9 +5714,9 @@
       if (!pd || !pd.prices || pd.prices.length < 2) return '';
       var c = pd.changePct >= 0 ? '#276749' : '#c53030';
       var s = pd.changePct >= 0 ? '+' : '';
-      return '<div style="background:#f7fafc;border-radius:7px;padding:9px 12px;">' +
-        '<div style="font-weight:700;color:#2d3748;font-size:0.85em;margin-bottom:4px;">52W (52주 이내)</div>' +
-        '<div style="font-size:0.8em;color:#718096;margin-bottom:3px;">최고 <b style="color:#2d3748;">' + fmtP(pd.high) + '</b>&nbsp; 최저 <b style="color:#2d3748;">' + fmtP(pd.low) + '</b></div>' +
+      return '<div style="background:#f5f3ff;border-radius:7px;padding:9px 12px;">' +
+        '<div style="font-weight:700;color:#2d2747;font-size:0.85em;margin-bottom:4px;">52W (52주 이내)</div>' +
+        '<div style="font-size:0.8em;color:#718096;margin-bottom:3px;">최고 <b style="color:#2d2747;">' + fmtP(pd.high) + '</b>&nbsp; 최저 <b style="color:#2d2747;">' + fmtP(pd.low) + '</b></div>' +
         '<div style="margin:4px 0;">' + miniLineChart(pd.prices, 380, 72) + '</div>' +
         '<div style="font-size:0.82em;color:' + c + ';font-weight:600;">' + s + fmtD(pd.change) + ' (' + s + pd.changePct + '%)</div>' +
       '</div>';
@@ -5747,23 +5747,23 @@
           (dv.ttmAmount > 0
             ? '<div style="' + rowStyle + '">' +
                 '<span style="color:#718096;flex-shrink:0;">TTM</span>' +
-                '<span style="font-weight:700;color:#2b6cb0;">' + fmtA(dv.ttmAmount) + ' ' + cur + '/주</span>' +
+                '<span style="font-weight:700;color:#7c6ce0;">' + fmtA(dv.ttmAmount) + ' ' + cur + '/주</span>' +
                 '<span style="color:#718096;">' + dv.ttmYield.toFixed(2) + '%</span>' +
               '</div>'
             : '') +
         '</div>';
 
       var histRows = dv.history.map(function(h) {
-        return '<tr style="border-bottom:1px solid #f0f4f8;">' +
+        return '<tr style="border-bottom:1px solid #f9f7ff;">' +
           '<td style="padding:4px 8px;color:#4a5568;white-space:nowrap;">' + h.exDate + '</td>' +
-          '<td style="padding:4px 8px;text-align:right;font-weight:600;color:#2d3748;">' + fmtA(h.amount) + ' ' + cur + '</td>' +
+          '<td style="padding:4px 8px;text-align:right;font-weight:600;color:#2d2747;">' + fmtA(h.amount) + ' ' + cur + '</td>' +
         '</tr>';
       }).join('');
 
       var histTable = dv.history.length > 0
-        ? '<div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;">' +
+        ? '<div style="border:1px solid #e5e1f5;border-radius:6px;overflow:hidden;">' +
             '<table style="width:100%;border-collapse:collapse;font-size:0.82em;">' +
-              '<thead><tr style="background:#f7fafc;border-bottom:2px solid #e2e8f0;">' +
+              '<thead><tr style="background:#f5f3ff;border-bottom:2px solid #e5e1f5;">' +
                 '<th style="padding:5px 8px;text-align:left;color:#4a5568;font-weight:600;">배당락일</th>' +
                 '<th style="padding:5px 8px;text-align:right;color:#4a5568;font-weight:600;">배당금액</th>' +
               '</tr></thead>' +
@@ -5774,7 +5774,7 @@
 
       rightCol =
         '<div>' +
-          '<div style="font-weight:700;color:#2d3748;font-size:0.85em;margin-bottom:7px;">💰 배당 정보' + (divCycle ? ' <span style="font-weight:400;color:#718096;font-size:0.9em;">(' + divCycle + ')</span>' : '') + '</div>' +
+          '<div style="font-weight:700;color:#2d2747;font-size:0.85em;margin-bottom:7px;">💰 배당 정보' + (divCycle ? ' <span style="font-weight:400;color:#718096;font-size:0.9em;">(' + divCycle + ')</span>' : '') + '</div>' +
           divSummary + histTable +
         '</div>';
     }
