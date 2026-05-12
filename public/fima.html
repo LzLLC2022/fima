@@ -1447,6 +1447,7 @@
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">배분금액</th>
                 <th id="rbDivYieldTh" style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;cursor:pointer;user-select:none;" onclick="toggleRbDivSort()" title="배당율 기준 정렬">예상 연배당 <span id="rbDivSortIcon"></span></th>
                 <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#7c6ce0;">매수/매도</th>
+                <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#4a5568;min-width:160px;">52주 차트</th>
               </tr>
             </thead>
             <tbody id="rbTbody"></tbody>
@@ -5240,6 +5241,8 @@
         '<td class="rb-tgt-amt" style="padding:8px 10px;text-align:right;white-space:nowrap;">' + allocHtml + '</td>' +
         '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;">' + estDiv + '</td>' +
         '<td style="padding:8px 10px;text-align:center;">' + actHtml + '</td>' +
+        '<td class="rb-sparkline" data-ticker="' + item.ticker + '" data-iskrw="' + (liveCur === 'KRW' ? '1' : '0') + '" ' +
+            'style="padding:6px 8px;text-align:center;min-width:160px;"></td>' +
       '</tr>';
     });
 
@@ -5276,11 +5279,62 @@
       '<td style="padding:9px 10px;text-align:right;white-space:nowrap;">' + fmtAmt(rbAmountBase) + ' ' + baseCur + '</td>' +
       '<td id="rbSumDiv" style="padding:9px 10px;text-align:right;white-space:nowrap;color:#276749;">' + totalEstDivFmt + '</td>' +
       '<td></td>' +
+      '<td></td>' +
       '</tr>'
     );
 
     document.getElementById('rbTbody').innerHTML = rows.join('');
     updateRbWeightBadge(totalTgtPct);
+    loadRbSparklines();
+  }
+
+  function loadRbSparklines() {
+    var cells = document.querySelectorAll('#rbTbody .rb-sparkline');
+    cells.forEach(function(cell) {
+      var ticker = cell.dataset.ticker;
+      var isKRW  = cell.dataset.iskrw === '1';
+      if (!ticker || ticker === 'CASH') {
+        cell.innerHTML = '<span style="color:#a0aec0;font-size:0.78em;">-</span>';
+        return;
+      }
+      cell.innerHTML = '<div style="color:#c4b5fd;font-size:0.75em;">로딩중…</div>';
+
+      fetch('/api/stock-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticker: ticker })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error || !d.w52 || !d.w52.prices || d.w52.prices.length < 2) {
+          cell.innerHTML = '<span style="color:#a0aec0;font-size:0.78em;">데이터 없음</span>';
+          return;
+        }
+        var prices = d.w52.prices;
+        // ~60포인트로 다운샘플
+        var step = Math.max(1, Math.floor(prices.length / 60));
+        var sampled = [];
+        for (var i = 0; i < prices.length; i += step) sampled.push(prices[i]);
+        if (sampled[sampled.length - 1] !== prices[prices.length - 1]) sampled.push(prices[prices.length - 1]);
+
+        var high = d.w52.high || 0;
+        var low  = d.w52.low  || 0;
+        var fmtP = isKRW
+          ? function(v) { return Math.round(v).toLocaleString('ko-KR'); }
+          : function(v) { return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        var hlHtml = high > 0
+          ? '<div style="font-size:0.72em;margin-top:2px;">' +
+              '<span style="color:#276749;">↑' + fmtP(high) + '</span>' +
+              '<span style="color:#a0aec0;"> / </span>' +
+              '<span style="color:#c53030;">↓' + fmtP(low) + '</span>' +
+            '</div>'
+          : '';
+        cell.innerHTML = miniLineChart(sampled, 150, 46) + hlHtml;
+      })
+      .catch(function() {
+        cell.innerHTML = '<span style="color:#a0aec0;font-size:0.78em;">-</span>';
+      });
+    });
   }
 
   function toggleRbDivSort() {
