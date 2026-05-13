@@ -177,6 +177,7 @@
   <nav class="sidebar">
     <div class="sidebar-title">목차</div>
     <a href="#login">🔐 로그인</a>
+    <a href="#accountowner">👤 AccountOwner 전환</a>
     <a href="#overview">📊 조회 &gt; 현황</a>
     <a href="#query">🔍 조회 &gt; 거래 조회</a>
     <a href="#portfolio">📈 조회 &gt; 리포트</a>
@@ -205,7 +206,7 @@
           <div class="sub-title">✏️ 입력 항목</div>
           <table class="field-table">
             <tr><th>항목</th><th>설명</th></tr>
-            <tr><td><b>Account Owner</b></td><td>등록된 이름을 입력합니다 (예: Lz, Eric). 대소문자 구분.</td></tr>
+            <tr><td><b>Account Owner</b></td><td>등록된 이름을 입력합니다 (예: Lz, Forest). 대소문자 구분. Vercel 환경변수의 Google Spreadsheet와 연결되는 로그인 키입니다.</td></tr>
             <tr><td><b>PIN</b></td><td>설정한 PIN 번호. PIN 없이 등록된 경우 빈칸으로 입력.</td></tr>
           </table>
         </div>
@@ -213,6 +214,40 @@
         <div class="tip">
           <span class="tip-icon">💡</span>
           <span><b>샘플 보기</b> 버튼을 누르면 PIN 없이 샘플 데이터로 앱을 둘러볼 수 있습니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AccountOwner 전환 -->
+    <div class="section" id="accountowner">
+      <div class="section-header">
+        <span class="section-icon">👤</span>
+        <h2>AccountOwner 전환 (우측 상단 드롭다운)</h2>
+      </div>
+      <div class="section-body">
+        <p>로그인 후 화면 우측 상단의 드롭다운에서 <b>투자 AccountOwner</b>를 선택하면, 해당 계좌의 거래 데이터만 필터링하여 조회합니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">🔑 로그인ID vs 투자 AccountOwner</div>
+          <table class="field-table">
+            <tr><th>구분</th><th>역할</th><th>예시</th></tr>
+            <tr><td><b>로그인ID</b></td><td>Vercel 환경변수를 통해 Google Spreadsheet를 찾는 키. 로그인 후 변경되지 않습니다.</td><td>Lz, Forest</td></tr>
+            <tr><td><b>투자 AccountOwner</b></td><td>Ledger 시트 내 Account Owner 컬럼 값. 드롭다운으로 전환하며 데이터를 필터링합니다.</td><td>Forest, TEST</td></tr>
+          </table>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">🔄 전환 동작</div>
+          <ul class="info-list">
+            <li><span class="dot"></span>드롭다운에서 다른 AccountOwner를 선택하면 현황·거래 조회·리포트·리밸런싱 탭의 <b>이전 결과가 즉시 초기화</b>됩니다.</li>
+            <li><span class="dot"></span>이후 각 탭에서 조회 버튼을 누르면 선택한 AccountOwner의 데이터만 표시됩니다.</li>
+            <li><span class="dot"></span>거래 입력 시에도 드롭다운에서 선택된 AccountOwner가 Ledger에 자동으로 기록됩니다.</li>
+          </ul>
+        </div>
+
+        <div class="note">
+          <span class="note-icon">ℹ️</span>
+          <span>드롭다운 목록은 로그인한 사용자의 Google Spreadsheet <b>Ledger 시트</b>의 Account Owner 컬럼 고유값에서 자동으로 읽어옵니다.</span>
         </div>
       </div>
     </div>
@@ -237,6 +272,11 @@
         <div class="sub">
           <div class="sub-title">💰 현금 / 입출금 현황</div>
           <p>계좌별 순투자액(입금 − 출금)과 현금 잔액을 표시합니다.</p>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">🌏 Region 그룹핑</div>
+          <p>Stock(ETF) 현황 테이블의 종목은 <b>Region별로 묶어서</b> 표시됩니다. Region 헤더 행을 클릭하면 해당 그룹의 종목 목록을 <b>접거나 펼칠</b> 수 있습니다. (▼ 펼침 / ▶ 접힘)</p>
         </div>
 
         <div class="sub">
@@ -334,13 +374,20 @@
         </div>
 
         <div class="sub">
+          <div class="sub-title">🌏 Region 그룹핑</div>
+          <p>보유 종목별 수익률 테이블도 <b>Region별로 묶어서</b> 표시됩니다. Region 헤더 행을 클릭하면 접기/펼치기가 가능합니다.</p>
+        </div>
+
+        <div class="sub">
           <div class="sub-title">📋 보유 종목별 수익률 테이블</div>
           <table class="field-table">
             <tr><th>컬럼</th><th>설명</th></tr>
             <tr><td><b>종목명 / 티커</b></td><td>클릭 시 종목 정보 팝업 열림.</td></tr>
             <tr><td><b>매입금액</b></td><td>총 매입금액. 두 번째 줄: 매입단가 × 수량.</td></tr>
             <tr><td><b>평가금액</b></td><td>현재 평가금액. 두 번째 줄: 현재가 × 수량.</td></tr>
+            <tr><td><b>손익</b></td><td>평가금액 − 매입금액 (KRW 환산). 양수: 파란색, 음수: 빨간색.</td></tr>
             <tr><td><b>투자수익률</b></td><td>매입 이후 전체 수익률. <b>현지통화(USD/KRW) 기준</b>으로 계산하여 환율 효과를 제외한 순수 가격 변동만 반영합니다.</td></tr>
+            <tr><td><b>누적배당금</b></td><td>해당 종목에서 수령한 배당금 누계. 미국 주식은 <b>USD</b>, 한국 종목은 <b>KRW</b>로 표시됩니다.</td></tr>
             <tr><td><b>YTD (연간수익률)</b></td><td>연초(1월 1일) 대비 수익률. 두 번째 줄: <b>연초가 → 현재가</b> (기준가·현재가 표시).</td></tr>
             <tr><td><b>MTD (월간수익률)</b></td><td>월초(1일) 대비 수익률. 두 번째 줄: <b>월초가 → 현재가</b> (기준가·현재가 표시).</td></tr>
           </table>

@@ -9,9 +9,23 @@ Next.js + Vercel로 배포하며, 주식·ETF·펀드·현금 자산을 실시�
 
 | 탭 | 기능 |
 |---|---|
-| **현황** | 자산별 평가금액·손익·수익률 게이지, 도넛 차트, 기준일 역사적 종가 조회 |
-| **거래 조회** | 필터링·정렬, 수정/삭제, CSV 내보내기 |
-| **거래 입력** | Buy / Sell / Deposit / Dividend 등 신규 거래 기록 |
+| **현황** | 자산별 평가금액·손익·수익률, Region 그룹핑(접기/펼치기), 기준일 역사적 종가 조회 |
+| **거래 조회** | 기간·계좌·티커 필터링, 수정/삭제, CSV 내보내기 |
+| **리포트** | 포트폴리오 성과 분석 — YTD/MTD/Daily 손익, 월별 수익률 차트, 배당금 현황, 종목별 수익률(손익·누적배당금 포함) |
+| **리밸런싱** | 목표 비중 설정 → 매수/매도 필요 수량 자동 계산, 52주 미니 차트, 종목 추가 시뮬레이션 |
+| **관심종목** | WatchList 시트 기반 실시간 시세·등락률·배당률 모니터링 |
+| **거래 입력** | Buy / Sell / Deposit / Dividend 등 신규 거래 기록, 해외 Buy 환전 자동 처리 |
+
+### AccountOwner 드롭다운 (로그인 후 우측 상단)
+
+로그인 후 우측 상단의 드롭다운에서 **투자 AccountOwner**를 선택하면 해당 계좌의 데이터만 필터링하여 조회합니다.
+
+| 구분 | 설명 |
+|---|---|
+| **로그인ID** | Vercel 환경변수를 통해 Google Spreadsheet를 찾는 키. 로그인 후 변경되지 않음. |
+| **투자 AccountOwner** | 드롭다운으로 선택. 같은 Spreadsheet 내 Ledger 데이터를 필터링. (예: Forest, TEST) |
+
+드롭다운 변경 시 현황·거래 조회·리포트·리밸런싱 탭의 이전 결과가 자동으로 초기화됩니다.
 
 ---
 
@@ -284,25 +298,34 @@ npm run dev
 ## 프로젝트 구조
 
 ```
-fima-next/
+fima/
 ├── app/
 │   └── api/
 │       ├── auth/               # ★ 로그인 검증 (GET: owner목록, POST: PIN확인)
-│       ├── portfolio/          # 현황 API (평가금액·손익 계산)
-│       ├── query/              # 거래 조회 API
-│       ├── transactions/       # 거래 입력 API
+│       │   └── change-email/   #   이메일 주소 조회·변경
+│       ├── account-owners/     # 투자 AccountOwner 목록 조회 (Ledger 기반)
+│       ├── portfolio/          # 현황 API (평가금액·손익·Region 그룹 계산)
+│       ├── portfolio-analysis/ # 리포트 API (YTD/MTD/Daily·종목별 수익률·누적배당)
+│       ├── query/              # 거래 조회 API (AccountOwner 필터 포함)
+│       ├── transactions/       # 거래 입력 API (AccountOwner 컬럼 기록)
 │       ├── update-transaction/ # 거래 수정 API
 │       ├── delete-transaction/ # 거래 삭제 API
-│       ├── master/             # Master 시트 조회
+│       ├── master/             # Master 시트 조회 (계좌·지역·통화 목록)
 │       ├── ticker-data/        # 종목코드 목록 조회
+│       ├── ledger-tickers/     # Ledger 실거래 종목 목록 (AccountOwner 필터)
+│       ├── rebalancing/        # 리밸런싱 계산 API
+│       ├── watchlist/          # 관심종목 조회 API
 │       ├── purchase/           # 매입원가 자동 계산 (Sell 시)
-│       └── foreign-buy/        # 해외 Buy + 환전 처리
+│       ├── foreign-buy/        # 해외 Buy + 환전 처리 (AccountOwner 기록)
+│       └── report/
+│           └── email/          # 포트폴리오 이메일 리포트 발송 API
 ├── lib/
 │   ├── config.ts               # ★★ Owner 설정 (OWNER_CONFIG, 시트명)
-│   ├── sheets.ts               # Google Sheets API 연동
-│   └── stock.ts                # 주식·환율 실시간/역사적 조회
+│   ├── sheets.ts               # Google Sheets API 연동 (appendRow·updateRow)
+│   └── stock.ts                # 주식·환율 실시간/역사적 조회 (Yahoo·Naver)
 └── public/
-    └── fima.html               # 프론트엔드 (Single Page App)
+    ├── fima.html               # 프론트엔드 (Single Page App)
+    └── help.html               # 도움말 페이지
 ```
 
 > **새 사용자 추가 시 수정 파일: `lib/config.ts` 하나 + Vercel 환경변수**
