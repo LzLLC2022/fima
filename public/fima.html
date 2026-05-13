@@ -5644,7 +5644,7 @@
     var region = hdrRow.dataset.region;
     var icon   = hdrRow.querySelector('.rg-toggle');
     var isOpen = icon && icon.textContent.trim() === '▼';
-    var rows   = tbl.querySelectorAll('tr[data-region="' + region + '"]');
+    var rows   = tbl.querySelectorAll('tr[data-region="' + region + '"]:not(.region-group-hdr)');
     rows.forEach(function(r) { r.style.display = isOpen ? 'none' : ''; });
     if (icon) icon.textContent = isOpen ? '▶' : '▼';
   }
