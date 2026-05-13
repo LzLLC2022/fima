@@ -650,6 +650,7 @@ export async function POST(req: NextRequest) {
       return {
         ticker: t, name: p.name,
         currency: currencyMap[p.region] || 'KRW',
+        region: p.region,
         qty: p.qty,
         marketValueKRW: Math.round(mktVal),
         marketValueFX:  marketValueFX,

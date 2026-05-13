@@ -447,6 +447,14 @@
       margin-bottom: 8px; text-align: right;
     }
     .section-total strong { color: #2d2747; }
+    /* region group header row */
+    tr.region-group-hdr td {
+      background: #ede9fe; color: #5b4fa0;
+      font-size: 0.78rem; font-weight: 700;
+      padding: 5px 10px; letter-spacing: 0.04em;
+      border-top: 2px solid #c4b5fd;
+    }
+    tr.region-group-hdr:first-child td { border-top: none; }
     .ov-empty { text-align: center; padding: 24px; color: #a0aec0; font-size: 0.88rem; }
     .ov-refresh-row {
       display: flex; justify-content: space-between;
@@ -3266,7 +3274,21 @@
     }
 
     const thead = `<thead><tr>${cols.map(h => `<th${numCols.has(h) ? ' class="num"' : ''}>${h}</th>`).join('')}</tr></thead>`;
-    const tbody = '<tbody>' + items.map(item => {
+
+    // Region 그룹핑: KOREA → USA → 기타 순
+    const regionOrder = ['KOREA'];
+    items.forEach(i => { if (!regionOrder.includes(i.region)) regionOrder.push(i.region); });
+    const grouped = {};
+    items.forEach(i => {
+      if (!grouped[i.region]) grouped[i.region] = [];
+      grouped[i.region].push(i);
+    });
+    const sortedRegions = regionOrder.filter(r => grouped[r]);
+
+    const tbody = '<tbody>' + sortedRegions.flatMap(region => {
+      const regionItems = grouped[region];
+      const hdrRow = `<tr class="region-group-hdr"><td colspan="${cols.length}">🌏 ${region}</td></tr>`;
+      return [hdrRow, ...regionItems.map(item => {
       const pc   = pnlCls(item.pnlFX);
       const isK  = item.currency === 'KRW';
       const cur  = item.currency;
@@ -3351,6 +3373,7 @@
       }
       row += '</tr>';
       return row;
+    })]; // end region items
     }).join('') + '</tbody>';
 
     const pc = pnlCls(totalPnl);
@@ -3816,7 +3839,23 @@
       if (!data.stocks || data.stocks.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
-        tbody.innerHTML = data.stocks.map(function(st) {
+        // Region 그룹핑
+        var pfRegionOrder = ['KOREA'];
+        data.stocks.forEach(function(s) {
+          var r = s.region || 'UNKNOWN';
+          if (pfRegionOrder.indexOf(r) === -1) pfRegionOrder.push(r);
+        });
+        var pfGrouped = {};
+        data.stocks.forEach(function(s) {
+          var r = s.region || 'UNKNOWN';
+          if (!pfGrouped[r]) pfGrouped[r] = [];
+          pfGrouped[r].push(s);
+        });
+        var pfSortedRegions = pfRegionOrder.filter(function(r) { return pfGrouped[r]; });
+
+        tbody.innerHTML = pfSortedRegions.map(function(region) {
+          var hdr = '<tr class="region-group-hdr"><td colspan="8">🌏\u00a0' + region + '</td></tr>';
+          var rows = pfGrouped[region].map(function(st) {
           var cur   = st.currency || 'KRW';
           var isKRW = (cur === 'KRW');
           var fmtFX = function(v) {
@@ -3904,6 +3943,8 @@
             + '<td style="text-align:right;">' + annStr + '</td>'
             + '<td style="text-align:right;">' + monStr + '</td>'
             + '</tr>';
+          }).join('');
+          return hdr + rows;
         }).join('');
       }
 
