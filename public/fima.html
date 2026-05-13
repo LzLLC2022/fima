@@ -453,8 +453,11 @@
       font-size: 0.78rem; font-weight: 700;
       padding: 5px 10px; letter-spacing: 0.04em;
       border-top: 2px solid #c4b5fd;
+      cursor: pointer; user-select: none;
     }
+    tr.region-group-hdr:hover td { background: #e0d9fb; }
     tr.region-group-hdr:first-child td { border-top: none; }
+    .rg-toggle { display:inline-block; width:1em; margin-right:4px; }
     .ov-empty { text-align: center; padding: 24px; color: #a0aec0; font-size: 0.88rem; }
     .ov-refresh-row {
       display: flex; justify-content: space-between;
@@ -3287,7 +3290,7 @@
 
     const tbody = '<tbody>' + sortedRegions.flatMap(region => {
       const regionItems = grouped[region];
-      const hdrRow = `<tr class="region-group-hdr"><td colspan="${cols.length}">🌏 ${region}</td></tr>`;
+      const hdrRow = `<tr class="region-group-hdr" data-region="${region}" onclick="toggleRegionGroup(this)"><td colspan="${cols.length}"><span class="rg-toggle">▼</span> 🌏 ${region}</td></tr>`;
       return [hdrRow, ...regionItems.map(item => {
       const pc   = pnlCls(item.pnlFX);
       const isK  = item.currency === 'KRW';
@@ -3340,7 +3343,7 @@
 
       const safeName = (item.name || item.ticker).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       const safeTicker = item.ticker.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-      let row = `<tr>
+      let row = `<tr data-region="${item.region}">
         <td data-ticker="${safeTicker}" style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail(this.dataset.ticker,event)">
           <span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="${safeName}">${safeName}</span>
           <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${safeTicker}</div>
@@ -3854,7 +3857,7 @@
         var pfSortedRegions = pfRegionOrder.filter(function(r) { return pfGrouped[r]; });
 
         tbody.innerHTML = pfSortedRegions.map(function(region) {
-          var hdr = '<tr class="region-group-hdr"><td colspan="8">🌏\u00a0' + region + '</td></tr>';
+          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="8"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
           var rows = pfGrouped[region].map(function(st) {
           var cur   = st.currency || 'KRW';
           var isKRW = (cur === 'KRW');
@@ -3930,7 +3933,7 @@
 
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-          return '<tr>'
+          return '<tr data-region="' + (st.region || '') + '">'
             + '<td data-ticker="' + safePfTicker + '" style="cursor:pointer;white-space:nowrap;" onclick="showStockDetail(this.dataset.ticker,event)">'
             + '<span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
@@ -5635,7 +5638,19 @@
   var rbDetailTicker   = '';
   var rbDetailDivCycle = '';
 
-  function showStockDetail(ticker, evt, divCycle) {
+  // Region 그룹 접기/펼치기
+  function toggleRegionGroup(hdrRow) {
+    var tbl    = hdrRow.closest('table');
+    var region = hdrRow.dataset.region;
+    var icon   = hdrRow.querySelector('.rg-toggle');
+    var isOpen = icon && icon.textContent.trim() === '▼';
+    var rows   = tbl.querySelectorAll('tr[data-region="' + region + '"]');
+    rows.forEach(function(r) { r.style.display = isOpen ? 'none' : ''; });
+    if (icon) icon.textContent = isOpen ? '▶' : '▼';
+  }
+  window.toggleRegionGroup = toggleRegionGroup;
+
+    function showStockDetail(ticker, evt, divCycle) {
     var popup    = document.getElementById('rbStockPopup');
     var backdrop = document.getElementById('rbStockBackdrop');
     var body     = document.getElementById('rbPopupBody');
