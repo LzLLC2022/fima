@@ -176,8 +176,8 @@ export async function POST(req: NextRequest) {
     // ── 월별 배당 집계 (전체 기간 — 연도×월 크로스탭) ────────────────
     const divByYearMonth: Record<string, Record<string, number>> = {};
     const divRateCache: Record<string, number> = {};
-    // 종목별 월배당 상세 (예상 계산용): [year][mo][ticker] = { divKRW, qty }
-    const divDetailMap: Record<string, Record<string, Record<string, { divKRW: number; qty: number }>>> = {};
+    // 종목별 월배당 상세 (예상 계산용): [year][mo][ticker] = { divKRW, divFX, qty }
+    const divDetailMap: Record<string, Record<string, Record<string, { divKRW: number; divFX: number; qty: number }>>> = {};
     const runQtyMap: Record<string, number> = {};  // 배당 시점 수량 추적
 
     sorted.forEach(({ row, date }) => {
@@ -207,9 +207,12 @@ export async function POST(req: NextRequest) {
       if (rate2 > 0) divRateCache[region2] = rate2;
       const eff2    = rate2 > 0 ? rate2 : (divRateCache[region2] || 1);
       let divKRW = 0;
+      let divFX  = 0;
       if (t2.startsWith('div') && !t2.includes('stock')) {
-        divKRW = ((div2 || price2) - tax2 - chg2) * eff2;
+        divFX  = (div2 || price2) - tax2 - chg2;
+        divKRW = divFX * eff2;
       } else if (t2.includes('stock') && div2 > 0) {
+        divFX  = div2;
         divKRW = div2 * eff2;
       }
       if (divKRW <= 0) return;
@@ -224,19 +227,22 @@ export async function POST(req: NextRequest) {
         if (qtyAtDiv > 0) {
           if (!divDetailMap[yr]) divDetailMap[yr] = {};
           if (!divDetailMap[yr][mo]) divDetailMap[yr][mo] = {};
-          if (!divDetailMap[yr][mo][ticker2]) divDetailMap[yr][mo][ticker2] = { divKRW: 0, qty: qtyAtDiv };
+          if (!divDetailMap[yr][mo][ticker2]) divDetailMap[yr][mo][ticker2] = { divKRW: 0, divFX: 0, qty: qtyAtDiv };
           divDetailMap[yr][mo][ticker2].divKRW += divKRW;
+          divDetailMap[yr][mo][ticker2].divFX  += divFX;
           divDetailMap[yr][mo][ticker2].qty = qtyAtDiv;
         }
       }
     });
 
     // ── 종목별 누적 배당금 합계 (전체 기간) ──────────────────────
-    const cumDivByTicker: Record<string, number> = {};
+    const cumDivByTicker:   Record<string, number> = {};
+    const cumDivFXByTicker: Record<string, number> = {};
     Object.values(divDetailMap).forEach(months => {
       Object.values(months).forEach(tickers => {
-        Object.entries(tickers).forEach(([tk, { divKRW }]) => {
-          cumDivByTicker[tk] = (cumDivByTicker[tk] || 0) + divKRW;
+        Object.entries(tickers).forEach(([tk, { divKRW, divFX }]) => {
+          cumDivByTicker[tk]   = (cumDivByTicker[tk]   || 0) + divKRW;
+          cumDivFXByTicker[tk] = (cumDivFXByTicker[tk] || 0) + divFX;
         });
       });
     });
@@ -652,7 +658,8 @@ export async function POST(req: NextRequest) {
         pnlFX:          marketValueFX - buyCostFX,
         pnlKRW:         Math.round(mktVal - p.buyCostKRW),
         pnlPct:         pnlPct,
-        cumDividendKRW: Math.round(cumDivByTicker[t] || 0),
+        cumDividendKRW: Math.round(cumDivByTicker[t]   || 0),
+        cumDividendFX:  cumDivFXByTicker[t] || 0,
         annualReturnPct:  ysp  > 0 && cp > 0 ? (cp - ysp)  / ysp  * 100 : null,
         monthlyReturnPct: mpsp > 0 && cp > 0 ? (cp - mpsp) / mpsp * 100 : null,
         yearStartPrice:   ysp  > 0 ? ysp  : null,

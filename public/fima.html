@@ -3875,9 +3875,18 @@
                 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + gainSign + fmtK(Math.abs(st.pnlKRW)) + ' KRW</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
 
-          // 누적배당금 (KRW)
-          var divStr = (st.cumDividendKRW > 0)
-            ? '<span style="color:#276749;font-weight:600;">' + fmtK(st.cumDividendKRW) + ' KRW</span>'
+          // 누적배당금 (현지통화: KRW 종목은 KRW, 해외 종목은 현지통화)
+          var divAmt, divCur;
+          if (isKRW) {
+            divAmt = st.cumDividendKRW > 0 ? st.cumDividendKRW : 0;
+            divCur = 'KRW';
+          } else {
+            divAmt = (st.cumDividendFX != null && st.cumDividendFX > 0) ? st.cumDividendFX : 0;
+            divCur = cur;
+          }
+          var divFmtAmt = isKRW ? fmtK(divAmt) : Number(divAmt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          var divStr = (divAmt > 0)
+            ? '<span style="color:#276749;font-weight:600;">' + divFmtAmt + ' ' + divCur + '</span>'
             : '<span style="color:#a0aec0">-</span>';
 
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
