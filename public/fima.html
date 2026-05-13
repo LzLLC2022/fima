@@ -1966,6 +1966,10 @@
     if (document.getElementById('pfContent')) document.getElementById('pfContent').style.display = 'none';
     if (document.getElementById('pfError'))   document.getElementById('pfError').style.display   = 'none';
     if (document.getElementById('pfLoading')) document.getElementById('pfLoading').style.display  = 'none';
+    // 리밸런싱 탭 결과 초기화
+    if (document.getElementById('rbTableCard'))  document.getElementById('rbTableCard').style.display  = 'none';
+    if (document.getElementById('rbLoadingMsg')) document.getElementById('rbLoadingMsg').classList.add('hidden');
+    if (document.getElementById('rbTbody'))      document.getElementById('rbTbody').innerHTML = '';
     // 거래 조회 탭 결과 초기화
     var qResult = document.getElementById('queryResult');
     if (qResult) qResult.innerHTML = '<div class="empty-state"><div class="icon">🔍</div>조회 조건을 설정하고 조회 버튼을 클릭하세요.</div>';
