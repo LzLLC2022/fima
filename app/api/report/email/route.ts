@@ -414,7 +414,11 @@ function buildSectionContent(accountOwner: string, data: any): string {
   const stocks    = (data.stocks  || []).filter((st: any) => st);
   const monthly   = data.monthly  || [];
   const indices   = data.indices  || {};
-  const dividends = data.dividends || [];
+  // 최근 4개년만 표시 (현재 연도 기준: 예) 2026 → 2023~2026)
+  const allDividends = data.dividends || [];
+  const _curYear  = new Date().getFullYear();
+  const _startYear = _curYear - 3;
+  const dividends = allDividends.filter((d: any) => parseInt(d.year) >= _startYear);
 
   const netInv = s.netInvestmentKRW ?? 0;
   const mktVal = s.marketValueKRW   ?? 0;
@@ -515,13 +519,30 @@ function buildSectionContent(accountOwner: string, data: any): string {
         + (mtdDiff != null ? priceSub(mtdDiff) : '')
       : '-';
 
+    // 손익 셀: 현지통화 손익 + KRW 환산 서브라인 (해외 종목)
+    const pnlFXVal  = st.pnlFX  ?? null;
+    const pnlKRWVal = st.pnlKRW ?? null;
+    const pnlFXCol  = signColor(pnlFXVal);
+    const pnlFXCell = pnlFXVal != null
+      ? `<span style="color:${pnlFXCol};font-weight:600;">${pnlFXVal >= 0 ? '+' : ''}${fmtFX(Math.abs(pnlFXVal))}&nbsp;${cur}</span>`
+        + (!isKRW && pnlKRWVal != null ? sub(`${pnlKRWVal >= 0 ? '+' : ''}${fmtKRW(Math.abs(pnlKRWVal))} KRW`) : '')
+      : '-';
+
+    // 누적배당금 셀: cumDividendKRW
+    const cumDiv     = st.cumDividendKRW ?? 0;
+    const cumDivCell = cumDiv > 0
+      ? `<span style="color:#276749;font-weight:600;">${fmtKRW(cumDiv)} KRW</span>`
+      : '-';
+
     return `
       <tr style="border-bottom:1px solid #edf2f7;">
         <td style="padding:7px 8px;font-weight:600;color:#2d3748;font-size:12px;">${st.ticker}</td>
         <td style="padding:7px 8px;color:#4a5568;font-size:11px;">${st.name || '-'}</td>
         <td style="padding:7px 8px;text-align:right;font-size:12px;">${acCell}</td>
         <td style="padding:7px 8px;text-align:right;font-size:12px;">${mvCell}</td>
+        <td style="padding:7px 8px;text-align:right;font-size:12px;">${pnlFXCell}</td>
         <td style="padding:7px 8px;text-align:right;color:${pnlCol};font-weight:600;font-size:12px;">${st.pnlPct != null ? fmtPct(st.pnlPct) : '-'}</td>
+        <td style="padding:7px 8px;text-align:right;font-size:12px;">${cumDivCell}</td>
         <td style="padding:7px 8px;text-align:right;font-size:12px;">${ytdCell}</td>
         <td style="padding:7px 8px;text-align:right;font-size:12px;">${mtdCell}</td>
       </tr>`;
@@ -584,7 +605,9 @@ function buildSectionContent(accountOwner: string, data: any): string {
               <th style="padding:8px;text-align:left;font-size:11px;color:#718096;font-weight:600;">종목명</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">매입금액</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">평가금액</th>
+              <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">손익</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">투자수익률</th>
+              <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">누적배당금</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">YTD</th>
               <th style="padding:8px;text-align:right;font-size:11px;color:#718096;font-weight:600;">MTD</th>
             </tr>
