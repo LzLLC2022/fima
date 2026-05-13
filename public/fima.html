@@ -1955,7 +1955,6 @@
     var selected = sel.value;
     if (!selected) return;
     if (selected === currentAccountOwner) return;  // 동일 값 재선택 시 무시
-    currentOwner = selected;           // ← 해당 Owner의 Google Spreadsheet로 전환
     currentAccountOwner = selected;
     currentOvFilters = { owner: currentOwner, accountOwner: currentAccountOwner };
     // 포트폴리오 탭 Account 필터도 초기화
