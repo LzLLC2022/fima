@@ -154,7 +154,10 @@ export async function POST(req: NextRequest) {
 
     // 행 필터
     const rows = ledgerData.slice(1).filter((row: any[]) => {
-      if (filters.accountOwner && aoIdx >= 0 && String(row[aoIdx] ?? '').trim() !== filters.accountOwner) return false;
+      if (filters.accountOwner && aoIdx >= 0) {
+        const rowAO = String(row[aoIdx] ?? '').trim();
+        if (rowAO && rowAO !== filters.accountOwner) return false;  // 빈 값은 구 데이터 호환
+      }
       if (filters.account     && acctIdx >= 0 && String(row[acctIdx] ?? '').trim() !== filters.account)     return false;
       return true;
     });

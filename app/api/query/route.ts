@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
             if (rowDate > end) return false;
           }
         }
-        if (filters.accountOwner && aoIdx >= 0 && String(row[aoIdx] ?? '').trim() !== filters.accountOwner) return false;
+        if (filters.accountOwner && aoIdx >= 0) {
+          const rowAO = String(row[aoIdx] ?? '').trim();
+          if (rowAO && rowAO !== filters.accountOwner) return false;  // 빈 값은 구 데이터 호환
+        }
         if (filters.account && String(row[accountIdx] ?? '').trim() !== filters.account) return false;
         if (filters.ticker  && String(row[tickerIdx]  ?? '').trim().toUpperCase() !== String(filters.ticker).trim().toUpperCase()) return false;
         return true;

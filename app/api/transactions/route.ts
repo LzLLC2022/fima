@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     await appendRow(spreadsheetId, LEDGER_SHEET_NAME, [
       dateValue,
-      f.owner        || '',
+      f.accountOwner || '',   // Account Owner (투자계좌 소유자)
       f.account      || '',
       f.region       || '',
       f.assetType    || '',

@@ -2604,8 +2604,9 @@
     document.getElementById('submitBtn').disabled = true;
 
     const formData = {
-      date:    document.getElementById('date').value,
-      owner:   currentOwner,
+      date:         document.getElementById('date').value,
+      owner:        currentOwner,
+      accountOwner: currentAccountOwner,   // 투자계좌 소유자 (Ledger Account Owner 컬럼에 저장)
       account: document.getElementById('account').value,
       region:       document.getElementById('region').value,
       assetType:    document.getElementById('assetType').value,

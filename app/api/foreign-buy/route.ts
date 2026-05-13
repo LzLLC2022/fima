@@ -33,21 +33,23 @@ export async function POST(req: NextRequest) {
     const note = f.comment || '';
     const rows: any[][] = [];
 
+    const accountOwner = f.accountOwner || own;
+
     // ① Withdraw (KRW 출금) — 환전 시에만
     if (convertFX > 0) {
-      rows.push([dateValue, own, acct, krwRegion, 'Cash', '', '환전',
+      rows.push([dateValue, accountOwner, acct, krwRegion, 'Cash', '', '환전',
                  'Withdraw', withdrawKRW, '', '', '', '', '', '', '',
                  note ? note + ' [환전출금]' : '환전출금']);
 
       // ② Deposit (외화 입금)
-      rows.push([dateValue, own, acct, f.region, 'Cash', '', '환전',
+      rows.push([dateValue, accountOwner, acct, f.region, 'Cash', '', '환전',
                  'Deposit', convertFX, rate, '', '', '', '', '', '',
                  note ? note + ' [환전입금]' : '환전입금']);
     }
 
     // ③ Buy (주식 매입)
     rows.push([
-      dateValue, own, acct,
+      dateValue, accountOwner, acct,
       f.region, f.assetType || '',
       f.ticker || '', f.name || '',
       f.trade  || 'Buy',

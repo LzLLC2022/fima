@@ -120,7 +120,8 @@ export async function POST(req: NextRequest) {
         if (!isNaN(rowDate.getTime()) && rowDate > endDate) return false;
       }
       if (filters.accountOwner && aoIdx >= 0) {
-        if (String(row[aoIdx] ?? '').trim() !== filters.accountOwner) return false;
+        const rowAO = String(row[aoIdx] ?? '').trim();
+        if (rowAO && rowAO !== filters.accountOwner) return false;  // 빈 값은 모든 Owner에 포함(구 데이터 호환)
       }
       if (filters.account && acctIdx >= 0) {
         if (String(row[acctIdx] ?? '').trim() !== filters.account) return false;

@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const values = [
       String(f.date || ''),
-      owner,
+      f.accountOwner || '',   // Account Owner (투자계좌 소유자)
       f.account      || '',
       f.region       || '',
       f.assetType    || '',
