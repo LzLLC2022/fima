@@ -1962,7 +1962,11 @@
     if (document.getElementById('pfAccount')) document.getElementById('pfAccount').value = '';
     if (document.getElementById('pfFilterBadge')) document.getElementById('pfFilterBadge').classList.add('hidden');
     pfAnalysisLoaded = false;
-    // 화면 초기화 후 재조회
+    // 거래 조회 탭 결과 초기화
+    var qResult = document.getElementById('queryResult');
+    if (qResult) qResult.innerHTML = '<div class="empty-state"><div class="icon">🔍</div>조회 조건을 설정하고 조회 버튼을 클릭하세요.</div>';
+    if (document.getElementById('exportBtn')) document.getElementById('exportBtn').disabled = true;
+    // 현황 탭 초기화 후 재조회
     document.getElementById('ovTotalKRW').textContent = '-';
     document.getElementById('ovCashTotal').textContent = '-';
     document.getElementById('ovStockTotal').textContent = '-';
