@@ -231,6 +231,16 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // ── 종목별 누적 배당금 합계 (전체 기간) ──────────────────────
+    const cumDivByTicker: Record<string, number> = {};
+    Object.values(divDetailMap).forEach(months => {
+      Object.values(months).forEach(tickers => {
+        Object.entries(tickers).forEach(([tk, { divKRW }]) => {
+          cumDivByTicker[tk] = (cumDivByTicker[tk] || 0) + divKRW;
+        });
+      });
+    });
+
     const dividends = Object.entries(divByYearMonth)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([year, months]) => ({
@@ -639,7 +649,10 @@ export async function POST(req: NextRequest) {
         marketValueFX:  marketValueFX,
         currentPrice:   cp,
         buyCostFX:      buyCostFX,
+        pnlFX:          marketValueFX - buyCostFX,
+        pnlKRW:         Math.round(mktVal - p.buyCostKRW),
         pnlPct:         pnlPct,
+        cumDividendKRW: Math.round(cumDivByTicker[t] || 0),
         annualReturnPct:  ysp  > 0 && cp > 0 ? (cp - ysp)  / ysp  * 100 : null,
         monthlyReturnPct: mpsp > 0 && cp > 0 ? (cp - mpsp) / mpsp * 100 : null,
         yearStartPrice:   ysp  > 0 ? ysp  : null,

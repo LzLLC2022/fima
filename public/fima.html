@@ -1374,6 +1374,8 @@
                 <th>Name</th>
                 <th style="text-align:right;">매입금액</th>
                 <th style="text-align:right;">평가금액</th>
+                <th style="text-align:right;">손익</th>
+                <th style="text-align:right;">누적배당금</th>
                 <th style="text-align:right;">투자수익률</th>
                 <th style="text-align:right;">연간 수익률 (YTD)</th>
                 <th style="text-align:right;">월간 수익률 (MTD)</th>
@@ -3812,7 +3814,7 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
         tbody.innerHTML = data.stocks.map(function(st) {
           var cur   = st.currency || 'KRW';
@@ -3863,6 +3865,21 @@
               + (st.currentPrice > 0 && st.qty > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(st.currentPrice) + ' × ' + fmtQty(st.qty) + '</div>' : '')
             : (st.marketValueKRW > 0 ? fmtK(st.marketValueKRW) + ' KRW' : '-');
 
+          // 손익 (현지통화 기준)
+          var gainFX  = (st.pnlFX != null) ? st.pnlFX : (st.marketValueFX - st.buyCostFX);
+          var gainCol = gainFX >= 0 ? '#c53030' : '#7c6ce0';
+          var gainSign = gainFX >= 0 ? '+' : '';
+          var gainStr = (st.buyCostFX > 0)
+            ? '<span style="color:' + gainCol + ';font-weight:600;">' + gainSign + fmtFX(gainFX) + ' ' + cur + '</span>'
+              + (st.pnlKRW != null && !isKRW
+                ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + gainSign + fmtK(Math.abs(st.pnlKRW)) + ' KRW</div>' : '')
+            : '<span style="color:#a0aec0">-</span>';
+
+          // 누적배당금 (KRW)
+          var divStr = (st.cumDividendKRW > 0)
+            ? '<span style="color:#276749;font-weight:600;">' + fmtK(st.cumDividendKRW) + ' KRW</span>'
+            : '<span style="color:#a0aec0">-</span>';
+
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           return '<tr>'
@@ -3872,6 +3889,8 @@
             + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
             + '<td style="text-align:right;">' + mvStr + '</td>'
+            + '<td style="text-align:right;">' + gainStr + '</td>'
+            + '<td style="text-align:right;">' + divStr + '</td>'
             + '<td style="text-align:right;">' + pnlStr + '</td>'
             + '<td style="text-align:right;">' + annStr + '</td>'
             + '<td style="text-align:right;">' + monStr + '</td>'
