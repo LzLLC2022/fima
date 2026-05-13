@@ -447,18 +447,6 @@
       margin-bottom: 8px; text-align: right;
     }
     .section-total strong { color: #2d2747; }
-    /* region group header row */
-    tr.region-group-hdr td {
-      background: #ede9fe; color: #5b4fa0;
-      font-size: 0.78rem; font-weight: 700;
-      padding: 5px 10px; letter-spacing: 0.04em;
-      border-top: 2px solid #c4b5fd;
-      cursor: pointer; user-select: none;
-      text-align: left !important;
-    }
-    tr.region-group-hdr:hover td { background: #e0d9fb; }
-    tr.region-group-hdr:first-child td { border-top: none; }
-    .rg-toggle { display:inline-block; width:1em; margin-right:4px; }
     .ov-empty { text-align: center; padding: 24px; color: #a0aec0; font-size: 0.88rem; }
     .ov-refresh-row {
       display: flex; justify-content: space-between;
@@ -1386,9 +1374,7 @@
                 <th>Name</th>
                 <th style="text-align:right;">매입금액</th>
                 <th style="text-align:right;">평가금액</th>
-                <th style="text-align:right;">손익</th>
                 <th style="text-align:right;">투자수익률</th>
-                <th style="text-align:right;">누적배당금</th>
                 <th style="text-align:right;">연간 수익률 (YTD)</th>
                 <th style="text-align:right;">월간 수익률 (MTD)</th>
               </tr></thead>
@@ -1962,20 +1948,7 @@
     if (document.getElementById('pfAccount')) document.getElementById('pfAccount').value = '';
     if (document.getElementById('pfFilterBadge')) document.getElementById('pfFilterBadge').classList.add('hidden');
     pfAnalysisLoaded = false;
-    // 리포트 탭 결과 초기화
-    if (document.getElementById('pfContent')) document.getElementById('pfContent').style.display = 'none';
-    if (document.getElementById('pfError'))   document.getElementById('pfError').style.display   = 'none';
-    if (document.getElementById('pfLoading')) document.getElementById('pfLoading').style.display  = 'none';
-    // 리밸런싱 탭 결과 초기화
-    if (document.getElementById('rbTableCard'))  document.getElementById('rbTableCard').style.display  = 'none';
-    if (document.getElementById('rbLoadingMsg')) document.getElementById('rbLoadingMsg').classList.add('hidden');
-    if (document.getElementById('rbTbody'))      document.getElementById('rbTbody').innerHTML = '';
-    if (document.getElementById('rbAmountInput')) document.getElementById('rbAmountInput').value = '';
-    // 거래 조회 탭 결과 초기화
-    var qResult = document.getElementById('queryResult');
-    if (qResult) qResult.innerHTML = '<div class="empty-state"><div class="icon">🔍</div>조회 조건을 설정하고 조회 버튼을 클릭하세요.</div>';
-    if (document.getElementById('exportBtn')) document.getElementById('exportBtn').disabled = true;
-    // 현황 탭 초기화 후 재조회
+    // 화면 초기화 후 재조회
     document.getElementById('ovTotalKRW').textContent = '-';
     document.getElementById('ovCashTotal').textContent = '-';
     document.getElementById('ovStockTotal').textContent = '-';
@@ -2617,9 +2590,8 @@
     document.getElementById('submitBtn').disabled = true;
 
     const formData = {
-      date:         document.getElementById('date').value,
-      owner:        currentOwner,
-      accountOwner: document.getElementById('navOwnerSelect').value || currentAccountOwner,   // 투자계좌 소유자 (제출 시점 드롭다운 값 직접 읽기)
+      date:    document.getElementById('date').value,
+      owner:   currentOwner,
       account: document.getElementById('account').value,
       region:       document.getElementById('region').value,
       assetType:    document.getElementById('assetType').value,
@@ -3292,21 +3264,7 @@
     }
 
     const thead = `<thead><tr>${cols.map(h => `<th${numCols.has(h) ? ' class="num"' : ''}>${h}</th>`).join('')}</tr></thead>`;
-
-    // Region 그룹핑: KOREA → USA → 기타 순
-    const regionOrder = ['KOREA'];
-    items.forEach(i => { if (!regionOrder.includes(i.region)) regionOrder.push(i.region); });
-    const grouped = {};
-    items.forEach(i => {
-      if (!grouped[i.region]) grouped[i.region] = [];
-      grouped[i.region].push(i);
-    });
-    const sortedRegions = regionOrder.filter(r => grouped[r]);
-
-    const tbody = '<tbody>' + sortedRegions.flatMap(region => {
-      const regionItems = grouped[region];
-      const hdrRow = `<tr class="region-group-hdr" data-region="${region}" onclick="toggleRegionGroup(this)"><td colspan="${cols.length}"><span class="rg-toggle">▼</span> 🌏 ${region}</td></tr>`;
-      return [hdrRow, ...regionItems.map(item => {
+    const tbody = '<tbody>' + items.map(item => {
       const pc   = pnlCls(item.pnlFX);
       const isK  = item.currency === 'KRW';
       const cur  = item.currency;
@@ -3358,7 +3316,7 @@
 
       const safeName = (item.name || item.ticker).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       const safeTicker = item.ticker.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-      let row = `<tr data-region="${item.region}">
+      let row = `<tr>
         <td data-ticker="${safeTicker}" style="cursor:pointer;white-space:nowrap;max-width:180px;" onclick="showStockDetail(this.dataset.ticker,event)">
           <span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="${safeName}">${safeName}</span>
           <div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">${safeTicker}</div>
@@ -3391,7 +3349,6 @@
       }
       row += '</tr>';
       return row;
-    })]; // end region items
     }).join('') + '</tbody>';
 
     const pc = pnlCls(totalPnl);
@@ -3855,25 +3812,9 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
-        // Region 그룹핑
-        var pfRegionOrder = ['KOREA'];
-        data.stocks.forEach(function(s) {
-          var r = s.region || 'UNKNOWN';
-          if (pfRegionOrder.indexOf(r) === -1) pfRegionOrder.push(r);
-        });
-        var pfGrouped = {};
-        data.stocks.forEach(function(s) {
-          var r = s.region || 'UNKNOWN';
-          if (!pfGrouped[r]) pfGrouped[r] = [];
-          pfGrouped[r].push(s);
-        });
-        var pfSortedRegions = pfRegionOrder.filter(function(r) { return pfGrouped[r]; });
-
-        tbody.innerHTML = pfSortedRegions.map(function(region) {
-          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="8"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
-          var rows = pfGrouped[region].map(function(st) {
+        tbody.innerHTML = data.stocks.map(function(st) {
           var cur   = st.currency || 'KRW';
           var isKRW = (cur === 'KRW');
           var fmtFX = function(v) {
@@ -3922,47 +3863,19 @@
               + (st.currentPrice > 0 && st.qty > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(st.currentPrice) + ' × ' + fmtQty(st.qty) + '</div>' : '')
             : (st.marketValueKRW > 0 ? fmtK(st.marketValueKRW) + ' KRW' : '-');
 
-          // 손익 (현지통화 기준)
-          var gainFX  = (st.pnlFX != null) ? st.pnlFX : (st.marketValueFX - st.buyCostFX);
-          var gainCol = gainFX >= 0 ? '#c53030' : '#7c6ce0';
-          var gainSign = gainFX >= 0 ? '+' : '';
-          var gainStr = (st.buyCostFX > 0)
-            ? '<span style="color:' + gainCol + ';font-weight:600;">' + gainSign + fmtFX(gainFX) + ' ' + cur + '</span>'
-              + (st.pnlKRW != null && !isKRW
-                ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + gainSign + fmtK(Math.abs(st.pnlKRW)) + ' KRW</div>' : '')
-            : '<span style="color:#a0aec0">-</span>';
-
-          // 누적배당금 (현지통화: KRW 종목은 KRW, 해외 종목은 현지통화)
-          var divAmt, divCur;
-          if (isKRW) {
-            divAmt = st.cumDividendKRW > 0 ? st.cumDividendKRW : 0;
-            divCur = 'KRW';
-          } else {
-            divAmt = (st.cumDividendFX != null && st.cumDividendFX > 0) ? st.cumDividendFX : 0;
-            divCur = cur;
-          }
-          var divFmtAmt = isKRW ? fmtK(divAmt) : Number(divAmt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          var divStr = (divAmt > 0)
-            ? '<span style="color:#276749;font-weight:600;">' + divFmtAmt + ' ' + divCur + '</span>'
-            : '<span style="color:#a0aec0">-</span>';
-
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-          return '<tr data-region="' + (st.region || '') + '">'
+          return '<tr>'
             + '<td data-ticker="' + safePfTicker + '" style="cursor:pointer;white-space:nowrap;" onclick="showStockDetail(this.dataset.ticker,event)">'
             + '<span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
             + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
             + '<td style="text-align:right;">' + mvStr + '</td>'
-            + '<td style="text-align:right;">' + gainStr + '</td>'
             + '<td style="text-align:right;">' + pnlStr + '</td>'
-            + '<td style="text-align:right;">' + divStr + '</td>'
             + '<td style="text-align:right;">' + annStr + '</td>'
             + '<td style="text-align:right;">' + monStr + '</td>'
             + '</tr>';
-          }).join('');
-          return hdr + rows;
         }).join('');
       }
 
@@ -4392,6 +4305,16 @@
     var chartEl = document.getElementById('pfDivChart');
     var tableEl = document.getElementById('pfDivTable');
     if (!dividends || dividends.length === 0) {
+      if (chartEl) chartEl.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">배당 데이터 없음</div>';
+      if (tableEl) tableEl.innerHTML = '';
+      return;
+    }
+
+    // 최근 4개년만 표시 (현재 연도 기준: 예) 2026 → 2023~2026)
+    var currentYear = new Date().getFullYear();
+    var startYear = currentYear - 3;
+    dividends = dividends.filter(function(d) { return parseInt(d.year) >= startYear; });
+    if (dividends.length === 0) {
       if (chartEl) chartEl.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">배당 데이터 없음</div>';
       if (tableEl) tableEl.innerHTML = '';
       return;
@@ -5653,19 +5576,7 @@
   var rbDetailTicker   = '';
   var rbDetailDivCycle = '';
 
-  // Region 그룹 접기/펼치기
-  function toggleRegionGroup(hdrRow) {
-    var tbl    = hdrRow.closest('table');
-    var region = hdrRow.dataset.region;
-    var icon   = hdrRow.querySelector('.rg-toggle');
-    var isOpen = icon && icon.textContent.trim() === '▼';
-    var rows   = tbl.querySelectorAll('tr[data-region="' + region + '"]:not(.region-group-hdr)');
-    rows.forEach(function(r) { r.style.display = isOpen ? 'none' : ''; });
-    if (icon) icon.textContent = isOpen ? '▶' : '▼';
-  }
-  window.toggleRegionGroup = toggleRegionGroup;
-
-    function showStockDetail(ticker, evt, divCycle) {
+  function showStockDetail(ticker, evt, divCycle) {
     var popup    = document.getElementById('rbStockPopup');
     var backdrop = document.getElementById('rbStockBackdrop');
     var body     = document.getElementById('rbPopupBody');
