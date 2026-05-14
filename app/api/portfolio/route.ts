@@ -120,8 +120,7 @@ export async function POST(req: NextRequest) {
         if (!isNaN(rowDate.getTime()) && rowDate > endDate) return false;
       }
       if (filters.accountOwner && aoIdx >= 0) {
-        const rowAO = String(row[aoIdx] ?? '').trim();
-        if (rowAO && rowAO !== filters.accountOwner) return false;  // 빈 값은 모든 Owner에 포함(구 데이터 호환)
+        if (String(row[aoIdx] ?? '').trim() !== filters.accountOwner) return false;
       }
       if (filters.account && acctIdx >= 0) {
         if (String(row[acctIdx] ?? '').trim() !== filters.account) return false;
@@ -289,11 +288,15 @@ export async function POST(req: NextRequest) {
                         : isKoreanBondISIN(p.ticker) ? avgPriceFX : 0;
       const marketValueKRW = isKRW ? curPriceFX * netQty : curPriceFX * netQty * effRate2;
       const pnl            = marketValueKRW - purchaseAmtKRW;
-      const pnlPct         = purchaseAmtKRW > 0 ? pnl / purchaseAmtKRW * 100 : 0;
 
       const purchaseAmtFX = avgPriceFX * netQty;
       const marketValueFX = curPriceFX  * netQty;
       const pnlFX         = marketValueFX - purchaseAmtFX;
+
+      // 수익률: 현지통화 기준 (KRW 종목은 KRW, 외화 종목은 해당 통화 기준)
+      const pnlPct = isKRW
+        ? (purchaseAmtKRW > 0 ? pnl / purchaseAmtKRW * 100 : 0)
+        : (purchaseAmtFX  > 0 ? pnlFX / purchaseAmtFX  * 100 : 0);
 
       // 채권 ISIN인 경우 Naver에서 가져온 이름 우선 사용
       const displayName = bondNameMap[p.ticker] || p.name || p.ticker;
