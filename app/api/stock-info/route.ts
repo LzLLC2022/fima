@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getStockInfo } from '@/lib/stock';
 
 function isKoreanCode(code: string): boolean {
   const c = code.toString().trim().toUpperCase().split('.')[0];
@@ -86,16 +87,28 @@ export async function POST(req: NextRequest) {
       ? hasSuffix ? [clean] : [`${clean}.KS`, `${clean}.KQ`]
       : [clean];
 
+    // 한국 bare code: 네이버 가격 pre-fetch (Yahoo .KS가 다른 종목을 반환하는 경우 감지용)
+    let naverInfo: any = null;
+    if (isKoreanCode(clean) && !hasSuffix) {
+      naverInfo = await getStockInfo(clean.split('.')[0]).catch(() => null);
+    }
+
     let chartResult: any = null;
     let usedTicker = '';
     for (const yt of candidates) {
       try {
         // 2년치 일봉 + 배당 이벤트
         chartResult = await fetchChart(yt, 'interval=1d&range=2y&events=dividends');
-        // .KS로 조회했으나 실제 코스닥 종목인 경우(exchangeName=KOQ) → 버리고 .KQ로 재시도
         if (yt.endsWith('.KS') && candidates.length > 1) {
+          // exchangeName=KOQ(코스닥) → .KQ 재시도
           const exch = chartResult?.meta?.exchangeName || '';
           if (exch === 'KOQ') { chartResult = null; continue; }
+          // 네이버 가격과 10% 이상 차이 → 다른 종목으로 판단 → .KQ 재시도
+          const yahooPrice = chartResult?.meta?.regularMarketPrice ?? 0;
+          if (naverInfo?.price > 0 && yahooPrice > 0) {
+            const diff = Math.abs(yahooPrice - naverInfo.price) / naverInfo.price;
+            if (diff > 0.10) { chartResult = null; continue; }
+          }
         }
         usedTicker = yt;
         break;
@@ -119,14 +132,27 @@ export async function POST(req: NextRequest) {
     // 기본 정보
     // meta.regularMarketPreviousClose 는 일부 종목(ETN 등)에서 현재가와 동일하게 반환되는 경우가 있어 신뢰하지 않음
     // 일봉 차트 데이터의 마지막에서 두 번째 종가 = 전일 종가 (가장 신뢰성 높음)
-    const price = meta.regularMarketPrice ?? 0;
+    let price = meta.regularMarketPrice ?? 0;
 
     const validCloses = closes.filter((c): c is number => c != null);
     // 마지막 종가(오늘) / 마지막에서 두번째(전일)
     const prevCloseFromChart = validCloses.length >= 2 ? validCloses[validCloses.length - 2] : null;
     const prevClose = prevCloseFromChart ?? meta.regularMarketPreviousClose ?? meta.previousClose ?? price;
-    const change    = Math.round((price - prevClose) * 10000) / 10000;
-    const changePct = prevClose > 0 ? Math.round((change / prevClose) * 10000) / 100 : 0;
+    let change    = Math.round((price - prevClose) * 10000) / 10000;
+    let changePct = prevClose > 0 ? Math.round((change / prevClose) * 10000) / 100 : 0;
+    let volume    = meta.regularMarketVolume ?? 0;
+    let name      = meta.longName || meta.shortName || clean;
+    let currency  = meta.currency || 'USD';
+
+    // 한국 종목: 네이버 가격으로 override (코스피/코스닥 모두 정확)
+    if (naverInfo?.price > 0) {
+      price     = naverInfo.price;
+      change    = naverInfo.change    ?? change;
+      changePct = (naverInfo.changepct ?? 0) * 100;
+      volume    = naverInfo.volume    ?? volume;
+      if (naverInfo.name) name = naverInfo.name;
+      currency  = naverInfo.currency  || 'KRW';
+    }
 
     // 날짜 범위
     const now = new Date();
@@ -173,12 +199,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ticker:    usedTicker,
       origTicker: clean,
-      name:      meta.longName || meta.shortName || clean,
-      currency:  meta.currency || 'USD',
+      name,
+      currency,
       price,
       change,
       changePct,
-      volume:    meta.regularMarketVolume ?? 0,
+      volume,
       high52:    meta.fiftyTwoWeekHigh ?? 0,
       low52:     meta.fiftyTwoWeekLow  ?? 0,
       ytd,
