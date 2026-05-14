@@ -286,8 +286,8 @@ async function getNaverStockInfo(code: string, item?: string): Promise<any> {
   const toFloat = (s: any) => parseFloat(('' + s).replace(/[^0-9.-]/g, ''));
 
   const price     = toInt(d.closePriceRaw);
-  const change    = sign * toInt(d.compareToPreviousClosePriceRaw);
-  const changepct = sign * toFloat(d.fluctuationsRatioRaw) / 100;
+  const change    = sign * Math.abs(toInt(d.compareToPreviousClosePriceRaw));
+  const changepct = sign * Math.abs(toFloat(d.fluctuationsRatioRaw)) / 100;
   const yesterday = price - change;
 
   const baseDate = d.localTradedAt
