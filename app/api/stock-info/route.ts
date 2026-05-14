@@ -81,8 +81,9 @@ export async function POST(req: NextRequest) {
     if (!ticker) return NextResponse.json({ error: 'ticker 필요' }, { status: 400 });
 
     const clean = ticker.toString().trim().toUpperCase();
+    const hasSuffix = /\.(KS|KQ)$/i.test(clean);
     const candidates = isKoreanCode(clean)
-      ? [`${clean.split('.')[0]}.KS`, `${clean.split('.')[0]}.KQ`]
+      ? hasSuffix ? [clean] : [`${clean}.KS`, `${clean}.KQ`]
       : [clean];
 
     let chartResult: any = null;
