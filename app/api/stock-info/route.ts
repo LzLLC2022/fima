@@ -92,6 +92,11 @@ export async function POST(req: NextRequest) {
       try {
         // 2년치 일봉 + 배당 이벤트
         chartResult = await fetchChart(yt, 'interval=1d&range=2y&events=dividends');
+        // .KS로 조회했으나 실제 코스닥 종목인 경우(exchangeName=KOQ) → 버리고 .KQ로 재시도
+        if (yt.endsWith('.KS') && candidates.length > 1) {
+          const exch = chartResult?.meta?.exchangeName || '';
+          if (exch === 'KOQ') { chartResult = null; continue; }
+        }
         usedTicker = yt;
         break;
       } catch { /* try next */ }
