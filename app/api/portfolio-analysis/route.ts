@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
       let divKRW = 0;
       let divFX  = 0;
       if (t2.startsWith('div') && !t2.includes('stock')) {
-        divFX  = (div2 || price2) - tax2 - chg2;
+        divFX  = (div2 || price2);
         divKRW = divFX * eff2;
       } else if (t2.includes('stock') && div2 > 0) {
         divFX  = div2;
