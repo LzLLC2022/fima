@@ -224,8 +224,8 @@ export async function POST(req: NextRequest) {
       if (!divByYearMonth[yr]) divByYearMonth[yr] = {};
       divByYearMonth[yr][mo] = (divByYearMonth[yr][mo] || 0) + divKRW;
 
-      // 현금배당 & ticker 있는 경우: 종목별 상세 기록
-      if (ticker2 && t2.startsWith('div') && !t2.includes('stock')) {
+      // 현금배당 & Dividend-Stock & ticker 있는 경우: 종목별 상세 기록
+      if (ticker2 && t2.startsWith('div')) {
         const qtyAtDiv = runQtyMap[ticker2] || 0;
         if (qtyAtDiv > 0) {
           if (!divDetailMap[yr]) divDetailMap[yr] = {};
