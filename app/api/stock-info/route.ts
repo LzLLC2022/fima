@@ -39,6 +39,65 @@ async function fetchSummary(yticker: string) {
   } catch { return null; }
 }
 
+async function fetchNaverChartData(code: string): Promise<{
+  timestamps: number[];
+  closes: (number | null)[];
+  highs: (number | null)[];
+  lows: (number | null)[];
+} | null> {
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const toNaverDate = (d: Date) =>
+    `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+
+  const endDt   = new Date();
+  const startDt = new Date(endDt.getTime() - 2 * 365 * 86400 * 1000);
+
+  const url = `https://api.finance.naver.com/siseJson.naver`
+    + `?symbol=${code}&requestType=1`
+    + `&startTime=${toNaverDate(startDt)}&endTime=${toNaverDate(endDt)}`
+    + `&timeframe=day`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Referer': 'https://finance.naver.com',
+      },
+    });
+    if (!res.ok) return null;
+
+    const text = (await res.text()).trim().replace(/^﻿/, '');
+    let rows: any[][];
+    try { rows = JSON.parse(text); }
+    catch { rows = JSON.parse(text.replace(/'/g, '"')); }
+
+    // 유효 데이터 행만 필터 (헤더 제외): [날짜, 시가, 고가, 저가, 종가, 거래량]
+    const dataRows = rows.filter(
+      (r: any[]) => Array.isArray(r) && r.length >= 5 && !isNaN(Number(r[4])) && Number(r[4]) > 0
+    );
+    if (!dataRows.length) return null;
+
+    const timestamps: number[] = [];
+    const closes: (number | null)[] = [];
+    const highs: (number | null)[]  = [];
+    const lows: (number | null)[]   = [];
+
+    for (const r of dataRows) {
+      const dateStr = String(r[0]);
+      const y = dateStr.slice(0, 4), m = dateStr.slice(4, 6), d2 = dateStr.slice(6, 8);
+      const ts = new Date(`${y}-${m}-${d2}T00:00:00+09:00`).getTime() / 1000;
+      timestamps.push(ts);
+      highs.push(Number(r[2]) || null);
+      lows.push(Number(r[3]) || null);
+      closes.push(Number(r[4]) || null);
+    }
+
+    return { timestamps, closes, highs, lows };
+  } catch {
+    return null;
+  }
+}
+
 function fmtDate(ts: number): string {
   const d = new Date(ts * 1000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -114,7 +173,40 @@ export async function POST(req: NextRequest) {
         break;
       } catch { /* try next */ }
     }
-    if (!chartResult) return NextResponse.json({ error: '데이터를 가져올 수 없습니다' }, { status: 404 });
+    // Yahoo Finance 실패 시 한국 종목은 네이버 siseJson으로 폴백
+    let naverChartData: Awaited<ReturnType<typeof fetchNaverChartData>> = null;
+    if (!chartResult && isKoreanCode(clean)) {
+      naverChartData = await fetchNaverChartData(clean.split('.')[0]);
+    }
+    if (!chartResult && !naverChartData) {
+      return NextResponse.json({ error: '데이터를 가져올 수 없습니다' }, { status: 404 });
+    }
+
+    // 네이버 폴백: 네이버 차트 데이터로 Yahoo 구조를 모방해 chartResult 구성
+    if (!chartResult && naverChartData && naverInfo) {
+      const { timestamps, closes, highs, lows } = naverChartData;
+      const now       = Date.now();
+      const w52Start  = now / 1000 - 365 * 24 * 3600;
+      const ytdStart  = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
+      const mtdStart  = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() / 1000;
+      const ytd = buildPeriodData(timestamps, closes, highs, lows, ytdStart);
+      const mtd = buildPeriodData(timestamps, closes, highs, lows, mtdStart);
+      const w52 = buildPeriodData(timestamps, closes, highs, lows, w52Start);
+      return NextResponse.json({
+        ticker:     clean,
+        origTicker: clean,
+        name:       naverInfo.name || clean,
+        currency:   'KRW',
+        price:      naverInfo.price || 0,
+        change:     naverInfo.change || 0,
+        changePct:  (naverInfo.changepct ?? 0) * 100,
+        volume:     naverInfo.volume || 0,
+        high52:     w52.high,
+        low52:      w52.low,
+        ytd, mtd, w52,
+        dividend: { fwdAmount: 0, fwdYield: 0, ttmAmount: 0, ttmYield: 0, history: [] },
+      });
+    }
 
     const [summary] = await Promise.all([fetchSummary(usedTicker)]);
 
