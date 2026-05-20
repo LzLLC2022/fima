@@ -41,6 +41,10 @@ import {
   getLedgerData,
   getTrialBalance,
   carryForward,
+  getAssets,
+  saveAsset,
+  updateAsset,
+  deleteAsset,
 } from '@/lib/bookkeeping';
 
 // ── CORS 헤더 ─────────────────────────────────────────────────
@@ -115,6 +119,9 @@ export async function GET(req: NextRequest) {
       case 'carryForward':
         return ok(await carryForward(spreadsheetId, p), req);
 
+      case 'getAssets':
+        return ok(await getAssets(spreadsheetId), req);
+
       // ── 진단: 거래 시트 원시 데이터 조회 (최근 N행) ──
       case 'debugTx': {
         const raw = await getSheetValues(spreadsheetId, '거래');
@@ -171,6 +178,16 @@ export async function POST(req: NextRequest) {
       case 'generateLedger':
         // 시트 쓰기 없이 JSON 반환 (getLedger와 동일)
         return ok(await getLedgerData(spreadsheetId, body), req);
+
+      case 'saveAsset':
+        return ok(await saveAsset(spreadsheetId, body), req);
+
+      case 'updateAsset':
+        return ok(await updateAsset(spreadsheetId, body), req);
+
+      case 'deleteAsset':
+        if (!body.assetNo) return err('assetNo가 필요합니다.', req);
+        return ok(await deleteAsset(spreadsheetId, body.assetNo), req);
 
       default:
         return err('Unknown action: ' + action, req);

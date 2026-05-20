@@ -19,12 +19,16 @@ export const BOOK_SHEETS = {
   TRANSACTION : '거래',
   ENTRY       : '분개',
   ACCOUNT     : '계정과목',
+  ASSET       : '고정자산',
 } as const;
 
 // ── 헤더 정의 ─────────────────────────────────────────────────
 const TX_HEADERS      = ['거래ID','날짜','적요','거래처','부가세여부','공급대가','공급가액','부가세','등록일시','수정일시'];
 const ENTRY_HEADERS   = ['분개ID','거래ID','순번','구분','계정과목','재무제표계정과목','금액','거래요소'];
 const ACCOUNT_HEADERS = ['용도','분류(상)','분류(하)','계정과목(상)','계정과목(하)','계정과목(장부)','국세청계정과목','거래의요소','내용'];
+// A:자산번호 B:자산명 C:자산분류 D:규격모델명 E:수량 F:취득방법 G:보관장소
+// H:담당부서 I:담당자 J:비고 K:취득일자 L:취득가액 M:상각법 N:내용연수 O:잔존가치율 P:등록일시 Q:수정일시
+const ASSET_HEADERS   = ['자산번호','자산명','자산분류','규격/모델명','수량','취득방법','보관장소','담당부서','담당자','비고','취득일자','취득가액','상각법','내용연수','잔존가치율(%)','등록일시','수정일시'];
 
 // ============================================================
 //  공통 유틸
@@ -735,4 +739,123 @@ export async function carryForward(spreadsheetId: string, p: any): Promise<any> 
     year,
     entriesCount: totalEntries,
   };
+}
+
+// ============================================================
+//  고정자산 관리
+//  시트: '고정자산' (17컬럼)
+// ============================================================
+
+/** 자산번호 자동 채번: YYYYNNNNN (예: 202500001) */
+async function genAssetNo(spreadsheetId: string): Promise<string> {
+  const year = String(new Date().getFullYear());
+  const data = await safeGetSheetValues(spreadsheetId, BOOK_SHEETS.ASSET);
+  const nums = data.slice(1)
+    .map(r => String(r[0] || ''))
+    .filter(n => n.startsWith(year))
+    .map(n => parseInt(n.slice(4)) || 0);
+  const maxSeq = nums.length ? Math.max(...nums) : 0;
+  return year + String(maxSeq + 1).padStart(5, '0');
+}
+
+/** 고정자산 목록 조회 */
+export async function getAssets(spreadsheetId: string): Promise<any[]> {
+  await ensureSheet(spreadsheetId, BOOK_SHEETS.ASSET, ASSET_HEADERS);
+  const data = await safeGetSheetValues(spreadsheetId, BOOK_SHEETS.ASSET);
+  return data.slice(1)
+    .filter(r => String(r[0] || '').trim())
+    .map(r => ({
+      assetNo    : String(r[0]  || ''),
+      name       : String(r[1]  || ''),
+      category   : String(r[2]  || ''),
+      model      : String(r[3]  || ''),
+      qty        : Number(r[4]) || 1,
+      acqMethod  : String(r[5]  || ''),
+      location   : String(r[6]  || ''),
+      dept       : String(r[7]  || ''),
+      manager    : String(r[8]  || ''),
+      note       : String(r[9]  || ''),
+      acquireDate: safeFormatDate(r[10]),
+      cost       : Number(r[11]) || 0,
+      depMethod  : String(r[12] || '정액법'),
+      usefulLife : Number(r[13]) || 5,
+      salvageRate: Number(r[14]) || 0,
+    }));
+}
+
+/** 고정자산 등록 */
+export async function saveAsset(
+  spreadsheetId: string,
+  body: any,
+): Promise<{ success: boolean; assetNo: string }> {
+  await ensureSheet(spreadsheetId, BOOK_SHEETS.ASSET, ASSET_HEADERS);
+  const assetNo = await genAssetNo(spreadsheetId);
+  const now     = new Date().toISOString();
+  await appendRow(spreadsheetId, BOOK_SHEETS.ASSET, [
+    assetNo,
+    body.name       || '',
+    body.category   || '',
+    body.model      || '',
+    Number(body.qty) || 1,
+    body.acqMethod  || '매입',
+    body.location   || '',
+    body.dept       || '',
+    body.manager    || '',
+    body.note       || '',
+    body.acquireDate || '',
+    Number(body.cost) || 0,
+    body.depMethod  || '정액법',
+    Number(body.usefulLife) || 5,
+    Number(body.salvageRate) || 0,
+    now, now,
+  ]);
+  return { success: true, assetNo };
+}
+
+/** 고정자산 수정 */
+export async function updateAsset(
+  spreadsheetId: string,
+  body: any,
+): Promise<{ success: boolean; error?: string }> {
+  const data = await safeGetSheetValues(spreadsheetId, BOOK_SHEETS.ASSET);
+  const rows  = data.slice(1);
+  const idx   = rows.findIndex(r => String(r[0] || '') === String(body.assetNo));
+  if (idx < 0) return { success: false, error: '자산을 찾을 수 없습니다.' };
+
+  const sheetRow  = idx + 2;   // 1-indexed + header
+  const origCreated = String(rows[idx][15] || '');
+  const now       = new Date().toISOString();
+
+  await updateRow(spreadsheetId, BOOK_SHEETS.ASSET, sheetRow, [
+    body.assetNo,
+    body.name       || '',
+    body.category   || '',
+    body.model      || '',
+    Number(body.qty) || 1,
+    body.acqMethod  || '매입',
+    body.location   || '',
+    body.dept       || '',
+    body.manager    || '',
+    body.note       || '',
+    body.acquireDate || '',
+    Number(body.cost) || 0,
+    body.depMethod  || '정액법',
+    Number(body.usefulLife) || 5,
+    Number(body.salvageRate) || 0,
+    origCreated, now,
+  ]);
+  return { success: true };
+}
+
+/** 고정자산 삭제 */
+export async function deleteAsset(
+  spreadsheetId: string,
+  assetNo: string,
+): Promise<{ success: boolean; error?: string }> {
+  const data = await safeGetSheetValues(spreadsheetId, BOOK_SHEETS.ASSET);
+  const rows  = data.slice(1);
+  const idx   = rows.findIndex(r => String(r[0] || '') === String(assetNo));
+  if (idx < 0) return { success: false, error: '자산을 찾을 수 없습니다.' };
+  await deleteRow(spreadsheetId, BOOK_SHEETS.ASSET, idx + 2);
+  return { success: true };
 }
