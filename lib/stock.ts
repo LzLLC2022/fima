@@ -653,24 +653,24 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
 }
 
 /**
- * Yahoo Finance quoteSummary에서 Forward Dividend Yield(FDW)를 조회합니다.
- * summaryDetail.dividendYield.raw (소수) → 퍼센트(%) 변환하여 반환합니다.
- * 데이터 없거나 배당 없는 종목은 0 반환합니다.
+ * 가장 최근 배당 이벤트의 주당 배당금을 조회합니다.
+ * Yahoo Finance v8 chart API의 events=dividends 데이터를 사용합니다.
+ * FDW(Forward Dividend Yield) 계산에 사용: recentDiv × divCount / price × 100
  *
- * @param ticker - 종목 코드 (한국 6자리 또는 Yahoo 티커)
- * @returns      - Forward Dividend Yield (%) 예: 3.30 → 3.30%
+ * @param ticker - 종목 코드 또는 Yahoo 티커
+ * @returns      - 가장 최근 1회 주당 배당금 (채권 ISIN 또는 조회 실패 시 0)
  */
-export async function getFwdDividendYield(ticker: string): Promise<number> {
+export async function getMostRecentDividend(ticker: string): Promise<number> {
   if (!ticker) return 0;
   ticker = ticker.toString().trim().toUpperCase();
   if (isKoreanBondISIN(ticker)) return 0;
 
-  const yticker = isKoreanCode(ticker)
-    ? `${ticker.split('.')[0]}.KS`
-    : ticker;
+  const candidates: string[] = isKoreanCode(ticker)
+    ? [`${ticker.split('.')[0]}.KS`, `${ticker.split('.')[0]}.KQ`]
+    : [ticker];
 
-  try {
-    const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yticker)}?modules=summaryDetail`;
+  const fetchRecent = async (yticker: string): Promise<number> => {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1d&range=2y&events=dividends`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -680,13 +680,22 @@ export async function getFwdDividendYield(ticker: string): Promise<number> {
     });
     if (!res.ok) return 0;
     const json = await res.json();
-    const sd = json?.quoteSummary?.result?.[0]?.summaryDetail;
-    if (!sd) return 0;
-    const raw = sd.dividendYield?.raw;
-    return typeof raw === 'number' && raw > 0 ? Math.round(raw * 10000) / 100 : 0;
-  } catch {
-    return 0;
+    const events = json?.chart?.result?.[0]?.events?.dividends;
+    if (!events) return 0;
+    const entries = Object.entries(events as Record<string, { amount: number; date?: number }>)
+      .map(([ts, d]) => ({ date: d.date ?? Number(ts), amount: d.amount || 0 }))
+      .filter(e => e.amount > 0)
+      .sort((a, b) => b.date - a.date);
+    return entries.length > 0 ? Math.round(entries[0].amount * 10000) / 10000 : 0;
+  };
+
+  for (const yticker of candidates) {
+    try {
+      const val = await fetchRecent(yticker);
+      if (val > 0) return val;
+    } catch { /* 다음 후보 시도 */ }
   }
+  return 0;
 }
 
 /**
