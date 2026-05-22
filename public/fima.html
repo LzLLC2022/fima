@@ -5318,13 +5318,13 @@
         }
       }
 
-      // TTM / FDW 배당율 서브라인 (종목명 두 번째 줄)
+      // TTM / FWD 배당율 서브라인 (종목명 두 번째 줄)
       var ttmYield = (item.divPerShare > 0 && livePrice > 0) ? (item.divPerShare / livePrice * 100) : 0;
       var yieldStr2 = '';
       if (ttmYield > 0 || (item.fwdDivYield || 0) > 0) {
         var yParts = [];
         if (ttmYield > 0) yParts.push('TTM ' + ttmYield.toFixed(2) + '%');
-        if ((item.fwdDivYield || 0) > 0) yParts.push('FDW ' + item.fwdDivYield.toFixed(2) + '%');
+        if ((item.fwdDivYield || 0) > 0) yParts.push('FWD ' + item.fwdDivYield.toFixed(2) + '%');
         yieldStr2 = ' · ' + yParts.join(' / ');
       }
 
@@ -6032,7 +6032,7 @@
       row['매수(+)/매도(-) 수량']         = diffShares;
       row['거래금액(' + baseCur + ')']    = diffAmt > 0 ? Math.round(diffAmt) : 0;
       row['TTM배당율(%)']                 = ttmYield;
-      row['FDW배당율(%)']                 = item.fwdDivYield || 0;
+      row['FWD배당율(%)']                 = item.fwdDivYield || 0;
       row['예상연배당(' + baseCur + ')']  = estDivTotal;
       return row;
     });
