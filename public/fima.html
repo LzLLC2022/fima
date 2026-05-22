@@ -5316,12 +5316,22 @@
         }
       }
 
+      // TTM / FDW 배당율 서브라인 (종목명 두 번째 줄)
+      var ttmYield = (item.divPerShare > 0 && livePrice > 0) ? (item.divPerShare / livePrice * 100) : 0;
+      var yieldStr2 = '';
+      if (ttmYield > 0 || (item.fwdDivYield || 0) > 0) {
+        var yParts = [];
+        if (ttmYield > 0) yParts.push('TTM ' + ttmYield.toFixed(2) + '%');
+        if ((item.fwdDivYield || 0) > 0) yParts.push('FDW ' + item.fwdDivYield.toFixed(2) + '%');
+        yieldStr2 = ' · ' + yParts.join(' / ');
+      }
+
       return '<tr style="border-bottom:1px solid #ede9fe;">' +
         '<td style="padding:8px 10px;font-size:0.88em;color:#2d2747;">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">' +
             '<div style="cursor:pointer;flex:1;min-width:0;" onclick="showStockDetail(\'' + item.ticker.replace(/'/g,"\\'") + '\',event,\'' + (item.divCycle||'').replace(/'/g,"\\'") + '\')">' +
               '<span style="color:#7c6ce0;text-decoration:underline dotted;">' + item.name + '</span>' +
-              '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + (item.divCycle ? ' (' + item.divCycle + ')' : '') + '</div>' +
+              '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + item.ticker + (item.divCycle ? ' (' + item.divCycle + ')' : '') + yieldStr2 + '</div>' +
             '</div>' +
             '<button onclick="event.stopPropagation();rbDeleteItem(\'' + item.ticker.replace(/'/g,"\\'") + '\')" title="목록에서 제거" style="background:none;border:none;cursor:pointer;color:#fc8181;font-size:1em;padding:0 2px;line-height:1;flex-shrink:0;opacity:0.65;">🗑</button>' +
           '</div>' +

@@ -653,6 +653,43 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
 }
 
 /**
+ * Yahoo Finance quoteSummary에서 Forward Dividend Yield(FDW)를 조회합니다.
+ * summaryDetail.dividendYield.raw (소수) → 퍼센트(%) 변환하여 반환합니다.
+ * 데이터 없거나 배당 없는 종목은 0 반환합니다.
+ *
+ * @param ticker - 종목 코드 (한국 6자리 또는 Yahoo 티커)
+ * @returns      - Forward Dividend Yield (%) 예: 3.30 → 3.30%
+ */
+export async function getFwdDividendYield(ticker: string): Promise<number> {
+  if (!ticker) return 0;
+  ticker = ticker.toString().trim().toUpperCase();
+  if (isKoreanBondISIN(ticker)) return 0;
+
+  const yticker = isKoreanCode(ticker)
+    ? `${ticker.split('.')[0]}.KS`
+    : ticker;
+
+  try {
+    const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(yticker)}?modules=summaryDetail`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com/',
+      },
+    });
+    if (!res.ok) return 0;
+    const json = await res.json();
+    const sd = json?.quoteSummary?.result?.[0]?.summaryDetail;
+    if (!sd) return 0;
+    const raw = sd.dividendYield?.raw;
+    return typeof raw === 'number' && raw > 0 ? Math.round(raw * 10000) / 100 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * 최근 1년간 종목의 월별 주당 배당금을 조회합니다 (로컬 통화 기준).
  *
  * @param ticker - 종목 코드 또는 Yahoo 티커
