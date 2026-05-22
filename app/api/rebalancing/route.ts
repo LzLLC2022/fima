@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice, getAnnualDividendPerShare, get52WeekHighLow } from '@/lib/stock';
+import { getStockPrice, getAnnualDividendPerShare, get52WeekHighLow, getMostRecentDividend } from '@/lib/stock';
 
 const REBALANCING_SHEET_NAME = 'Rebalancing';
 
@@ -64,20 +64,31 @@ export async function POST(req: NextRequest) {
         };
       });
 
-    // 현재가 + 주당연배당금 + 52주고저가 병렬 조회
-    const [prices, divs, hls] = await Promise.all([
+    // 현재가 + 주당연배당금(TTM) + 52주고저가 + 최근배당금(FDW계산용) 병렬 조회
+    const [prices, divs, hls, recentDivs] = await Promise.all([
       Promise.all(filtered.map((it: any) => getStockPrice(it.ticker).catch(() => 0))),
       Promise.all(filtered.map((it: any) => getAnnualDividendPerShare(it.ticker).catch(() => 0))),
       Promise.all(filtered.map((it: any) => get52WeekHighLow(it.ticker).catch(() => ({ high: 0, low: 0 })))),
+      Promise.all(filtered.map((it: any) => getMostRecentDividend(it.ticker).catch(() => 0))),
     ]);
 
-    const items = filtered.map((it: any, i: number) => ({
-      ...it,
-      currentPrice: prices[i] || 0,
-      divPerShare:  divs[i]   || 0,
-      weekHigh52:   hls[i].high || 0,
-      weekLow52:    hls[i].low  || 0,
-    }));
+    const items = filtered.map((it: any, i: number) => {
+      const currentPrice = prices[i] || 0;
+      const recentDiv    = recentDivs[i] || 0;
+      const divCount     = it.divCount || 0;
+      // FDW(%) = 최근 1회 배당금 × 연배당횟수 / 현재가 × 100
+      const fwdDivYield  = (recentDiv > 0 && divCount > 0 && currentPrice > 0)
+        ? Math.round(recentDiv * divCount / currentPrice * 10000) / 100
+        : 0;
+      return {
+        ...it,
+        currentPrice,
+        divPerShare:  divs[i] || 0,
+        weekHigh52:   hls[i].high || 0,
+        weekLow52:    hls[i].low  || 0,
+        fwdDivYield,
+      };
+    });
 
     return NextResponse.json({ items });
   } catch (e: any) {

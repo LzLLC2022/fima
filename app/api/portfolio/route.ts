@@ -1,16 +1,74 @@
+/**
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * 파일: app/api/portfolio/route.ts
+ * 역할: 포트폴리오 현황 계산 API (POST /api/portfolio)
+ *
+ * ▶ 처리 흐름
+ *   1. 구글 스프레드시트(원장)에서 전체 거래 내역을 읽어온다.
+ *   2. 기준일/계좌 필터를 적용해 대상 거래를 추린다.
+ *   3. 종목별 매수·매도·배당 내역을 집계해 잔고(포지션)를 구한다.
+ *   4. 외부 API(야후 파이낸스·네이버 채권)에서 현재가와 환율을 조회한다.
+ *   5. 손익(현재가치 - 취득원가)과 수익률을 계산한다.
+ *   6. 현금·주식/ETF·펀드/채권으로 분류해 JSON으로 응답한다.
+ *
+ * ▶ 응답 데이터 구조
+ *   {
+ *     success       : 성공 여부 (true/false)
+ *     cash          : 현금 잔고 목록 (지역별 · 통화별)
+ *     stocks        : 주식·ETF 포지션 목록
+ *     funds         : 펀드·채권 포지션 목록
+ *     totalKRW      : 전체 평가액 합계 (원화)
+ *     totalCashKRW  : 현금 합계 (원화)
+ *     totalStockKRW : 주식·ETF 합계 (원화)
+ *     totalFundKRW  : 펀드·채권 합계 (원화)
+ *   }
+ *
+ * ▶ 각 종목(stocks/funds) 항목의 주요 필드
+ *   ticker        : 종목 코드 (예: AAPL, KR000123456)
+ *   name          : 종목명
+ *   currency      : 거래 통화 (KRW / USD / JPY 등)
+ *   quantity      : 현재 보유 수량
+ *   avgPrice      : 평균 매입단가 (현지통화)
+ *   purchaseAmt   : 총 매입금액 (원화 환산)
+ *   currentPrice  : 현재가 (현지통화)
+ *   marketValue   : 현재 평가액 (원화 환산)
+ *   pnl           : 평가손익 (원화, marketValue - purchaseAmt)
+ *   pnlPct        : 수익률 % (현지통화 기준)
+ *   divFX / divKRW: 수령한 배당 합계 (현지통화 / 원화)
+ *   annualDivFX   : 예상 연간 배당 (현지통화)
+ *   annualDivKRW  : 예상 연간 배당 (원화)
+ *   maturityEval  : 만기보유 평가 정보 (채권 전용, 해당 없으면 null)
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues, LEDGER_SHEET_NAME, MASTER_SHEET_NAME } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
 import { getStockPrice, getExchangeRate, getNaverBondInfo, BOND_META, getAnnualDividendPerShare } from '@/lib/stock';
 
+/**
+ * 한국 채권 ISIN 여부 판별
+ * - ISIN(국제증권식별번호)은 'KR'로 시작하는 12자리 코드
+ * - 예: KR1234567890 → 채권으로 인식
+ * - 채권인 경우 네이버 채권 API에서 이름·만기 정보를 조회한다
+ */
 function isKoreanBondISIN(ticker: string): boolean {
   return /^KR[A-Z0-9]{10}$/i.test(ticker.trim());
 }
 
 /**
- * 만기보유시 평가 계산
- * - 남은 쿠폰 지급일(반기) 합산 + 원금(액면가×수량)
- * - purchaseAmtFX: 총 매입금액(현지통화 기준)
+ * 채권 만기보유 평가 계산
+ *
+ * 채권을 만기까지 보유했을 때 받을 수 있는 총 금액을 계산한다.
+ * 계산식: 원금(액면가 × 수량) + 남은 쿠폰 합계
+ *
+ * - BOND_META에 등록된 채권만 계산 가능 (lib/stock.ts 참고)
+ * - 쿠폰은 반기(6개월) 지급 기준으로 계산
+ * - 이미 만기가 지난 채권은 null 반환
+ *
+ * @param isin          채권 ISIN 코드 (예: KR1234567890)
+ * @param netQty        현재 보유 수량
+ * @param purchaseAmtFX 총 매입금액 (현지통화 기준)
+ * @returns 만기보유 평가 정보 객체, 또는 해당 없으면 null
  */
 function calcMaturityEval(isin: string, netQty: number, purchaseAmtFX: number) {
   const meta = BOND_META[isin.toUpperCase()];
@@ -53,16 +111,29 @@ function calcMaturityEval(isin: string, netQty: number, purchaseAmtFX: number) {
   };
 }
 
+// 원장 데이터가 비어있을 때 반환하는 빈 응답 (에러가 아닌 정상 빈 결과)
 const EMPTY = { success: true, cash: [], stocks: [], funds: [],
                 totalKRW: 0, totalCashKRW: 0, totalStockKRW: 0, totalFundKRW: 0 };
 
+/**
+ * POST /api/portfolio
+ *
+ * 포트폴리오 현황을 계산해서 반환하는 메인 API 핸들러.
+ *
+ * 요청 바디(JSON) 옵션:
+ * @param filters.owner        오너 이름 (어떤 스프레드시트를 읽을지 결정)
+ * @param filters.endDate      기준일 'YYYY-MM-DD' — 해당 날짜까지의 거래만 집계
+ * @param filters.accountOwner 특정 계좌 오너로 필터링
+ * @param filters.account      특정 계좌명으로 필터링
+ */
 export async function POST(req: NextRequest) {
-  const filters = await req.json().catch(() => ({}));
+  const filters = await req.json().catch(() => ({})); // JSON 파싱 실패 시 빈 객체로 대체
 
   try {
     const spreadsheetId = getOwnerSheetId(filters.owner);
 
     // ── 기준일 파싱 ──
+    // '2024-12-31' 형식을 Date 객체로 변환. 해당 날짜의 23:59:59까지 포함
     let endDate: Date | null = null;
     if (filters.endDate) {
       const ep = String(filters.endDate).split('-');
@@ -73,6 +144,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 시트 데이터 읽기 ──
+    // 원장(Ledger)과 마스터(Master) 시트를 동시에 읽는다.
+    // 마스터 시트: 지역별 통화 코드(region→currency) 매핑 정보를 보관
     const [ledgerData, masterData] = await Promise.all([
       getSheetValues(spreadsheetId, LEDGER_SHEET_NAME),
       getSheetValues(spreadsheetId, MASTER_SHEET_NAME).catch(() => [] as any[][]),
@@ -92,6 +165,8 @@ export async function POST(req: NextRequest) {
     const acctIdx   = col('account');   const aoIdx     = col('account owner');
 
     // ── Master → region-currency 매핑 ──
+    // 마스터 시트에서 '지역(region) → 통화(currency)' 대응표를 구성한다.
+    // 예: { "US": "USD", "JP": "JPY", "KR": "KRW" }
     const currencyMap: Record<string, string> = {};
     if (masterData.length > 1) {
       const mh = masterData[0].map((h: any) => String(h ?? '').trim().toLowerCase());
@@ -108,6 +183,8 @@ export async function POST(req: NextRequest) {
     const posMap: Record<string, any>        = {};
 
     // ── 행 필터 ──
+    // 기준일·계좌오너·계좌명 조건에 맞는 행만 통과시킨다.
+    // false를 반환하면 해당 행은 집계에서 제외된다.
     const rowFilter = (row: any[]): boolean => {
       if (endDate && dateIdx >= 0) {
         const raw = row[dateIdx];
@@ -129,6 +206,16 @@ export async function POST(req: NextRequest) {
     };
 
     // ── 거래 집계 ──
+    // 원장의 각 행을 순서대로 읽으면서 현금 잔고와 종목 포지션을 누적 계산한다.
+    // 거래 유형(trade)에 따라 다음과 같이 처리:
+    //   dep(입금)   : 현금 증가 (세금·수수료 차감)
+    //   with(출금)  : 현금 감소 (세금·수수료 추가)
+    //   buy         : 현금 감소 + 종목 매입수량·매입원가 증가
+    //   sell        : 현금 증가 + 종목 매도수량 증가
+    //   div(배당)   : 현금 증가 + 배당 합계 누적
+    //   stockdiv    : 주식배당 — 주식 수량·원가에도 반영
+    //   split       : 주식 분할 (수량 증가)
+    //   merge/reversesplit: 주식 병합 (수량 감소)
     ledgerData.slice(1).forEach((row: any[]) => {
       if (!rowFilter(row)) return;
 
@@ -214,6 +301,9 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     // ── 현재가 / 역사적 종가 + 연배당 병렬 조회 ──
+    // 야후 파이낸스에서 각 종목의 현재가(또는 기준일 종가)를 동시에 조회한다.
+    // 기준일이 지정된 경우: 그 날짜의 종가 사용 (과거 시점 포트폴리오 재현)
+    // 기준일이 없는 경우: 실시간 현재가 + 연간 배당 동시 조회
     const tickers      = Object.keys(posMap);
     const [priceResults, annDivResults] = await Promise.all([
       Promise.allSettled(tickers.map(tk => getStockPrice(tk, endDateStr).catch(() => 0))),
@@ -242,6 +332,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 환율 조회 (기준일 지정 시 역사적 환율, 없으면 현재 환율) ──
+    // 포트폴리오 전체에 사용되는 통화 목록을 수집한 뒤 한 번에 환율을 조회한다.
+    // 환율 우선순위: 야후 파이낸스 조회값 → 원장의 최근 기록값 → 1(기본값)
     const histRateMap: Record<string, number> = { KRW: 1 };
     const uniqueCurrencies = Array.from(new Set([
       ...tickers.map(k => currencyMap[posMap[k].region] || 'KRW'),
@@ -267,26 +359,32 @@ export async function POST(req: NextRequest) {
     };
 
     // ── 포지션 계산 ──
+    // 각 종목에 대해 손익과 평가금액을 최종 계산한다.
+    // 매도를 모두 완료한 종목(netQty≈0)은 결과에서 제외한다.
     const stocks: any[] = [], funds: any[] = [];
 
     Object.keys(posMap).forEach(key => {
       const p            = posMap[key];
-      const effectiveQty = p.buyQty + p.splitAdj;
-      const netQty       = effectiveQty - p.sellQty;
-      if (netQty < 0.0001) return;
+      const effectiveQty = p.buyQty + p.splitAdj; // 분할·합병 반영 실질 매입수량
+      const netQty       = effectiveQty - p.sellQty; // 현재 보유수량
+      if (netQty < 0.0001) return; // 전량 매도된 종목은 건너뜀
 
-      const avgPriceFX  = effectiveQty > 0 ? p.buyCostFX / effectiveQty : 0;
-      const avgRate     = p.buyCostFX  > 0 ? p.buyCostKRW / p.buyCostFX : (p.lastRate || 1);
+      const avgPriceFX  = effectiveQty > 0 ? p.buyCostFX / effectiveQty : 0; // 평균 매입단가 (현지통화)
+      const avgRate     = p.buyCostFX  > 0 ? p.buyCostKRW / p.buyCostFX : (p.lastRate || 1); // 매입 당시 평균 환율
       const currency    = currencyMap[p.region] || 'KRW';
       const isKRW       = currency === 'KRW';
+      // 현재 평가에 적용할 환율: 야후 조회값 → 원장 최근값 → 1 순서로 사용
       const effRate2    = isKRW ? 1 : resolveRate(p.region, p.lastRate > 0 ? p.lastRate : (latestRate[p.region] || 1));
 
+      // 취득원가(원화): 매입단가 × 보유수량 × 매입 당시 환율
       const purchaseAmtKRW = isKRW ? avgPriceFX * netQty : avgPriceFX * netQty * avgRate;
       // 현재가 조회 불가(0)인 경우: Bond ISIN이면 매입단가로 대체 (평가손실 0%)
       const rawPriceFX  = priceMap[p.ticker] || 0;
       const curPriceFX  = rawPriceFX > 0 ? rawPriceFX
                         : isKoreanBondISIN(p.ticker) ? avgPriceFX : 0;
+      // 현재 평가액(원화): 현재가 × 보유수량 × 현재 환율
       const marketValueKRW = isKRW ? curPriceFX * netQty : curPriceFX * netQty * effRate2;
+      // 평가손익(원화) = 현재 평가액 - 취득원가
       const pnl            = marketValueKRW - purchaseAmtKRW;
 
       const purchaseAmtFX = avgPriceFX * netQty;
@@ -320,15 +418,19 @@ export async function POST(req: NextRequest) {
           : null,
       };
 
+      // 자산 유형에 따라 stocks 배열(주식·ETF) 또는 funds 배열(펀드·채권)에 분류
       const at = p.assetType.toLowerCase();
       if (at === 'stock' || at === 'etf')    stocks.push(item);   // Stock(ETF) 섹션
       else if (at === 'fund' || at === 'bond') funds.push(item);  // Fund/Bond 섹션
     });
 
+    // 종목 코드(ticker) 알파벳순으로 정렬
     stocks.sort((a, b) => a.ticker.localeCompare(b.ticker));
     funds.sort((a, b)  => a.ticker.localeCompare(b.ticker));
 
     // ── 현금 요약 ──
+    // 지역별 현금 잔고를 원화로 환산한 목록을 만든다.
+    // 잔고가 0에 가까운 지역(±0.001 미만)은 표시에서 제외
     const cash = Object.keys(cashFX)
       .map(region => {
         const amount   = cashFX[region];
@@ -340,6 +442,7 @@ export async function POST(req: NextRequest) {
       })
       .filter(c => Math.abs(c.amount) > 0.001);
 
+    // 현금·주식·펀드/채권 각 섹션의 원화 합산
     const totalCashKRW  = cash.reduce((s, c)  => s + c.amountKRW,   0);
     const totalStockKRW = stocks.reduce((s, i) => s + i.marketValue, 0);
     const totalFundKRW  = funds.reduce((s, i)  => s + i.marketValue, 0);
