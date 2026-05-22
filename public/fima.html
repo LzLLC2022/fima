@@ -847,6 +847,7 @@
     .pin-modal .pin-btn-ok:hover { background: #4a3d8f; }
     .pin-modal .pin-btn-ok:disabled { background: #a0aec0; cursor: not-allowed; }
   </style>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1445,6 +1446,7 @@
           <div style="display:flex;align-items:center;gap:12px;">
             <span id="rbWeightBadge" style="font-size:0.85rem;"></span>
             <button class="btn btn-reset-filter" style="padding:5px 12px;font-size:0.82rem;" onclick="resetRbTargets()">비중 초기화</button>
+            <button class="btn btn-reset-filter" style="padding:5px 12px;font-size:0.82rem;" onclick="downloadRbExcel()">📥 엑셀</button>
             <button id="rbSaveBtn" class="btn" style="display:none;padding:5px 14px;font-size:0.82rem;background:#7c6ce0;color:#fff;border:none;border-radius:6px;cursor:pointer;" onclick="saveRbTargets()">💾 저장</button>
           </div>
         </div>
@@ -5960,6 +5962,94 @@
       '</div>';
 
     body.innerHTML = basicHtml + twoCol;
+  }
+
+  // ====================================================
+  // ---- 리밸런싱 엑셀 다운로드 ----
+  // ====================================================
+  function downloadRbExcel() {
+    if (!rbPortfolioData || !rbSheetItems || !rbSheetItems.length) {
+      alert('먼저 리밸런싱을 조회하세요.');
+      return;
+    }
+    if (typeof XLSX === 'undefined') {
+      alert('Excel 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
+
+    var portMap       = buildPortfolioMap(rbPortfolioData);
+    var baseCur       = rbIsUSD ? 'USD' : 'KRW';
+    var totalCurrentBase = rbSheetItems.reduce(function(s, it) {
+      var p = portMap[it.ticker];
+      if (!p) return s;
+      return s + Math.max(0, rbIsUSD ? (p.marketValueFX || p.marketValueKRW / rbExRate) : p.marketValueKRW);
+    }, 0);
+
+    var rows = rbSheetItems.map(function(item) {
+      var pos = portMap[item.ticker] || {
+        currentPrice: 0, currency: baseCur,
+        marketValueKRW: 0, marketValueFX: 0,
+        quantity: 0, rate: rbExRate || 1,
+        avgPrice: 0, divKRW: 0, divFX: 0
+      };
+      var currentBase  = rbIsUSD ? (pos.marketValueFX || pos.marketValueKRW / rbExRate) : pos.marketValueKRW;
+      var currPct      = totalCurrentBase > 0 ? Math.round(currentBase / totalCurrentBase * 10000) / 100 : 0;
+      var tgtPct       = (rbTargetState[item.ticker] !== undefined) ? rbTargetState[item.ticker] : item.targetPct;
+      var tgtBase      = rbAmountBase * tgtPct / 100;
+      var livePrice    = pos.currentPrice > 0 ? pos.currentPrice : (item.currentPrice || 0);
+      var liveCur      = pos.currency || baseCur;
+      var liveRate     = pos.rate > 0 ? pos.rate : (rbExRate || 1);
+      var allocQty     = livePrice > 0
+        ? (rbIsUSD ? Math.floor(tgtBase / livePrice) : Math.floor(tgtBase / (livePrice * liveRate))) : 0;
+      var diffShares   = allocQty - (pos.quantity || 0);
+      var diffAmt      = livePrice > 0
+        ? (rbIsUSD ? Math.abs(diffShares) * livePrice : Math.abs(diffShares) * livePrice * liveRate) : 0;
+
+      var ttmYield = (item.divPerShare > 0 && livePrice > 0)
+        ? Math.round(item.divPerShare / livePrice * 10000) / 100 : 0;
+
+      var divPerShareAnnual = 0;
+      if (item.divPerShare > 0) {
+        divPerShareAnnual = item.divPerShare;
+      } else if (pos.quantity > 0) {
+        var histDiv = rbIsUSD ? (pos.divFX || 0) : (pos.divKRW || 0);
+        if (histDiv > 0) divPerShareAnnual = histDiv / pos.quantity;
+      }
+      var estDivTotal = (divPerShareAnnual > 0 && allocQty > 0)
+        ? Math.round(divPerShareAnnual * allocQty * 100) / 100 : 0;
+
+      var row = {};
+      row['종목명']                       = item.name;
+      row['Ticker']                       = item.ticker;
+      row['배당주기']                     = item.divCycle || '';
+      row['현재가(' + liveCur + ')']      = livePrice || 0;
+      row['보유수량']                     = pos.quantity || 0;
+      row['매입단가(' + liveCur + ')']    = pos.avgPrice || 0;
+      row['현재비중(%)']                  = currPct;
+      row['목표비중(%)']                  = tgtPct;
+      row['배분금액(' + baseCur + ')']    = Math.round(tgtBase * 100) / 100;
+      row['배분수량']                     = allocQty;
+      row['매수(+)/매도(-) 수량']         = diffShares;
+      row['거래금액(' + baseCur + ')']    = diffAmt > 0 ? Math.round(diffAmt) : 0;
+      row['TTM배당율(%)']                 = ttmYield;
+      row['FDW배당율(%)']                 = item.fwdDivYield || 0;
+      row['예상연배당(' + baseCur + ')']  = estDivTotal;
+      return row;
+    });
+
+    var ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      {wch:30},{wch:10},{wch:8},{wch:14},{wch:8},{wch:12},
+      {wch:10},{wch:10},{wch:16},{wch:8},{wch:16},{wch:16},
+      {wch:12},{wch:12},{wch:16}
+    ];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '리밸런싱');
+
+    var account = document.getElementById('rbAccount').value || '';
+    var region  = document.getElementById('rbRegion').value  || '';
+    var dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, '리밸런싱_' + account + '_' + region + '_' + dateStr + '.xlsx');
   }
 </script>
 </body>
