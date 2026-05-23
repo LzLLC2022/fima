@@ -1594,6 +1594,18 @@
             </select>
           </div>
           <div class="field">
+            <label>Name / Ticker</label>
+            <input type="text" id="qName" placeholder="종목명 또는 Ticker" oninput="applyClientFilters()" />
+          </div>
+          <div class="field">
+            <label>Trade</label>
+            <select id="qTrade" onchange="applyClientFilters()">
+              <option value="">전체</option>
+              <option value="Buy">Buy</option>
+              <option value="Sell">Sell</option>
+            </select>
+          </div>
+          <div class="field">
             <label>&nbsp;</label>
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
               <button class="btn btn-search" id="qSearchBtn" onclick="runQuery()">조회</button>
@@ -1721,6 +1733,7 @@
   let pendingFgnBuy   = false;
   var taxIsKRW        = false;   // Tax 필드 KRW 직접입력 모드
   var lastQueryResult = { headers: [], data: [], rowIndices: [] };
+  var rawQueryResult  = { headers: [], data: [], rowIndices: [] };
   var editingSheetRow = null;
   var editTaxIsKRW    = false;  // 수정 모달 Tax KRW 직접입력 모드
 
@@ -2986,12 +2999,44 @@
             `<div class="alert alert-error">\uC870\uD68C \uC624\uB958: ${result.error}</div>`;
           return;
         }
-        renderTable(result.headers, result.data, result.rowIndices);
+        rawQueryResult = { headers: result.headers, data: result.data, rowIndices: result.rowIndices || [] };
+        applyClientFilters();
       }).catch(function(err) {
         showLoading(false);
         document.getElementById('queryResult').innerHTML =
           `<div class="alert alert-error">\uC870\uD68C \uC2E4\uD328: ${err.message}</div>`;
       });
+  }
+
+  function applyClientFilters() {
+    if (!rawQueryResult.data.length) return;
+
+    const nameFilter  = (document.getElementById('qName').value  || '').trim().toLowerCase();
+    const tradeFilter = (document.getElementById('qTrade').value || '').trim().toLowerCase();
+
+    const headers   = rawQueryResult.headers;
+    const nameIdx   = headers.indexOf('Name');
+    const tickerIdx = headers.indexOf('Ticker');
+    const tradeIdx  = headers.indexOf('Trade');
+
+    const filteredRows    = [];
+    const filteredIndices = [];
+
+    rawQueryResult.data.forEach(function(row, i) {
+      if (nameFilter) {
+        const name   = nameIdx   >= 0 ? String(row[nameIdx]   || '').toLowerCase() : '';
+        const ticker = tickerIdx >= 0 ? String(row[tickerIdx] || '').toLowerCase() : '';
+        if (!name.includes(nameFilter) && !ticker.includes(nameFilter)) return;
+      }
+      if (tradeFilter) {
+        const trade = tradeIdx >= 0 ? String(row[tradeIdx] || '').toLowerCase() : '';
+        if (trade !== tradeFilter) return;
+      }
+      filteredRows.push(row);
+      filteredIndices.push(rawQueryResult.rowIndices[i]);
+    });
+
+    renderTable(headers, filteredRows, filteredIndices);
   }
 
   var sortDateAsc = false;  // 기본: 최신순(내림차순)
@@ -3132,14 +3177,16 @@
   }
 
   function resetQuery() {
-    ['qStartDate','qEndDate'].forEach(id => { document.getElementById(id).value = ''; });
+    ['qStartDate','qEndDate','qName'].forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('qAccount').value = '';
+    document.getElementById('qTrade').value   = '';
     document.getElementById('queryResult').innerHTML = `
       <div class="empty-state">
         <div class="icon">\uD83D\uDD0D</div>
         \uC870\uD68C \uC870\uAC74\uC744 \uC124\uC815\uD558\uACE0 \uC870\uD68C \uBC84\uD2BC\uC744 \uD074\uB9AD\uD558\uC138\uC694.
       </div>`;
     lastQueryResult = { headers: [], data: [] };
+    rawQueryResult  = { headers: [], data: [], rowIndices: [] };
     var eb = document.getElementById('exportBtn'); if (eb) eb.disabled = true;
   }
 
