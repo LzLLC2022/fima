@@ -655,7 +655,7 @@ export async function getAnnualDividendPerShare(ticker: string): Promise<number>
 /**
  * 가장 최근 배당 이벤트의 주당 배당금을 조회합니다.
  * Yahoo Finance v8 chart API의 events=dividends 데이터를 사용합니다.
- * FDW(Forward Dividend Yield) 계산에 사용: recentDiv × divCount / price × 100
+ * FWD(Forward Dividend Yield) 계산에 사용: recentDiv × divCount / price × 100
  *
  * @param ticker - 종목 코드 또는 Yahoo 티커
  * @returns      - 가장 최근 1회 주당 배당금 (채권 ISIN 또는 조회 실패 시 0)
