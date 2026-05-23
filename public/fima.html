@@ -232,7 +232,7 @@
     /* ---- 거래 조회 테이블 ---- */
     .query-filter-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1.5fr 1fr auto;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
       align-items: flex-end;
     }
@@ -1594,7 +1594,7 @@
             </select>
           </div>
           <div class="field">
-            <label>Name / Ticker</label>
+            <label>Name</label>
             <input type="text" id="qName" list="qNameList" placeholder="종목명 또는 Ticker" oninput="applyClientFilters()" autocomplete="off" />
             <datalist id="qNameList"></datalist>
           </div>
