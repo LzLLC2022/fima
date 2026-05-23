@@ -183,6 +183,18 @@
 
     /* Ticker 콤보 */
     .ticker-wrap { position: relative; }
+    /* Name 자동완성 드롭다운 */
+    .qname-wrap { position: relative; }
+    .qname-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: white; border: 1.5px solid #9b87f5;
+      border-radius: 8px; max-height: 220px; overflow-y: auto;
+      z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .qname-option {
+      padding: 7px 12px; cursor: pointer; font-size: 0.87rem; color: #2d2747;
+    }
+    .qname-option:hover { background: #ede9fe; }
     .ticker-dropdown {
       position: absolute; top: calc(100% + 4px); left: 0; right: 0;
       background: white; border: 1.5px solid #9b87f5;
@@ -1595,8 +1607,14 @@
           </div>
           <div class="field">
             <label>Name</label>
-            <input type="text" id="qName" list="qNameList" placeholder="종목명 또는 Ticker" oninput="applyClientFilters()" autocomplete="off" />
-            <datalist id="qNameList"></datalist>
+            <div class="qname-wrap">
+              <input type="text" id="qName" placeholder="종목명 또는 Ticker"
+                     autocomplete="off"
+                     oninput="qNameInput()"
+                     onfocus="qNameFocus()"
+                     onblur="qNameBlur()" />
+              <div id="qNameDropdown" class="qname-dropdown hidden"></div>
+            </div>
           </div>
           <div class="field">
             <label>Trade</label>
@@ -1742,6 +1760,7 @@
   var taxIsKRW        = false;   // Tax 필드 KRW 직접입력 모드
   var lastQueryResult = { headers: [], data: [], rowIndices: [] };
   var rawQueryResult  = { headers: [], data: [], rowIndices: [] };
+  var qNameOptions    = [];
   var editingSheetRow = null;
   var editTaxIsKRW    = false;  // 수정 모달 Tax KRW 직접입력 모드
 
@@ -3018,19 +3037,62 @@
   }
 
   function populateNameList() {
-    const dl = document.getElementById('qNameList');
-    if (!dl) return;
-    dl.innerHTML = '';
     const headers   = rawQueryResult.headers;
     const nameIdx   = headers.indexOf('Name');
     const tickerIdx = headers.indexOf('Ticker');
     const seen = new Set();
+    qNameOptions = [];
     rawQueryResult.data.forEach(function(row) {
       const name   = nameIdx   >= 0 ? String(row[nameIdx]   || '').trim() : '';
       const ticker = tickerIdx >= 0 ? String(row[tickerIdx] || '').trim() : '';
-      if (name   && !seen.has(name))   { seen.add(name);   const o = document.createElement('option'); o.value = name;   dl.appendChild(o); }
-      if (ticker && !seen.has(ticker)) { seen.add(ticker); const o = document.createElement('option'); o.value = ticker; dl.appendChild(o); }
+      if (name   && !seen.has(name))   { seen.add(name);   qNameOptions.push(name); }
+      if (ticker && !seen.has(ticker)) { seen.add(ticker); qNameOptions.push(ticker); }
     });
+  }
+
+  function qNameFocus() {
+    if (qNameOptions.length > 0) showQNameDropdown();
+  }
+
+  function qNameInput() {
+    showQNameDropdown();
+    applyClientFilters();
+  }
+
+  function qNameBlur() {
+    setTimeout(function() {
+      var dd = document.getElementById('qNameDropdown');
+      if (dd) dd.classList.add('hidden');
+    }, 150);
+  }
+
+  function showQNameDropdown() {
+    var input = document.getElementById('qName');
+    var dd    = document.getElementById('qNameDropdown');
+    if (!dd) return;
+    if (!qNameOptions.length) { dd.classList.add('hidden'); return; }
+
+    var filter  = input.value.trim().toLowerCase();
+    var matches = filter
+      ? qNameOptions.filter(function(o) { return o.toLowerCase().includes(filter); })
+      : qNameOptions;
+
+    if (!matches.length) { dd.classList.add('hidden'); return; }
+
+    dd.innerHTML = '';
+    matches.slice(0, 60).forEach(function(o) {
+      var div = document.createElement('div');
+      div.className = 'qname-option';
+      div.textContent = o;
+      div.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        document.getElementById('qName').value = o;
+        dd.classList.add('hidden');
+        applyClientFilters();
+      });
+      dd.appendChild(div);
+    });
+    dd.classList.remove('hidden');
   }
 
   function applyClientFilters() {
@@ -3212,7 +3274,9 @@
       </div>`;
     lastQueryResult = { headers: [], data: [] };
     rawQueryResult  = { headers: [], data: [], rowIndices: [] };
-    var eb = document.getElementById('exportBtn'); if (eb) eb.disabled = true;
+    qNameOptions    = [];
+    var qdd = document.getElementById('qNameDropdown'); if (qdd) qdd.classList.add('hidden');
+    var eb  = document.getElementById('exportBtn');     if (eb)  eb.disabled = true;
   }
 
   // ====================================================
