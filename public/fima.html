@@ -232,7 +232,7 @@
     /* ---- 거래 조회 테이블 ---- */
     .query-filter-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr 1fr 1.5fr 1fr auto;
       gap: 10px;
       align-items: flex-end;
     }
@@ -1595,7 +1595,8 @@
           </div>
           <div class="field">
             <label>Name / Ticker</label>
-            <input type="text" id="qName" placeholder="종목명 또는 Ticker" oninput="applyClientFilters()" />
+            <input type="text" id="qName" list="qNameList" placeholder="종목명 또는 Ticker" oninput="applyClientFilters()" autocomplete="off" />
+            <datalist id="qNameList"></datalist>
           </div>
           <div class="field">
             <label>Trade</label>
@@ -1603,6 +1604,13 @@
               <option value="">전체</option>
               <option value="Buy">Buy</option>
               <option value="Sell">Sell</option>
+              <option value="Deposit">Deposit</option>
+              <option value="Withdraw">Withdraw</option>
+              <option value="Dividend">Dividend</option>
+              <option value="Dividend-Stock">Dividend-Stock</option>
+              <option value="Split">Split</option>
+              <option value="Merge">Merge</option>
+              <option value="Reverse-Split">Reverse-Split</option>
             </select>
           </div>
           <div class="field">
@@ -3000,12 +3008,29 @@
           return;
         }
         rawQueryResult = { headers: result.headers, data: result.data, rowIndices: result.rowIndices || [] };
+        populateNameList();
         applyClientFilters();
       }).catch(function(err) {
         showLoading(false);
         document.getElementById('queryResult').innerHTML =
           `<div class="alert alert-error">\uC870\uD68C \uC2E4\uD328: ${err.message}</div>`;
       });
+  }
+
+  function populateNameList() {
+    const dl = document.getElementById('qNameList');
+    if (!dl) return;
+    dl.innerHTML = '';
+    const headers   = rawQueryResult.headers;
+    const nameIdx   = headers.indexOf('Name');
+    const tickerIdx = headers.indexOf('Ticker');
+    const seen = new Set();
+    rawQueryResult.data.forEach(function(row) {
+      const name   = nameIdx   >= 0 ? String(row[nameIdx]   || '').trim() : '';
+      const ticker = tickerIdx >= 0 ? String(row[tickerIdx] || '').trim() : '';
+      if (name   && !seen.has(name))   { seen.add(name);   const o = document.createElement('option'); o.value = name;   dl.appendChild(o); }
+      if (ticker && !seen.has(ticker)) { seen.add(ticker); const o = document.createElement('option'); o.value = ticker; dl.appendChild(o); }
+    });
   }
 
   function applyClientFilters() {
