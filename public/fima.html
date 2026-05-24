@@ -1471,7 +1471,7 @@
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">매입단가</th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">현재비중</th>
-                <th style="padding:8px 10px;text-align:right;white-space:nowrap;color:#6b5cc4;">목표비중</th>
+                <th id="rbTgtPctTh" style="padding:8px 10px;text-align:right;white-space:nowrap;color:#6b5cc4;cursor:pointer;user-select:none;" onclick="toggleRbTgtSort()" title="목표비중 기준 정렬">목표비중 <span id="rbTgtSortIcon"></span></th>
                 <th style="padding:8px 10px;text-align:right;white-space:nowrap;">배분금액</th>
                 <th id="rbDivYieldTh" style="padding:8px 10px;text-align:right;white-space:nowrap;color:#276749;cursor:pointer;user-select:none;" onclick="toggleRbDivSort()" title="배당율 기준 정렬">예상 연배당 <span id="rbDivSortIcon"></span></th>
                 <th style="padding:8px 10px;text-align:center;white-space:nowrap;color:#7c6ce0;">매수/매도</th>
@@ -5033,6 +5033,7 @@
   var rbTargetState   = {};   // { ticker: targetPct } 사용자 수정값 보존
   var rbLoaded        = false;
   var rbDivSortDir    = 0;    // 0=원본순, 1=배당율↓(내림), -1=배당율↑(오름)
+  var rbTgtSortDir    = 0;    // 0=원본순, 1=목표비중↓(내림), -1=목표비중↑(오름)
   var rbDeletedTickers = []; // 삭제 예정 ticker 목록 (저장 시 시트에서 행 삭제)
   var rbAddedItems     = []; // 신규 추가 항목 [{region,ticker,name,targetPct,...}]
 
@@ -5055,6 +5056,7 @@
       rbTargetState   = {};
       rbLoaded        = false;
       rbDivSortDir    = 0;
+      rbTgtSortDir    = 0;
       var inp = document.getElementById('rbAmountInput');
       if (inp) inp.value = '';
       var lbl = document.getElementById('rbAmountLabel');
@@ -5332,18 +5334,21 @@
       return s + Math.max(0, rbIsUSD ? (p.marketValueFX || p.marketValueKRW / rbExRate) : p.marketValueKRW);
     }, 0);
 
-    // ── 배당율 기준 정렬 아이콘 갱신 ──
-    var sortIconEl = document.getElementById('rbDivSortIcon');
-    if (sortIconEl) sortIconEl.textContent = rbDivSortDir === 1 ? '▼' : rbDivSortDir === -1 ? '▲' : '';
+    // ── 정렬 아이콘 갱신 (배당율 / 목표비중) ──
+    var divSortIconEl = document.getElementById('rbDivSortIcon');
+    if (divSortIconEl) divSortIconEl.textContent = rbDivSortDir === 1 ? '▼' : rbDivSortDir === -1 ? '▲' : '';
+    var tgtSortIconEl = document.getElementById('rbTgtSortIcon');
+    if (tgtSortIconEl) tgtSortIconEl.textContent = rbTgtSortDir === 1 ? '▼' : rbTgtSortDir === -1 ? '▲' : '';
 
-    // ── 배당율 미리 계산 후 정렬 ──
+    // ── 배당율·목표비중 미리 계산 후 정렬 ──
     var itemsWithYield = items.map(function(it) {
       var pos = portMap[it.ticker] || { currentPrice:0, quantity:0, divKRW:0, divFX:0, rate:rbExRate||1 };
       var lp = pos.currentPrice > 0 ? pos.currentPrice : (it.currentPrice || 0);
       var dpa = it.divPerShare > 0 ? it.divPerShare
               : (pos.quantity > 0 ? (rbIsUSD ? (pos.divFX||0) : (pos.divKRW||0)) / pos.quantity : 0);
       var dy = (lp > 0 && dpa > 0) ? dpa / lp * 100 : 0;
-      return Object.assign({}, it, { _divYield: dy });
+      var tp = (rbTargetState[it.ticker] !== undefined) ? rbTargetState[it.ticker] : it.targetPct;
+      return Object.assign({}, it, { _divYield: dy, _tgtPct: Number(tp) || 0 });
     });
     if (rbDivSortDir !== 0) {
       itemsWithYield.sort(function(a, b) {
@@ -5356,6 +5361,15 @@
         return rbDivSortDir === 1
           ? b._divYield - a._divYield   // 내림차순 (높은 배당율 먼저)
           : a._divYield - b._divYield;  // 오름차순
+      });
+    } else if (rbTgtSortDir !== 0) {
+      itemsWithYield.sort(function(a, b) {
+        // CASH 항목은 항상 맨 뒤
+        if (a.ticker === 'CASH') return 1;
+        if (b.ticker === 'CASH') return -1;
+        return rbTgtSortDir === 1
+          ? b._tgtPct - a._tgtPct   // 내림차순 (높은 목표비중 먼저)
+          : a._tgtPct - b._tgtPct;  // 오름차순
       });
     } else {
       itemsWithYield = items.map(function(it) { return Object.assign({}, it, { _divYield: 0 }); });
@@ -5585,6 +5599,14 @@
   function toggleRbDivSort() {
     // 0 → 1(내림차순, 높은 배당율↓) → -1(오름차순, 낮은 배당율↑) → 0(원본) 순환
     rbDivSortDir = rbDivSortDir === 0 ? 1 : rbDivSortDir === 1 ? -1 : 0;
+    rbTgtSortDir = 0;
+    renderRebalanceTable();
+  }
+
+  function toggleRbTgtSort() {
+    // 0 → 1(내림차순, 높은 목표비중↓) → -1(오름차순, 낮은 목표비중↑) → 0(원본) 순환
+    rbTgtSortDir = rbTgtSortDir === 0 ? 1 : rbTgtSortDir === 1 ? -1 : 0;
+    rbDivSortDir = 0;
     renderRebalanceTable();
   }
 
