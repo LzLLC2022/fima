@@ -6004,11 +6004,37 @@
       '</svg>';
   }
 
+  function getNaverStockUrl(ticker, currency) {
+    var clean = String(ticker || '').toUpperCase().split('.')[0];
+    if (!clean) return '';
+    // 한국 6자리 코드 → NAVER 금융 종목 페이지
+    if (currency === 'KRW' && /^\d{6}$/.test(clean)) {
+      return 'https://finance.naver.com/item/main.naver?code=' + clean;
+    }
+    // 해외 종목 → NAVER 해외주식 (NASDAQ .O 기본; NYSE 등은 페이지 내 검색 가능)
+    return 'https://m.stock.naver.com/worldstock/stock/' + encodeURIComponent(clean) + '.O/total';
+  }
+
+  function escapeHtmlAttr(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function renderStockDetail(d, divCycle) {
     var body  = document.getElementById('rbPopupBody');
     var title = document.getElementById('rbPopupTitle');
     if (!body) return;
-    title.textContent = '📊 ' + d.origTicker + (d.name && d.name !== d.origTicker ? '  (' + d.name + ')' : '');
+    var naverUrl   = getNaverStockUrl(d.origTicker, d.currency);
+    var safeTicker = escapeHtmlAttr(d.origTicker);
+    var safeName   = escapeHtmlAttr(d.name);
+    var nameSuffix = (d.name && d.name !== d.origTicker) ? '  (' + safeName + ')' : '';
+    var linkHtml   = '<a href="' + escapeHtmlAttr(naverUrl) + '" target="_blank" rel="noopener noreferrer" title="NAVER 금융에서 보기" style="color:inherit;text-decoration:underline;text-decoration-color:#a78bfa;text-underline-offset:2px;">'
+                   + safeTicker + nameSuffix + '</a>';
+    title.innerHTML = '📊 ' + linkHtml;
 
     var cur   = d.currency || 'USD';
     var isKRW = (cur === 'KRW');
