@@ -1397,11 +1397,6 @@
             <table id="pfStockTable">
               <thead><tr>
                 <th>Name</th>
-                <th style="text-align:right;">매입금액 (KRW)</th>
-                <th style="text-align:right;">평가금액 (KRW)</th>
-                <th style="text-align:right;">손익 (KRW)</th>
-                <th style="text-align:right;">투자수익률 (KRW)</th>
-                <th style="text-align:right;">누적배당금 (KRW)</th>
                 <th style="text-align:right;">매입금액</th>
                 <th style="text-align:right;">평가금액</th>
                 <th style="text-align:right;">손익</th>
@@ -3998,7 +3993,7 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
         // Region 그룹핑
         var pfRegionOrder = ['KOREA'];
@@ -4015,7 +4010,7 @@
         var pfSortedRegions = pfRegionOrder.filter(function(r) { return pfGrouped[r]; });
 
         tbody.innerHTML = pfSortedRegions.map(function(region) {
-          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="13"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
+          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="8"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
           var rows = pfGrouped[region].map(function(st) {
           var cur   = st.currency || 'KRW';
           var isKRW = (cur === 'KRW');
@@ -4053,15 +4048,30 @@
               + (st.monthStartPrice > 0 && st.currentPrice > 0
                 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(st.monthStartPrice) + ' → ' + fmtPrice(st.currentPrice) + ' ' + cur + '</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
+          // 해외주식: KRW 환산 PnL% (FX 효과 반영) = (mvKRW − buyKRW) / buyKRW × 100
+          var pctKRWVal = (!isKRW && st.buyCostKRW > 0 && st.marketValueKRW != null)
+            ? (st.marketValueKRW - st.buyCostKRW) / st.buyCostKRW * 100
+            : null;
           var pnlStr = (st.pnlPct !== null && st.pnlPct !== undefined)
             ? '<span style="color:' + pnlCol(st.pnlPct) + ';font-weight:700;">' + fmtPct(st.pnlPct) + '</span>'
+              + (pctKRWVal !== null ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtPct(pctKRWVal) + ' (KRW)</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
+          // 해외주식: KRW 환산 매입금액 (거래 당시 환율 누적) 라인 추가 — KRW 종목은 라인 생략
+          var acKRWLine = (!isKRW && st.buyCostKRW > 0)
+            ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtK(st.buyCostKRW) + ' KRW</div>'
+            : '';
           var acStr = (st.buyCostFX > 0)
             ? fmtFX(st.buyCostFX) + ' ' + cur
+              + acKRWLine
               + (avgPrice > 0 && st.qty > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(avgPrice) + ' × ' + fmtQty(st.qty) + '</div>' : '')
             : '-';
+          // 해외주식: KRW 환산 평가금액 (현재 환율 기준) 라인 추가 — KRW 종목은 라인 생략
+          var mvKRWLine = (!isKRW && st.marketValueKRW > 0)
+            ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtK(st.marketValueKRW) + ' KRW</div>'
+            : '';
           var mvStr = (st.marketValueFX > 0)
             ? fmtFX(st.marketValueFX) + ' ' + cur
+              + mvKRWLine
               + (st.currentPrice > 0 && st.qty > 0 ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + fmtPrice(st.currentPrice) + ' × ' + fmtQty(st.qty) + '</div>' : '')
             : (st.marketValueKRW > 0 ? fmtK(st.marketValueKRW) + ' KRW' : '-');
 
@@ -4085,32 +4095,13 @@
             divCur = cur;
           }
           var divFmtAmt = isKRW ? fmtK(divAmt) : Number(divAmt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          // 해외주식: KRW 환산 누적배당금 (각 배당 지급 당시 환율 누적) 라인 추가
+          var divKRWLine = (!isKRW && st.cumDividendKRW > 0)
+            ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtK(st.cumDividendKRW) + ' KRW</div>'
+            : '';
           var divStr = (divAmt > 0)
             ? '<span style="color:#276749;font-weight:600;">' + divFmtAmt + ' ' + divCur + '</span>'
-            : '<span style="color:#a0aec0">-</span>';
-
-          // KRW 환산 컬럼 (매입금액·누적배당금: 거래 당시 환율로 누적된 buyCostKRW·cumDividendKRW 사용 / 평가금액·손익: 현재 환율 기준)
-          var buyKRW = Number(st.buyCostKRW) || 0;
-          var mvKRW  = Number(st.marketValueKRW) || 0;
-          var pnlKRWVal = (st.pnlKRW != null) ? Number(st.pnlKRW) : (mvKRW - buyKRW);
-          var pctKRWVal = buyKRW > 0 ? (pnlKRWVal / buyKRW * 100) : null;
-          var divKRWAmt = Number(st.cumDividendKRW) || 0;
-          var buyKRWStr = buyKRW > 0
-            ? fmtK(buyKRW) + ' KRW'
-            : '<span style="color:#a0aec0">-</span>';
-          var mvKRWStr = mvKRW > 0
-            ? fmtK(mvKRW) + ' KRW'
-            : '<span style="color:#a0aec0">-</span>';
-          var gainKRWCol  = pnlKRWVal >= 0 ? '#c53030' : '#7c6ce0';
-          var gainKRWSign = pnlKRWVal >= 0 ? '+' : '';
-          var pnlKRWStr = buyKRW > 0
-            ? '<span style="color:' + gainKRWCol + ';font-weight:600;">' + gainKRWSign + fmtK(pnlKRWVal) + ' KRW</span>'
-            : '<span style="color:#a0aec0">-</span>';
-          var pctKRWStr = pctKRWVal !== null
-            ? '<span style="color:' + pnlCol(pctKRWVal) + ';font-weight:700;">' + fmtPct(pctKRWVal) + '</span>'
-            : '<span style="color:#a0aec0">-</span>';
-          var divKRWStr = divKRWAmt > 0
-            ? '<span style="color:#276749;font-weight:600;">' + fmtK(divKRWAmt) + ' KRW</span>'
+              + divKRWLine
             : '<span style="color:#a0aec0">-</span>';
 
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -4120,11 +4111,6 @@
             + '<span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
             + '</td>'
-            + '<td style="text-align:right;">' + buyKRWStr + '</td>'
-            + '<td style="text-align:right;">' + mvKRWStr + '</td>'
-            + '<td style="text-align:right;">' + pnlKRWStr + '</td>'
-            + '<td style="text-align:right;">' + pctKRWStr + '</td>'
-            + '<td style="text-align:right;">' + divKRWStr + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
             + '<td style="text-align:right;">' + mvStr + '</td>'
             + '<td style="text-align:right;">' + gainStr + '</td>'
