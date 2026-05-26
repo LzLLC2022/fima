@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
       if (t === 'buy') {
         p.buyQty     += qty;
         p.buyCostFX  += price * qty;
-        p.buyCostKRW += price * qty * effRate;
+        p.buyCostKRW += Math.floor(price * qty * effRate);  // 거래일별 환산 후 소수점 버림
       } else if (t === 'sell') {
         p.sellQty += qty;
       } else if (t === 'split') {
@@ -284,12 +284,12 @@ export async function POST(req: NextRequest) {
         if (t.includes('stock')) {
           p.buyQty     += qty;
           p.buyCostFX  += price * qty;
-          p.buyCostKRW += price * qty * effRate;
+          p.buyCostKRW += Math.floor(price * qty * effRate);  // 거래일별 환산 후 소수점 버림
           p.divFX      += divAmt;
-          p.divKRW     += divAmt * effRate;
+          p.divKRW     += Math.floor(divAmt * effRate);  // 거래일별 환산 후 소수점 버림
         } else {
           p.divFX  += (divAmt || price);
-          p.divKRW += (divAmt || price) * effRate;
+          p.divKRW += Math.floor((divAmt || price) * effRate);  // 거래일별 환산 후 소수점 버림
         }
       }
     });
@@ -370,20 +370,24 @@ export async function POST(req: NextRequest) {
       if (netQty < 0.0001) return; // 전량 매도된 종목은 건너뜀
 
       const avgPriceFX  = effectiveQty > 0 ? p.buyCostFX / effectiveQty : 0; // 평균 매입단가 (현지통화)
-      const avgRate     = p.buyCostFX  > 0 ? p.buyCostKRW / p.buyCostFX : (p.lastRate || 1); // 매입 당시 평균 환율
       const currency    = currencyMap[p.region] || 'KRW';
       const isKRW       = currency === 'KRW';
       // 현재 평가에 적용할 환율: 야후 조회값 → 원장 최근값 → 1 순서로 사용
       const effRate2    = isKRW ? 1 : resolveRate(p.region, p.lastRate > 0 ? p.lastRate : (latestRate[p.region] || 1));
 
-      // 취득원가(원화): 매입단가 × 보유수량 × 매입 당시 환율
-      const purchaseAmtKRW = isKRW ? avgPriceFX * netQty : avgPriceFX * netQty * avgRate;
+      // 취득원가(원화): 거래일별 floor 누적된 buyCostKRW를 netQty/effectiveQty 비율로 환산
+      // (매도가 있는 경우 평균 매입원가 기준 비례 축소)
+      const purchaseAmtKRW = isKRW
+        ? Math.floor(avgPriceFX * netQty)
+        : (effectiveQty > 0 ? Math.floor(p.buyCostKRW * netQty / effectiveQty) : 0);
       // 현재가 조회 불가(0)인 경우: Bond ISIN이면 매입단가로 대체 (평가손실 0%)
       const rawPriceFX  = priceMap[p.ticker] || 0;
       const curPriceFX  = rawPriceFX > 0 ? rawPriceFX
                         : isKoreanBondISIN(p.ticker) ? avgPriceFX : 0;
-      // 현재 평가액(원화): 현재가 × 보유수량 × 현재 환율
-      const marketValueKRW = isKRW ? curPriceFX * netQty : curPriceFX * netQty * effRate2;
+      // 현재 평가액(원화): 현재가 × 보유수량 × 현재 환율 (단일 환산 → floor)
+      const marketValueKRW = isKRW
+        ? Math.floor(curPriceFX * netQty)
+        : Math.floor(curPriceFX * netQty * effRate2);
       // 평가손익(원화) = 현재 평가액 - 취득원가
       const pnl            = marketValueKRW - purchaseAmtKRW;
 
