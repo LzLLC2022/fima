@@ -213,10 +213,10 @@ export async function POST(req: NextRequest) {
       let divFX  = 0;
       if (t2.startsWith('div') && !t2.includes('stock')) {
         divFX  = (div2 || price2);
-        divKRW = divFX * eff2;
+        divKRW = Math.floor(divFX * eff2);  // 거래일별 환산 후 소수점 버림
       } else if (t2.includes('stock') && div2 > 0) {
         divFX  = div2;
-        divKRW = div2 * eff2;
+        divKRW = Math.floor(div2 * eff2);  // 거래일별 환산 후 소수점 버림
       }
       if (divKRW <= 0) return;
       const yr = String(date.getUTCFullYear());
@@ -350,10 +350,10 @@ export async function POST(req: NextRequest) {
 
         if (t.startsWith('dep')) {
           runningState.cashFX[region]    += price - tax - charge;
-          if (isRealInvestment) runningState.netDepositKRW += (price - tax - charge) * effRate;
+          if (isRealInvestment) runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
         } else if (t.startsWith('with')) {
           runningState.cashFX[region]    -= price + tax + charge;
-          if (isRealInvestment) runningState.netDepositKRW -= (price + tax + charge) * effRate;
+          if (isRealInvestment) runningState.netDepositKRW -= Math.floor((price + tax + charge) * effRate);
         } else if (t === 'buy') {
           if (asset.toLowerCase() === 'cash') {
             runningState.cashFX[region] += price * (qty || 1);
@@ -387,7 +387,8 @@ export async function POST(req: NextRequest) {
         if (rate > 0) p.lastRate = rate;
 
         if (t === 'buy' || (isDiv && t.includes('stock'))) {
-          p.qty += qty; p.buyCostFX += price * qty; p.buyCostKRW += price * qty * effRate;
+          p.qty += qty; p.buyCostFX += price * qty;
+          p.buyCostKRW += Math.floor(price * qty * effRate);  // 거래일별 환산 후 소수점 버림
         } else if (t === 'sell') {
           p.qty -= qty;
         } else if (t === 'split') {
@@ -655,15 +656,15 @@ export async function POST(req: NextRequest) {
         currency: currencyMap[p.region] || 'KRW',
         region: p.region,
         qty: p.qty,
-        marketValueKRW: Math.round(mktVal),
+        marketValueKRW: Math.floor(mktVal),
         marketValueFX:  marketValueFX,
         currentPrice:   cp,
         buyCostFX:      buyCostFX,
-        buyCostKRW:     Math.round(p.buyCostKRW),
+        buyCostKRW:     p.buyCostKRW,  // 이미 거래일별 floor 누적된 정수
         pnlFX:          marketValueFX - buyCostFX,
-        pnlKRW:         Math.round(mktVal - p.buyCostKRW),
+        pnlKRW:         Math.floor(mktVal) - p.buyCostKRW,
         pnlPct:         pnlPct,
-        cumDividendKRW: Math.round(cumDivByTicker[t]   || 0),
+        cumDividendKRW: cumDivByTicker[t] || 0,  // 이미 거래일별 floor 누적된 정수
         cumDividendFX:  cumDivFXByTicker[t] || 0,
         annualReturnPct:  ysp  > 0 && cp > 0 ? (cp - ysp)  / ysp  * 100 : null,
         monthlyReturnPct: mpsp > 0 && cp > 0 ? (cp - mpsp) / mpsp * 100 : null,
