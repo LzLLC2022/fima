@@ -659,6 +659,7 @@ export async function POST(req: NextRequest) {
         marketValueFX:  marketValueFX,
         currentPrice:   cp,
         buyCostFX:      buyCostFX,
+        buyCostKRW:     Math.round(p.buyCostKRW),
         pnlFX:          marketValueFX - buyCostFX,
         pnlKRW:         Math.round(mktVal - p.buyCostKRW),
         pnlPct:         pnlPct,

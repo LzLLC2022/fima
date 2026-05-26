@@ -1397,6 +1397,11 @@
             <table id="pfStockTable">
               <thead><tr>
                 <th>Name</th>
+                <th style="text-align:right;">매입금액 (KRW)</th>
+                <th style="text-align:right;">평가금액 (KRW)</th>
+                <th style="text-align:right;">손익 (KRW)</th>
+                <th style="text-align:right;">투자수익률 (KRW)</th>
+                <th style="text-align:right;">누적배당금 (KRW)</th>
                 <th style="text-align:right;">매입금액</th>
                 <th style="text-align:right;">평가금액</th>
                 <th style="text-align:right;">손익</th>
@@ -3993,7 +3998,7 @@
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
       if (!data.stocks || data.stocks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#a0aec0;">보유 종목 없음</td></tr>';
       } else {
         // Region 그룹핑
         var pfRegionOrder = ['KOREA'];
@@ -4010,7 +4015,7 @@
         var pfSortedRegions = pfRegionOrder.filter(function(r) { return pfGrouped[r]; });
 
         tbody.innerHTML = pfSortedRegions.map(function(region) {
-          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="8"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
+          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="13"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
           var rows = pfGrouped[region].map(function(st) {
           var cur   = st.currency || 'KRW';
           var isKRW = (cur === 'KRW');
@@ -4084,6 +4089,30 @@
             ? '<span style="color:#276749;font-weight:600;">' + divFmtAmt + ' ' + divCur + '</span>'
             : '<span style="color:#a0aec0">-</span>';
 
+          // KRW 환산 컬럼 (매입금액·누적배당금: 거래 당시 환율로 누적된 buyCostKRW·cumDividendKRW 사용 / 평가금액·손익: 현재 환율 기준)
+          var buyKRW = Number(st.buyCostKRW) || 0;
+          var mvKRW  = Number(st.marketValueKRW) || 0;
+          var pnlKRWVal = (st.pnlKRW != null) ? Number(st.pnlKRW) : (mvKRW - buyKRW);
+          var pctKRWVal = buyKRW > 0 ? (pnlKRWVal / buyKRW * 100) : null;
+          var divKRWAmt = Number(st.cumDividendKRW) || 0;
+          var buyKRWStr = buyKRW > 0
+            ? fmtK(buyKRW) + ' KRW'
+            : '<span style="color:#a0aec0">-</span>';
+          var mvKRWStr = mvKRW > 0
+            ? fmtK(mvKRW) + ' KRW'
+            : '<span style="color:#a0aec0">-</span>';
+          var gainKRWCol  = pnlKRWVal >= 0 ? '#c53030' : '#7c6ce0';
+          var gainKRWSign = pnlKRWVal >= 0 ? '+' : '';
+          var pnlKRWStr = buyKRW > 0
+            ? '<span style="color:' + gainKRWCol + ';font-weight:600;">' + gainKRWSign + fmtK(pnlKRWVal) + ' KRW</span>'
+            : '<span style="color:#a0aec0">-</span>';
+          var pctKRWStr = pctKRWVal !== null
+            ? '<span style="color:' + pnlCol(pctKRWVal) + ';font-weight:700;">' + fmtPct(pctKRWVal) + '</span>'
+            : '<span style="color:#a0aec0">-</span>';
+          var divKRWStr = divKRWAmt > 0
+            ? '<span style="color:#276749;font-weight:600;">' + fmtK(divKRWAmt) + ' KRW</span>'
+            : '<span style="color:#a0aec0">-</span>';
+
           var safePfTicker = (st.ticker || '').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           var safePfName   = (st.name || st.ticker || '-').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           return '<tr data-region="' + (st.region || '') + '">'
@@ -4091,6 +4120,11 @@
             + '<span style="color:#7c6ce0;text-decoration:underline dotted;font-weight:700;" title="' + safePfName + '">' + safePfName + '</span>'
             + '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">' + safePfTicker + '</div>'
             + '</td>'
+            + '<td style="text-align:right;">' + buyKRWStr + '</td>'
+            + '<td style="text-align:right;">' + mvKRWStr + '</td>'
+            + '<td style="text-align:right;">' + pnlKRWStr + '</td>'
+            + '<td style="text-align:right;">' + pctKRWStr + '</td>'
+            + '<td style="text-align:right;">' + divKRWStr + '</td>'
             + '<td style="text-align:right;">' + acStr + '</td>'
             + '<td style="text-align:right;">' + mvStr + '</td>'
             + '<td style="text-align:right;">' + gainStr + '</td>'
