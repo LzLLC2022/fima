@@ -4082,7 +4082,7 @@
           var gainStr = (st.buyCostFX > 0)
             ? '<span style="color:' + gainCol + ';font-weight:600;">' + gainSign + fmtFX(gainFX) + ' ' + cur + '</span>'
               + (st.pnlKRW != null && !isKRW
-                ? '<div style="color:#a0aec0;margin-top:1px;">' + gainSign + fmtK(Math.abs(st.pnlKRW)) + ' KRW</div>' : '')
+                ? '<div style="color:#a0aec0;margin-top:1px;">' + (st.pnlKRW >= 0 ? '+' : '') + fmtK(st.pnlKRW) + ' KRW</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
 
           // 누적배당금 (현지통화: KRW 종목은 KRW, 해외 종목은 현지통화)
