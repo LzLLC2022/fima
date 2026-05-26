@@ -304,6 +304,29 @@ Account Owner / Account / Region / Currency / Asset Type / Trade / **Pin** / **E
 2026-05-26부터 bookkeeping 저장소가 같은 시트를 직접 접근합니다. fima에서는 더 이상 사용 안 함.
 스키마 상세는 [bookkeeping 저장소 CodeGuide.md](../bookkeeping/CodeGuide.md)와 [README.md](../bookkeeping/README.md) 참고.
 
+### 6-4. KRW 환산 계산 규칙 — **거래일별 floor 누적**
+
+해외 종목의 KRW 환산은 증권사 명세서 방식과 동일하게 **거래별 소수점 버림 후 정수 누적**합니다. float 누적 후 마지막 round 방식이 아닙니다.
+
+```ts
+// portfolio/route.ts:276, portfolio-analysis/route.ts:390
+p.buyCostKRW += Math.floor(price * qty * effRate);
+p.divKRW     += Math.floor(divAmt * effRate);
+runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
+```
+
+| 값 | 산식 |
+|---|---|
+| 매입금액 `buyCostKRW` | `Σ floor(price × qty × rate)` (Buy + Dividend-Stock) |
+| 누적배당금 `cumDividendKRW` | `Σ floor(dividend × rate)` (현금배당 + 주식배당) |
+| 순투자액 `netDepositKRW` | `Σ floor((price − tax − charge) × rate)` — Name이 "투자금" |
+| 평가금액 `marketValueKRW` | `floor(현재가 × 보유수량 × 현재환율)` (단일 시점 환산) |
+| 손익 `pnlKRW` | `marketValueKRW − buyCostKRW` (정수 차) |
+
+`effRate`는 행의 Currency 컬럼 값 → 비어 있으면 같은 region의 `latestRate` fallback → 그것도 없으면 1.
+
+**현황·리포트 두 탭이 동일한 산식**을 쓰므로 KRW 값이 일치합니다. 새 Trade 타입을 추가하거나 누적 계산을 만질 때 반드시 같은 패턴을 유지하세요.
+
 ---
 
 ## 7. 환경 설정
@@ -392,6 +415,8 @@ README L33-99에 자세히 있음. 요약:
 3. **`portfolio/route.ts`** (현황 계산)에 새 분기 추가 — Trade별 손익 계산 로직.
 4. **`portfolio-analysis/route.ts`** (리포트)에도 동일 분기 추가.
 5. `public/fima.html` 거래 입력 폼에 옵션 추가.
+
+> ⚠️ KRW 누적 시 반드시 `Math.floor(price × qty × rate)`로 환산해서 더하기 — [6-4. KRW 환산 계산 규칙](#6-4-krw-환산-계산-규칙--거래일별-floor-누적) 참고. 두 API의 산식이 어긋나면 현황/리포트 탭 값이 불일치합니다.
 
 ### D. 새 차트/통계 항목 추가
 1. **백엔드:** `portfolio-analysis/route.ts`의 응답 객체에 새 필드.
