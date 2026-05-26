@@ -1,4 +1,7 @@
-# CodeGuide - fima (FiMa-Inv 투자 관리 + 복식장부 통합 백엔드)
+# CodeGuide - fima (FiMa-Inv 투자 관리)
+
+> 2026-05-26 변경: bookkeeping 백엔드가 [bookkeeping 저장소](https://github.com/LzLLC2022/bookkeeping)로 분리되었습니다.
+> fima의 `app/api/bookkeeping/route.ts`와 `lib/bookkeeping.ts`는 더 이상 운영에 쓰이지 않으며, 안정화 후 삭제 예정입니다. 본 가이드의 bookkeeping 관련 섹션은 참고용으로 남겨두지만 신규 작업은 모두 bookkeeping 저장소에서 진행합니다.
 
 > 초급 개발자(담당자) 기준 코드 리딩 & 수정 가이드.
 > 모든 코드 참조는 `파일명:라인` 형태로 표기합니다.
@@ -14,7 +17,7 @@
 - 백엔드는 **Next.js App Router의 API 라우트 26개** — Google Sheets를 DB처럼 사용.
 - 가족/팀 등 **여러 사용자가 각자 Spreadsheet**를 가지고 하나의 앱을 공유 (`OWNER_CONFIG`).
 - **이메일 일일 리포트** (GitHub Actions + Resend).
-- 같은 백엔드가 **`book.lim.kr` (bookkeeping 저장소)** 의 복식장부 API도 제공합니다 — [/api/bookkeeping](app/api/bookkeeping/route.ts)이 그 진입점.
+- ~~같은 백엔드가 `book.lim.kr` (bookkeeping 저장소)의 복식장부 API도 제공~~ → **2026-05-26부터 분리됨.** bookkeeping은 자체 저장소의 `/api/bookkeeping`을 사용. fima의 `app/api/bookkeeping` 코드는 deprecated, 안정화 후 삭제 예정.
 
 ### 6개 탭 (`public/fima.html`)
 | 탭 | 기능 |
@@ -57,14 +60,14 @@
       ├── lib/config.ts        (OWNER_CONFIG: 이름 → Spreadsheet ID)
       ├── lib/sheets.ts        (Sheets API CRUD 헬퍼)
       ├── lib/stock.ts         (Yahoo / Naver 시세·환율)
-      └── lib/bookkeeping.ts   (복식장부 도메인 — book.lim.kr 백엔드)
+      └── lib/bookkeeping.ts   (복식장부 도메인 — deprecated, 분리됨)
       │
       ▼
 [Google Sheets] (오너별 개별 스프레드시트)
       ├── Ledger  (거래 원장)
       ├── Master  (계좌·지역·통화·PIN·Email 메타)
       ├── WatchList
-      ├── 거래 / 분개 / 계정과목 / 고정자산   ← 복식장부용
+      ├── 거래 / 분개 / 계정과목 / 고정자산   ← 복식장부용 (2026-05-26부터 bookkeeping 저장소가 직접 접근)
       └── ...
 ```
 
@@ -109,13 +112,13 @@ fima/
 │       ├── stock-info/route.ts          (310줄) ★ 시세/환율/52주/배당 통합
 │       ├── bond-info/route.ts           (174줄) 채권 정보 (Naver)
 │       ├── cash-debug/route.ts          (102줄) 현금 잔액 디버깅
-│       ├── bookkeeping/route.ts         (276줄) ★ book.lim.kr용 복식장부 통합 API
+│       ├── bookkeeping/route.ts         (276줄) ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26)
 │       └── report/email/route.ts        (819줄) ★★ 일일 이메일 리포트
 ├── lib/
 │   ├── config.ts               ( 92줄) ★ OWNER_CONFIG, 시트명
 │   ├── sheets.ts               (302줄) Google Sheets API 래퍼
 │   ├── stock.ts                (~1100줄) ★ Yahoo/Naver 시세·환율 (42KB)
-│   └── bookkeeping.ts          (~1100줄) ★ 복식장부 도메인 (49KB)
+│   └── bookkeeping.ts          (~1100줄) ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26)
 ├── public/
 │   ├── fima.html               (298KB) ★★ 프론트엔드 SPA 단일 파일
 │   ├── help.html               ( 32KB)  도움말
@@ -179,9 +182,12 @@ fima/
 
 > 외부 의존성이 강한 영역. Yahoo Finance가 API 응답 형식을 바꾸면 파싱 함수도 같이 바꿔야 함. **회귀 테스트가 가장 까다로운 부분.**
 
-### 5-4. `lib/bookkeeping.ts` (~1100줄) — 복식장부 도메인
+### 5-4. `lib/bookkeeping.ts` (~1100줄) — 복식장부 도메인 ⚠️ Deprecated
 
-`book.lim.kr` 프론트엔드가 호출하는 백엔드 로직. **bookkeeping 저장소의 `Code.gs`와 1:1 매핑**되는 함수들:
+> **2026-05-26 분리됨.** 이 파일은 bookkeeping 저장소의 [`lib/bookkeeping.ts`](../bookkeeping/lib/bookkeeping.ts)로 이전되었고, fima 측 파일은 더 이상 운영에 쓰이지 않습니다. 안정화 후 삭제 예정.
+> 아래 함수 표는 두 저장소가 동일한 시그니처를 공유하므로 참고용으로 보존합니다.
+
+`book.lim.kr` 프론트엔드가 호출했던 백엔드 로직. **bookkeeping 저장소의 `Code.gs`와 1:1 매핑**되는 함수들:
 
 | 함수 | 라인 | 역할 |
 |---|---|---|
@@ -256,7 +262,7 @@ fima/
 
 | 파일 | 라인 | 역할 |
 |---|---|---|
-| **`app/api/bookkeeping/route.ts`** | **276** | **`book.lim.kr` 전용 통합 라우터** — GET/POST에서 `action` 분기 ([bookkeeping/route.ts:9-46](app/api/bookkeeping/route.ts#L9-L46)) |
+| `app/api/bookkeeping/route.ts` | 276 | ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26). 안정화 후 삭제 예정 |
 | **`app/api/report/email/route.ts`** | **819** | **일일 이메일 리포트** — Resend API + Bearer 인증 |
 
 ### 5-6. `app/page.tsx` & `app/layout.tsx`
@@ -294,8 +300,9 @@ Account Owner / Account / Region / Currency / Asset Type / Trade / **Pin** / **E
 
 > PIN과 Email 모두 Master 시트에서 관리. config.ts에서는 sheetId만 보관.
 
-### 6-3. 복식장부 시트들
-별도 시트 그룹 — bookkeeping 저장소 가이드 참고.
+### 6-3. 복식장부 시트들 (분리됨)
+2026-05-26부터 bookkeeping 저장소가 같은 시트를 직접 접근합니다. fima에서는 더 이상 사용 안 함.
+스키마 상세는 [bookkeeping 저장소 CodeGuide.md](../bookkeeping/CodeGuide.md)와 [README.md](../bookkeeping/README.md) 참고.
 
 ---
 
@@ -353,7 +360,8 @@ npm run start   # 빌드 결과 서빙 (포트 3000)
 ```
 
 ### 배포
-- **Vercel**: `main` 브랜치 push → 자동 빌드/배포. `fima-dev` 환경(다른 도메인)도 별도로 운영 중인 듯 — [bookkeeping의 `index.html:822-824`](../bookkeeping/index.html#L822-L824)에서 확인됨.
+- **Vercel**: `main` 브랜치 push → 자동 빌드/배포 → `fima.lim.kr`.
+- **우분투 개발서버**: `fima-dev.lim.kr` (PM2 port 3000, [ubuntu_server_manual.md](../ubuntu_server_manual.md) 참고).
 
 ### GitHub Actions (일일 리포트)
 - `.github/workflows/daily-report.yml` — cron `0 23 * * 1-5` (KST 08:00 화~토)
@@ -398,9 +406,11 @@ README L33-99에 자세히 있음. 요약:
 2. 영향 받는 API 라우트는 자동으로 새 결과 반환 (lib 함수 호출 그대로).
 3. 회귀: 한국/미국 양쪽 종목 1~2개로 수동 테스트.
 
-### G. 복식장부 기능 추가
-- bookkeeping 저장소의 `index.html`도 같이 수정 (프론트 + 백엔드 양쪽).
-- 백엔드 로직은 [lib/bookkeeping.ts](lib/bookkeeping.ts)에 추가 → [app/api/bookkeeping/route.ts](app/api/bookkeeping/route.ts)의 action switch에 라우팅.
+### G. 복식장부 기능 추가 (분리됨 — 더 이상 fima에서 작업 안 함)
+2026-05-26부터 복식장부는 [bookkeeping 저장소](https://github.com/LzLLC2022/bookkeeping)에서 독립 운영됩니다.
+- 프론트엔드 + 백엔드 모두 bookkeeping 저장소에서 함께 수정.
+- 진입점: `bookkeeping/app/api/bookkeeping/route.ts` + `bookkeeping/lib/bookkeeping.ts`.
+- fima의 동일 파일들은 deprecated. 안정화 후 삭제 예정.
 
 ---
 
@@ -418,7 +428,7 @@ README L33-99에 자세히 있음. 요약:
 | **`NEXT_PUBLIC_` 변수가 client에서 안 보임** | Next는 `NEXT_PUBLIC_` 접두사만 client 번들에 포함. 현재 코드는 `NEXT_PUBLIC_` 변수 없음 — 모두 서버 전용 |
 | **TypeScript strict 빌드 에러** | `strict: true` ([tsconfig.json:6](tsconfig.json#L6)). `any` 사용 시 `: any` 명시 또는 union/제네릭 정확히. Sheets 응답은 모두 `any[][]`로 받는 패턴이 일반적 |
 | **서버/클라이언트 컴포넌트 혼동** | 본 프로젝트는 사실상 server-only (page.tsx는 리다이렉트, 실제 UI는 정적 HTML). React 컴포넌트가 거의 없으므로 보통은 무관 |
-| **CORS** | API 라우트는 same-origin이라 일반 사용 시 문제 없음. `app/api/bookkeeping/route.ts`만 `book.lim.kr` / `book-dev.lim.kr` 외부 origin 허용 — 코드에서 CORS 헤더 확인 |
+| **CORS** | fima API 라우트는 모두 same-origin (fima.html이 같은 도메인에서 호출). cross-origin 허용 필요한 라우트 없음. (구 bookkeeping/route.ts의 CORS 화이트리스트는 분리 이후 무관) |
 | **Vercel function timeout** | Vercel Hobby 플랜은 10초, Pro는 60초. `portfolio-analysis`나 `report/email`처럼 외부 fetch 많은 라우트는 timeout 위험 |
 | **변경 후 즉시 반영 안 됨** | Vercel은 캐시 사용. 강제 새로고침(Ctrl+F5) 또는 fima.html 끝에 `?v=날짜` 쿼리 붙이는 패턴 권장 |
 
