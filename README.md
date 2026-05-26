@@ -42,38 +42,34 @@ FiMa-Inv는 **하나의 앱에서 여러 사용자**가 각자의 스프레드�
 export const OWNER_CONFIG: Record<string, OwnerConfig> = {
   'Lz': {
     sheetId: process.env.GOOGLE_SHEET_ID_LZ ?? '',
-    pin:     process.env.PIN_LZ ?? '',        // 빈 문자열이면 PIN 없음
   },
 
   // ▼ 새 사용자 추가 (아래를 복사해서 추가)
   'Spouse': {
     sheetId: process.env.GOOGLE_SHEET_ID_SPOUSE ?? '',
-    pin:     process.env.PIN_SPOUSE ?? '1234', // PIN 설정 시 4자리 권장
   },
   'Child': {
     sheetId: process.env.GOOGLE_SHEET_ID_CHILD ?? '',
-    pin:     '',   // PIN 없음 (빈 문자열)
   },
 };
 ```
 
 > ⚠️ 키 이름(`'Spouse'`, `'Child'` 등)이 로그인 화면에 표시되는 이름입니다.
+> PIN은 코드/환경변수가 아닌 각 스프레드시트의 **Master 시트 `Pin` 컬럼**에서 관리됩니다.
 
 ### Step 2 — Vercel 환경변수 추가
 
 [Vercel 대시보드](https://vercel.com) → 프로젝트 → **Settings → Environment Variables**
 
-새 사용자마다 아래 두 항목을 추가합니다 (`이름` 부분을 대문자로 통일):
+새 사용자마다 아래 항목을 추가합니다 (`이름` 부분을 대문자로 통일):
 
 | 변수명 | 값 | 설명 |
 |---|---|---|
 | `GOOGLE_SHEET_ID_이름` | `1BxiMV...` | 해당 사용자의 스프레드시트 ID |
-| `PIN_이름` | `1234` | PIN (빈 값이면 생략 가능) |
 
 **예시 (Spouse 추가):**
 ```
 GOOGLE_SHEET_ID_SPOUSE  =  1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms
-PIN_SPOUSE              =  1234
 ```
 
 **스프레드시트 ID 찾기:**
@@ -83,13 +79,20 @@ https://docs.google.com/spreadsheets/d/[여기가 ID]/edit
 
 ### Step 3 — 스프레드시트 공유
 
-새 사용자의 스프레드시트를 기존 서비스 계정에 공유합니다.  
+새 사용자의 스프레드시트를 기존 서비스 계정에 공유합니다.
 (`GOOGLE_CLIENT_EMAIL` 값, 즉 서비스 계정 이메일을 **편집자**로 추가)
 
-> 서비스 계정(`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`)은 모든 사용자가 공유합니다.  
+> 서비스 계정(`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`)은 모든 사용자가 공유합니다.
 > **새 사용자마다 서비스 계정을 새로 만들 필요 없습니다.**
 
-### Step 4 — 배포
+### Step 4 — PIN 설정 (선택)
+
+해당 사용자의 스프레드시트 **Master 시트**에 `Pin` 컬럼을 추가하고 PIN 값을 입력합니다.
+
+- `Pin` 컬럼이 없거나 비어 있으면: PIN 없이 로그인 가능 (선택만으로 입장)
+- `Pin` 컬럼에 값이 있으면: 입력한 PIN과 일치해야 로그인 성공
+
+### Step 5 — 배포
 
 ```
 GitHub에 push → Vercel 자동 재배포
@@ -106,7 +109,8 @@ GitHub에 push → Vercel 자동 재배포
   ↓
 로그인 화면 (Account Owner 선택 + PIN 입력)
   ↓
-/api/auth 에서 config.ts 기준으로 검증
+/api/auth 에서 OWNER_CONFIG로 스프레드시트 찾고
+            Master 시트의 Pin 컬럼으로 PIN 검증
   ↓
 성공 → sessionStorage에 저장 → 해당 사용자 스프레드시트만 접근
   ↓
@@ -117,11 +121,12 @@ GitHub에 push → Vercel 자동 재배포
 
 | 상황 | 동작 |
 |---|---|
-| `pin: ''` (빈 문자열) | PIN 입력 불필요, 선택만으로 입장 |
-| `pin: '1234'` | PIN 일치해야만 입장 |
+| Master 시트 `Pin` 컬럼이 없거나 빈 값 | PIN 입력 불필요, 선택만으로 입장 |
+| Master 시트 `Pin` 컬럼에 값 있음 | 입력한 PIN과 정확히 일치해야 입장 |
 | PIN 틀렸을 때 | 오류 메시지 표시, 재시도 가능 |
 
-> ⚠️ PIN은 앱 내부 접근 제어용입니다. 중요한 보안 인증이 필요하다면 추가 인증 레이어를 구성하세요.
+> PIN은 스프레드시트 안에서 관리되므로 사용자가 직접 변경할 수 있습니다.
+> 보안이 더 필요한 경우 추가 인증 레이어를 구성하세요.
 
 ---
 
@@ -207,11 +212,10 @@ GitHub에 push → Vercel 자동 재배포
 | 변수명 | 예시 값 | 설명 |
 |---|---|---|
 | `GOOGLE_SHEET_ID_LZ` | `1BxiMV...abc` | Lz의 스프레드시트 ID |
-| `PIN_LZ` | `1234` | Lz의 PIN (빈 값이면 생략) |
 | `GOOGLE_SHEET_ID_SPOUSE` | `1CyiNW...xyz` | Spouse의 스프레드시트 ID |
-| `PIN_SPOUSE` | `5678` | Spouse의 PIN |
 
 > 변수명의 `_LZ`, `_SPOUSE` 부분은 `lib/config.ts`의 키 이름과 대응합니다.
+> PIN은 환경변수가 아닌 각 스프레드시트의 **Master 시트 `Pin` 컬럼**에서 관리합니다.
 
 **`GOOGLE_PRIVATE_KEY` 입력 방법:**
 - JSON 파일의 `"private_key"` 값 전체를 복사하여 붙여넣기
