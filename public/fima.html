@@ -4009,6 +4009,30 @@
         });
         var pfSortedRegions = pfRegionOrder.filter(function(r) { return pfGrouped[r]; });
 
+        // ── 합계 행 데이터 계산 (KRW 기준) ─────────────────────────
+        var sumBuyKRW = 0, sumMvKRW = 0, sumPnlKRW = 0, sumDivKRW = 0;
+        data.stocks.forEach(function(s) {
+          sumBuyKRW += Number(s.buyCostKRW)     || 0;
+          sumMvKRW  += Number(s.marketValueKRW) || 0;
+          sumPnlKRW += Number(s.pnlKRW)         || 0;
+          sumDivKRW += Number(s.cumDividendKRW) || 0;
+        });
+        var sumPctKRW = sumBuyKRW > 0 ? (sumPnlKRW / sumBuyKRW * 100) : 0;
+        var sumGainCol  = sumPnlKRW >= 0 ? '#c53030' : '#7c6ce0';
+        var sumGainSign = sumPnlKRW >= 0 ? '+' : '';
+        var totalRow =
+          '<tr class="pf-total-row" style="background:#faf7ff;font-weight:700;border-top:2px solid #d4cbf2;">'
+          + '<td style="padding:10px 10px;">합계 (KRW)</td>'
+          + '<td style="text-align:right;">' + fmtK(sumBuyKRW) + ' KRW</td>'
+          + '<td style="text-align:right;">' + fmtK(sumMvKRW)  + ' KRW</td>'
+          + '<td style="text-align:right;color:' + sumGainCol + ';">'
+            + sumGainSign + fmtK(sumPnlKRW) + ' KRW</td>'
+          + '<td style="text-align:right;color:' + pnlCol(sumPctKRW) + ';">' + fmtPct(sumPctKRW) + '</td>'
+          + '<td style="text-align:right;color:#276749;">' + fmtK(sumDivKRW) + ' KRW</td>'
+          + '<td style="text-align:right;color:#a0aec0;">-</td>'
+          + '<td style="text-align:right;color:#a0aec0;">-</td>'
+          + '</tr>';
+
         tbody.innerHTML = pfSortedRegions.map(function(region) {
           var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="8"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
           var rows = pfGrouped[region].map(function(st) {
@@ -4121,7 +4145,7 @@
             + '</tr>';
           }).join('');
           return hdr + rows;
-        }).join('');
+        }).join('') + totalRow;
       }
 
       content.style.display = 'block';
