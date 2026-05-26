@@ -4054,11 +4054,11 @@
             : null;
           var pnlStr = (st.pnlPct !== null && st.pnlPct !== undefined)
             ? '<span style="color:' + pnlCol(st.pnlPct) + ';font-weight:700;">' + fmtPct(st.pnlPct) + '</span>'
-              + (pctKRWVal !== null ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtPct(pctKRWVal) + ' (KRW)</div>' : '')
+              + (pctKRWVal !== null ? '<div style="color:#a0aec0;margin-top:1px;">' + fmtPct(pctKRWVal) + ' (KRW)</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
           // 해외주식: KRW 환산 매입금액 (거래 당시 환율 누적) 라인 추가 — KRW 종목은 라인 생략
           var acKRWLine = (!isKRW && st.buyCostKRW > 0)
-            ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtK(st.buyCostKRW) + ' KRW</div>'
+            ? '<div style="color:#a0aec0;margin-top:1px;">' + fmtK(st.buyCostKRW) + ' KRW</div>'
             : '';
           var acStr = (st.buyCostFX > 0)
             ? fmtFX(st.buyCostFX) + ' ' + cur
@@ -4067,7 +4067,7 @@
             : '-';
           // 해외주식: KRW 환산 평가금액 (현재 환율 기준) 라인 추가 — KRW 종목은 라인 생략
           var mvKRWLine = (!isKRW && st.marketValueKRW > 0)
-            ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtK(st.marketValueKRW) + ' KRW</div>'
+            ? '<div style="color:#a0aec0;margin-top:1px;">' + fmtK(st.marketValueKRW) + ' KRW</div>'
             : '';
           var mvStr = (st.marketValueFX > 0)
             ? fmtFX(st.marketValueFX) + ' ' + cur
@@ -4082,7 +4082,7 @@
           var gainStr = (st.buyCostFX > 0)
             ? '<span style="color:' + gainCol + ';font-weight:600;">' + gainSign + fmtFX(gainFX) + ' ' + cur + '</span>'
               + (st.pnlKRW != null && !isKRW
-                ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + gainSign + fmtK(Math.abs(st.pnlKRW)) + ' KRW</div>' : '')
+                ? '<div style="color:#a0aec0;margin-top:1px;">' + gainSign + fmtK(Math.abs(st.pnlKRW)) + ' KRW</div>' : '')
             : '<span style="color:#a0aec0">-</span>';
 
           // 누적배당금 (현지통화: KRW 종목은 KRW, 해외 종목은 현지통화)
@@ -4097,7 +4097,7 @@
           var divFmtAmt = isKRW ? fmtK(divAmt) : Number(divAmt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           // 해외주식: KRW 환산 누적배당금 (각 배당 지급 당시 환율 누적) 라인 추가
           var divKRWLine = (!isKRW && st.cumDividendKRW > 0)
-            ? '<div style="font-size:0.78em;color:#a0aec0;margin-top:1px;">≈ ' + fmtK(st.cumDividendKRW) + ' KRW</div>'
+            ? '<div style="color:#a0aec0;margin-top:1px;">' + fmtK(st.cumDividendKRW) + ' KRW</div>'
             : '';
           var divStr = (divAmt > 0)
             ? '<span style="color:#276749;font-weight:600;">' + divFmtAmt + ' ' + divCur + '</span>'
