@@ -1685,24 +1685,49 @@
         </select>
       </div>
       <div class="edit-field"><label>Account</label><input type="text" id="ef_account"></div>
-      <div class="edit-field"><label>Region</label><input type="text" id="ef_region"></div>
+      <div class="edit-field"><label>Region</label><input type="text" id="ef_region" oninput="updateEditKrwConversion()"></div>
       <div class="edit-field"><label>Asset Type</label><input type="text" id="ef_assetType"></div>
       <div class="edit-field"><label>Ticker</label><input type="text" id="ef_ticker"></div>
       <div class="edit-field"><label>Name</label><input type="text" id="ef_name"></div>
-      <div class="edit-field"><label>Price</label><input type="number" step="any" id="ef_price"></div>
-      <div class="edit-field"><label>Currency (환율)</label><input type="number" step="any" id="ef_currency"></div>
-      <div class="edit-field"><label>Quantity</label><input type="number" step="any" id="ef_quantity"></div>
-      <div class="edit-field"><label>Dividend</label><input type="number" step="any" id="ef_dividend"></div>
+      <div class="edit-field">
+        <label>Price</label>
+        <input type="text" inputmode="decimal" id="ef_price" oninput="fmtNum(this); updateEditKrwConversion()">
+        <span class="krw-display hidden" id="ef_priceKrw"></span>
+      </div>
+      <div class="edit-field">
+        <label>Currency (환율)</label>
+        <input type="text" inputmode="decimal" id="ef_currency" oninput="fmtNum(this); updateEditKrwConversion()">
+      </div>
+      <div class="edit-field">
+        <label>Quantity</label>
+        <input type="text" inputmode="decimal" id="ef_quantity" oninput="fmtNum(this)">
+      </div>
+      <div class="edit-field">
+        <label>Dividend</label>
+        <input type="text" inputmode="decimal" id="ef_dividend" oninput="fmtNum(this); updateEditKrwConversion()">
+        <span class="krw-display hidden" id="ef_dividendKrw"></span>
+      </div>
       <div class="edit-field">
         <label>Tax</label>
-        <input type="number" step="any" id="ef_tax" placeholder="0" oninput="efUpdateTaxNote()">
+        <input type="text" inputmode="decimal" id="ef_tax" placeholder="0" oninput="fmtNum(this); efUpdateTaxNote(); updateEditKrwConversion()">
         <button type="button" id="ef_taxKrwBtn" class="tax-krw-btn hidden"
                 onclick="toggleEditTaxKrw()">💱 세금 KRW로 입력</button>
+        <span class="krw-display hidden" id="ef_taxKrw"></span>
         <span id="ef_taxNote" style="font-size:0.75rem;color:#9b87f5;display:none;margin-top:2px;"></span>
       </div>
-      <div class="edit-field"><label>Charge</label><input type="number" step="any" id="ef_charge"></div>
-      <div class="edit-field"><label>Purchase</label><input type="number" step="any" id="ef_purchase"></div>
-      <div class="edit-field"><label>Purchase Currency</label><input type="number" step="any" id="ef_purchaseCurrency"></div>
+      <div class="edit-field">
+        <label>Charge</label>
+        <input type="text" inputmode="decimal" id="ef_charge" oninput="fmtNum(this); updateEditKrwConversion()">
+        <span class="krw-display hidden" id="ef_chargeKrw"></span>
+      </div>
+      <div class="edit-field">
+        <label>Purchase</label>
+        <input type="text" inputmode="decimal" id="ef_purchase" oninput="fmtNum(this)">
+      </div>
+      <div class="edit-field">
+        <label>Purchase Currency</label>
+        <input type="text" inputmode="decimal" id="ef_purchaseCurrency" oninput="fmtNum(this)">
+      </div>
       <div class="edit-field full"><label>Comment</label><input type="text" id="ef_comment"></div>
     </div>
     <div class="edit-modal-footer">
@@ -1763,6 +1788,9 @@
   var qNameOptions    = [];
   var editingSheetRow = null;
   var editTaxIsKRW    = false;  // 수정 모달 Tax KRW 직접입력 모드
+  var editingAccountOwner = '';  // 수정 대상 행의 원본 Account Owner (모달에 필드가 없어 별도 보관)
+  var pendingEditMode   = false; // 미리보기 모달이 "수정" 흐름인지 식별
+  var pendingEditFields = null;  // 수정 저장 시 /api/update-transaction 으로 보낼 필드
 
   // ---- 초기화 ----
   window.addEventListener('DOMContentLoaded', () => {
@@ -2751,7 +2779,7 @@
     document.getElementById('pvBasic').innerHTML =
       pvRow('Date',          fd.date) +
       pvRow('Trade',         fd.trade) +
-      pvRow('Account Owner', fd.owner || currentOwner) +
+      pvRow('Account Owner', fd.accountOwner || fd.owner || currentOwner) +
       pvRow('Account',       fd.account);
 
     // \u2500\u2500 \uC885\uBAA9\uC815\uBCF4 \u2500\u2500
@@ -2896,6 +2924,15 @@
 
   function closePreview() {
     document.getElementById('previewModal').classList.add('hidden');
+    if (pendingEditMode) {
+      // 수정 흐름: 미리보기만 닫고 수정 모달은 유지 (저장 버튼 재활성화)
+      var editBtn = document.getElementById('editSaveBtn');
+      if (editBtn) { editBtn.disabled = false; editBtn.textContent = '저장'; }
+      pendingEditMode   = false;
+      pendingEditFields = null;
+      pendingFormData   = null;
+      return;
+    }
     document.getElementById('submitBtn').disabled = false;
     pendingFormData = null;
     pendingFgnBuy   = false;
@@ -2905,6 +2942,10 @@
     if (!pendingFormData) return;
     document.getElementById('confirmSaveBtn').disabled = true;
     document.getElementById('previewModal').classList.add('hidden');
+    if (pendingEditMode) {
+      confirmEditSave();
+      return;
+    }
     showLoading(true);
 
     const formData  = pendingFormData;
@@ -3564,49 +3605,96 @@
     'Comment': 'comment',
   };
 
+  // ---- 수정 모달 숫자 파서 (콤마 제거) ----
+  function parseEditNum(id) {
+    var el = document.getElementById('ef_' + id);
+    if (!el) return 0;
+    return parseFloat(String(el.value).replace(/,/g, '')) || 0;
+  }
+
+  // ---- 수정 모달 KRW 환산 표시 (입력 화면의 updateKrwConversion 미러링) ----
+  function updateEditKrwConversion() {
+    var rate     = parseEditNum('currency');
+    var price    = parseEditNum('price');
+    var tax      = parseEditNum('tax');
+    var charge   = parseEditNum('charge');
+    var dividend = parseEditNum('dividend');
+    var regEl    = document.getElementById('ef_region');
+    var region   = regEl ? regEl.value.trim() : '';
+    var currency = regionMap[region] || '';
+    var isKorea  = region === 'Korea' || currency === 'KRW';
+
+    var ids = ['ef_priceKrw','ef_dividendKrw','ef_taxKrw','ef_chargeKrw'];
+    if (isKorea || !region || rate <= 0) {
+      ids.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) { el.classList.add('hidden'); el.textContent = ''; }
+      });
+      // KRW 직접입력 모드의 환산 안내도 갱신
+      if (editTaxIsKRW) efUpdateTaxNote();
+      return;
+    }
+    var fmt = function(v) { return Math.floor(v).toLocaleString('ko-KR') + ' KRW'; };
+    var setKrw = function(id, val) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (val > 0) { el.textContent = '≈ ' + fmt(val * rate); el.classList.remove('hidden'); }
+      else { el.textContent = ''; el.classList.add('hidden'); }
+    };
+    setKrw('ef_priceKrw',    price);
+    setKrw('ef_dividendKrw', dividend);
+    setKrw('ef_chargeKrw',   charge);
+    // Tax: KRW 직접입력 모드일 때는 KRW 뱃지 대신 FX 환산 안내만
+    if (editTaxIsKRW) {
+      var taxKrwEl = document.getElementById('ef_taxKrw');
+      if (taxKrwEl) { taxKrwEl.classList.add('hidden'); taxKrwEl.textContent = ''; }
+      efUpdateTaxNote();
+    } else {
+      setKrw('ef_taxKrw', tax);
+    }
+  }
+
   // ---- 수정 모달 Tax KRW 토글 ----
   function toggleEditTaxKrw() {
     editTaxIsKRW = !editTaxIsKRW;
     var btn    = document.getElementById('ef_taxKrwBtn');
     var taxEl  = document.getElementById('ef_tax');
     var noteEl = document.getElementById('ef_taxNote');
-    var curEl  = document.getElementById('ef_currency');
-    var rate   = parseFloat(curEl.value) || 0;
+    var rate   = parseEditNum('currency');
 
     if (editTaxIsKRW) {
       // USD → KRW 변환해서 미리 채워줌
-      var usdVal = parseFloat(taxEl.value) || 0;
+      var usdVal = parseEditNum('tax');
       taxEl.value = usdVal > 0 && rate > 0 ? Math.round(usdVal * rate) : '';
+      if (taxEl.value !== '') fmtNum(taxEl);
       taxEl.placeholder = '세금 KRW 직접 입력';
-      taxEl.step = '1';
       btn.classList.add('active');
       btn.title = '클릭: 원래 통화로 전환';
       efUpdateTaxNote();
     } else {
       // KRW → USD 역산
-      var krwVal = parseFloat(taxEl.value) || 0;
+      var krwVal = parseEditNum('tax');
       taxEl.value = krwVal > 0 && rate > 0
         ? Math.round(krwVal / rate * 100000) / 100000 : '';
+      if (taxEl.value !== '') fmtNum(taxEl);
       taxEl.placeholder = '0';
-      taxEl.step = 'any';
       btn.classList.remove('active');
       btn.title = '클릭: 세금을 KRW로 직접 입력';
       noteEl.style.display = 'none';
       noteEl.textContent = '';
     }
+    updateEditKrwConversion();
   }
 
   function efUpdateTaxNote() {
     if (!editTaxIsKRW) return;
-    var taxEl  = document.getElementById('ef_tax');
-    var curEl  = document.getElementById('ef_currency');
     var noteEl = document.getElementById('ef_taxNote');
-    var krwVal = parseFloat(taxEl.value) || 0;
-    var rate   = parseFloat(curEl.value) || 0;
+    var krwVal = parseEditNum('tax');
+    var rate   = parseEditNum('currency');
     if (krwVal > 0 && rate > 0) {
       var regEl = document.getElementById('ef_region');
       var regVal = (regEl ? regEl.value : '').trim();
-      var curLabel = regVal ? regVal.replace(/.*\(/, '').replace(/\).*/, '') : 'USD';
+      var curLabel = regionMap[regVal] || (regVal ? regVal.replace(/.*\(/, '').replace(/\).*/, '') : 'USD');
       noteEl.textContent = '≈ ' + Math.round(krwVal / rate * 100000) / 100000 + ' ' + curLabel + ' (저장값)';
       noteEl.style.display = 'block';
     } else {
@@ -3630,16 +3718,25 @@
       var el = document.getElementById('ef_' + fieldId);
       if (el) el.value = '';
     });
+    editingAccountOwner = '';
 
-    // 현재 값 채우기
+    // 현재 값 채우기 (숫자형은 세자리 구분 콤마 포맷 적용)
+    var NUMERIC_FIELDS = { price:1, currency:1, quantity:1, dividend:1, tax:1, charge:1, purchase:1, purchaseCurrency:1 };
     headers.forEach(function(h, i) {
       var fieldId = HEADER_TO_FIELD[h];
       if (!fieldId) return;
+      // Account Owner는 화면 필드가 없으므로 별도 변수에 보관
+      if (fieldId === 'accountOwner') {
+        var aoVal = row[i];
+        editingAccountOwner = (aoVal === null || aoVal === undefined) ? '' : String(aoVal).trim();
+        return;
+      }
       var el = document.getElementById('ef_' + fieldId);
       if (!el) return;
       var val = row[i];
       if (val === null || val === undefined) val = '';
       el.value = val;
+      if (NUMERIC_FIELDS[fieldId] && el.value !== '') fmtNum(el);
     });
 
     // Tax KRW 토글 초기화
@@ -3655,6 +3752,8 @@
     var isKrwRegion = (regVal === 'korea' || regVal === 'kr' || regVal === '');
     efBtn.classList.toggle('hidden', isKrwRegion);
 
+    updateEditKrwConversion();
+
     document.getElementById('editSaveBtn').disabled = false;
     document.getElementById('editModal').classList.remove('hidden');
   }
@@ -3662,12 +3761,17 @@
   function closeEditModal() {
     editingSheetRow = null;
     editTaxIsKRW    = false;
+    editingAccountOwner = '';
     document.getElementById('ef_taxKrwBtn').classList.remove('active');
     document.getElementById('ef_taxNote').style.display = 'none';
+    ['ef_priceKrw','ef_dividendKrw','ef_taxKrw','ef_chargeKrw'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.classList.add('hidden'); el.textContent = ''; }
+    });
     document.getElementById('editModal').classList.add('hidden');
   }
 
-  async function submitEditForm() {
+  function submitEditForm() {
     if (!editingSheetRow) return;
 
     // 날짜 누락 방지: 날짜 필드가 비어있으면 경고
@@ -3681,47 +3785,103 @@
 
     var btn = document.getElementById('editSaveBtn');
     btn.disabled = true;
-    btn.textContent = '저장 중...';
+
+    // 입력 화면의 NUMERIC 필드: 콤마 제거 후 숫자 문자열로 정규화
+    var NUMERIC_FIELDS = { price:1, currency:1, quantity:1, dividend:1, tax:1, charge:1, purchase:1, purchaseCurrency:1 };
 
     var fields = {};
     Object.entries(HEADER_TO_FIELD).forEach(function([h, fieldId]) {
+      if (fieldId === 'accountOwner') return; // 모달에 필드 없음 — 별도 처리
       var el = document.getElementById('ef_' + fieldId);
-      fields[fieldId] = el ? el.value : '';
+      var raw = el ? el.value : '';
+      if (NUMERIC_FIELDS[fieldId]) {
+        raw = String(raw).replace(/,/g, '');
+      }
+      fields[fieldId] = raw;
     });
-    // Account Owner 필수 검증
+    // 모달에 화면 필드가 없는 Account Owner는 모달 열 때 보관한 원본값 사용
+    fields.accountOwner = editingAccountOwner;
+
+    // Account Owner 필수 검증 (원본 행이 비어있을 때 차단)
     if (!(fields.accountOwner || '').trim()) {
-      alert('❌ Account Owner는 필수 항목입니다.');
+      alert('❌ Account Owner가 비어 있는 행입니다. 직접 보정이 필요합니다.');
       btn.disabled = false;
-      btn.textContent = '저장';
-      var aoEl = document.getElementById('ef_accountOwner');
-      if (aoEl) aoEl.focus();
       return;
     }
     // Tax KRW 모드: KRW → 거래통화 역산
+    var taxDisplayKRW = 0;
     if (editTaxIsKRW) {
       var krwTax = parseFloat(fields.tax) || 0;
       var rate   = parseFloat(fields.currency) || 0;
+      taxDisplayKRW = krwTax;
       fields.tax = (krwTax > 0 && rate > 0)
         ? String(Math.round(krwTax / rate * 100000) / 100000)
         : '0';
     }
 
-    try {
-      var res = await fetch('/api/update-transaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner: currentOwner, sheetRow: editingSheetRow, fields: fields }),
-      });
-      var json = await res.json();
+    // ── 미리보기용 formData 구성 (입력 화면 showPreview와 동일 포맷) ──
+    var previewData = {
+      date:             fields.date,
+      owner:            currentOwner,
+      accountOwner:     fields.accountOwner,
+      account:          fields.account,
+      region:           fields.region,
+      assetType:        fields.assetType,
+      ticker:           fields.ticker,
+      name:             fields.name,
+      trade:            fields.trade,
+      price:            parseFloat(fields.price)    || 0,
+      currency:         parseFloat(fields.currency) || 0,
+      quantity:         parseFloat(fields.quantity) || 0,
+      dividend:         parseFloat(fields.dividend) || 0,
+      tax:              parseFloat(fields.tax)      || 0,
+      taxDisplayKRW:    taxDisplayKRW,
+      charge:           parseFloat(fields.charge)   || 0,
+      purchase:         parseFloat(fields.purchase) || 0,
+      purchaseCurrency: parseFloat(fields.purchaseCurrency) || 0,
+      comment:          fields.comment,
+    };
+
+    pendingEditMode   = true;
+    pendingEditFields = fields;
+    pendingFormData   = previewData;
+    pendingFgnBuy     = false;
+    // Sell 미리보기에서 매입금액 표시를 위해 행에 저장된 값을 캐시에 주입
+    _purchaseKRW = previewData.purchase || 0;
+    var _pc      = previewData.purchaseCurrency || 0;
+    _purchaseFX  = (_purchaseKRW > 0 && _pc > 0) ? (_purchaseKRW / _pc) : 0;
+    showPreview(previewData);
+  }
+
+  function confirmEditSave() {
+    if (!editingSheetRow || !pendingEditFields) return;
+    var btn = document.getElementById('editSaveBtn');
+    if (btn) btn.textContent = '저장 중...';
+    showLoading(true);
+    fetch('/api/update-transaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ owner: currentOwner, sheetRow: editingSheetRow, fields: pendingEditFields }),
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+      showLoading(false);
+      pendingEditMode   = false;
+      pendingEditFields = null;
+      pendingFormData   = null;
       if (!json.success) throw new Error(json.error || '수정 실패');
       closeEditModal();
       alert('✅ 수정 완료! 목록을 다시 조회합니다.');
       runQuery();
-    } catch (e) {
+    })
+    .catch(function(e) {
+      showLoading(false);
+      pendingEditMode   = false;
+      pendingEditFields = null;
+      pendingFormData   = null;
       alert('❌ 오류: ' + e.message);
-      btn.disabled = false;
-      btn.textContent = '저장';
-    }
+      if (btn) { btn.disabled = false; btn.textContent = '저장'; }
+    });
   }
 
   async function deleteTransaction(sheetRow) {
