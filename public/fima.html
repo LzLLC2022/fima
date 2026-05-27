@@ -6051,8 +6051,8 @@
   function getNaverStockUrl(ticker, currency) {
     var clean = String(ticker || '').toUpperCase().split('.')[0];
     if (!clean) return '';
-    // 한국 6자리 코드 → NAVER 금융 종목 페이지
-    if (currency === 'KRW' && /^\d{6}$/.test(clean)) {
+    // 한국 6자리 코드(숫자/알파벳) → NAVER 금융 종목 페이지 (ETF·ETN은 알파벳 포함, 예: 0040Y0)
+    if (currency === 'KRW' && /^[0-9A-Z]{6}$/.test(clean)) {
       return 'https://finance.naver.com/item/main.naver?code=' + clean;
     }
     // 해외 종목 → NAVER 해외주식 (NASDAQ .O 기본; NYSE 등은 페이지 내 검색 가능)
