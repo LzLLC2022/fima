@@ -98,10 +98,10 @@ fima/
 │       ├── ticker-name/route.ts         ( 12줄) 종목명만 빠르게
 │       ├── ledger-tickers/route.ts      ( 59줄) Ledger의 실거래 종목 (필터)
 │       ├── query/route.ts               ( 87줄) 거래 조회 (필터 + 정렬)
-│       ├── transactions/route.ts        ( 45줄) ★ 거래 입력
-│       ├── update-transaction/route.ts  ( 44줄) 거래 수정
+│       ├── transactions/route.ts        ( 53줄) ★ 거래 입력 (Account Owner 빈값 400 차단)
+│       ├── update-transaction/route.ts  ( 51줄) 거래 수정 (Account Owner 빈값 400 차단)
 │       ├── delete-transaction/route.ts  ( 19줄) 거래 삭제
-│       ├── foreign-buy/route.ts         ( 74줄) 해외 매수 + 환전 자동
+│       ├── foreign-buy/route.ts         ( 81줄) 해외 매수 + 환전 자동 (Account Owner 빈값 400 차단)
 │       ├── purchase/route.ts            ( 83줄) Sell 시 매입원가 자동 계산
 │       ├── portfolio/route.ts           (459줄) ★ 현황 계산 (평가금액·손익·Region 그룹)
 │       ├── portfolio-analysis/route.ts  (797줄) ★★ 리포트 계산 (YTD/MTD/Daily, 차트)
@@ -234,10 +234,10 @@ fima/
 
 | 파일 | 라인 | 역할 |
 |---|---|---|
-| `app/api/transactions/route.ts` | 45 | POST: 거래 입력 |
-| `app/api/update-transaction/route.ts` | 44 | POST: 수정 |
+| `app/api/transactions/route.ts` | 53 | POST: 거래 입력. `f.accountOwner` 공백 → 400 |
+| `app/api/update-transaction/route.ts` | 51 | POST: 수정. `f.accountOwner` 공백 → 400 |
 | `app/api/delete-transaction/route.ts` | 19 | POST/DELETE: 삭제 |
-| **`app/api/foreign-buy/route.ts`** | 74 | 해외 Buy + KRW 환전 자동 (Ledger에 2건 기록) |
+| **`app/api/foreign-buy/route.ts`** | 81 | 해외 Buy + KRW 환전 자동 (Ledger에 2건 기록). `f.accountOwner` 공백 → 400 |
 | `app/api/purchase/route.ts` | 83 | Sell 시 매입원가 자동 계산 (FIFO 추정) |
 | `app/api/query/route.ts` | 87 | 거래 조회 (필터 + 정렬) |
 
@@ -326,6 +326,34 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 `effRate`는 행의 Currency 컬럼 값 → 비어 있으면 같은 region의 `latestRate` fallback → 그것도 없으면 1.
 
 **현황·리포트 두 탭이 동일한 산식**을 쓰므로 KRW 값이 일치합니다. 새 Trade 타입을 추가하거나 누적 계산을 만질 때 반드시 같은 패턴을 유지하세요.
+
+### 6-5. Account Owner 필수 검증 (2026-05-27)
+
+거래 입력·수정·해외 Buy 세 API 라우트는 모두 `f.accountOwner` 공백을 거부합니다 — 검증 누락 시 시트에 빈 Account Owner 행이 생성되어 조회 필터에서 모든 사용자에게 노출되는 부작용이 있었음.
+
+| 위치 | 처리 |
+|---|---|
+| 프론트 입력 폼 [public/fima.html:2659-2668](public/fima.html#L2659-L2668) | `handleSubmit`이 `navOwnerSelect.value || currentAccountOwner` 공백이면 `showAlert` 후 return |
+| 프론트 수정 모달 [public/fima.html:3793-3795](public/fima.html#L3793-L3795) | 모달 열 때 원본 행의 Account Owner를 `editingAccountOwner` 전역 변수에 보관하고 저장 페이로드에 주입. 사용자 화면 필드는 없음 (Account Owner는 nav 드롭다운에서만 변경) |
+| API `transactions` [app/api/transactions/route.ts:10-15](app/api/transactions/route.ts#L10-L15) | `String(f.accountOwner ?? '').trim()`이 빈 문자열이면 `{ success: false, error: 'Account Owner는 필수 항목입니다.' }` 400 |
+| API `update-transaction` [app/api/update-transaction/route.ts:14-19](app/api/update-transaction/route.ts#L14-L19) | 동일 |
+| API `foreign-buy` [app/api/foreign-buy/route.ts:9-14](app/api/foreign-buy/route.ts#L9-L14) | 동일 (이전엔 `f.accountOwner \|\| own` fallback이 있었으나 제거) |
+
+> 조회(`/api/query`)는 빈 Account Owner를 **구 데이터 호환**으로 통과시킵니다 ([query/route.ts:42-45](app/api/query/route.ts#L42-L45)). 신규 입력만 차단되며, 과거에 입력된 빈 행은 별도 보정 필요.
+
+### 6-6. 거래 수정 모달 — 입력 화면 UX 패리티 (2026-05-27)
+
+수정 모달이 입력 화면과 동일한 3가지 UX를 갖춥니다. 관련 함수·상태:
+
+| 항목 | 위치 |
+|---|---|
+| 콤마 포맷 (입력 즉시) | `fmtNum(el)` [public/fima.html:2399](public/fima.html#L2399) — 입력 화면과 공유. 모달 열 때 기존 값에도 적용 |
+| KRW 환산 뱃지 (Price·Dividend·Tax·Charge 옆) | `updateEditKrwConversion()` [public/fima.html:3626-3667](public/fima.html#L3626-L3667) — `updateKrwConversion()` 미러링 |
+| 콤마 포함 숫자 파서 | `parseEditNum(id)` [public/fima.html:3621-3624](public/fima.html#L3621-L3624) |
+| 저장 전 확인 미리보기 | `submitEditForm` [public/fima.html:3768](public/fima.html#L3768)이 `previewModal`을 띄우고 `confirmSave` → `confirmEditSave()` [public/fima.html:3843](public/fima.html#L3843)에서 실제 PATCH |
+| 분기 상태 | `pendingEditMode` / `pendingEditFields` / `editingAccountOwner` [public/fima.html:1764-1766](public/fima.html#L1764-L1766) |
+
+> 새 필드를 추가할 때는 입력 화면 + 수정 모달 + `HEADER_TO_FIELD` 매핑 [public/fima.html:3585](public/fima.html#L3585) 세 곳을 모두 갱신해야 합니다.
 
 ---
 

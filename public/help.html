@@ -322,7 +322,14 @@
 
         <div class="sub">
           <div class="sub-title">✏️ 수정 / 🗑 삭제</div>
-          <p>조회 결과 각 행의 <b>수정</b> 버튼을 누르면 수정 모달이 열립니다. 모든 필드를 직접 편집할 수 있으며, 해외 거래의 경우 Tax 필드 아래에 <b>💱 세금 KRW로 입력</b> 버튼이 표시되어 KRW로 출금된 세금을 직접 입력할 수 있습니다.</p>
+          <p>조회 결과 각 행의 <b>수정</b> 버튼을 누르면 수정 모달이 열립니다. 거래 입력 화면과 동일한 UX로 통일되어 있습니다:</p>
+          <ul class="info-list" style="margin-top:8px;">
+            <li><span class="dot"></span><b>세자리 콤마 자동 포맷</b> — 모든 숫자 입력(Price/Currency/Quantity/Dividend/Tax/Charge/Purchase 등)에 입력 즉시 천단위 콤마가 들어갑니다.</li>
+            <li><span class="dot"></span><b>외화 거래 KRW 환산 뱃지</b> — 환율(Currency)이 입력되어 있고 Region이 KRW가 아니면 Price·Dividend·Tax·Charge 옆에 <code>≈ XXX KRW</code> 뱃지가 표시됩니다.</li>
+            <li><span class="dot"></span><b>💱 세금 KRW로 입력 토글</b> — 해외 거래는 Tax 필드 아래에 토글이 표시되어, KRW로 출금된 세금을 직접 입력하면 저장 시 외화로 자동 역산됩니다.</li>
+            <li><span class="dot"></span><b>저장 전 확인 미리보기</b> — <b>저장</b> 클릭 시 즉시 저장되지 않고 입력 화면과 동일한 미리보기 모달이 떠서 거래 기본정보/종목정보/거래내용을 확인할 수 있고, <b>확인 저장</b>을 한 번 더 눌러야 실제 시트에 반영됩니다.</li>
+            <li><span class="dot"></span><b>Account Owner 필수</b> — 저장·수정 모두 Account Owner가 비어 있으면 차단됩니다. 빈 값으로 입력된 과거 행을 수정할 때는 원본 값이 자동으로 유지됩니다.</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -458,6 +465,10 @@
       </div>
       <div class="section-body">
         <p>새로운 거래를 Google Sheets Ledger에 기록하는 화면입니다. 입력 후 <b>미리보기</b>에서 내용을 확인하고 <b>확인 저장</b>을 눌러야 실제로 저장됩니다.</p>
+        <div class="note">
+          <span class="note-icon">ℹ️</span>
+          <span>저장하기 직전 상단 드롭다운의 <b>Account Owner</b>가 비어 있으면 저장이 차단됩니다 (프론트엔드·API 양쪽 검증). 드롭다운이 로딩되기 전에 빠르게 저장 버튼을 누르는 경우를 방지합니다.</span>
+        </div>
 
         <div class="sub">
           <div class="sub-title">📋 거래 유형 (Trade)</div>
