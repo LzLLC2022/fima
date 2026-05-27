@@ -11,6 +11,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '유효하지 않은 행 번호' }, { status: 400 });
     }
 
+    if (!String(f?.accountOwner ?? '').trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Account Owner는 필수 항목입니다.' },
+        { status: 400 },
+      );
+    }
+
     const toNum = (v: any) =>
       (v !== '' && v !== null && v !== undefined) ? (parseFloat(v) || 0) : '';
 

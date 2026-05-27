@@ -5,6 +5,14 @@ import { getOwnerSheetId } from '@/lib/config';
 export async function POST(req: NextRequest) {
   try {
     const f = await req.json();
+
+    if (!String(f.accountOwner ?? '').trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Account Owner는 필수 항목입니다.' },
+        { status: 400 },
+      );
+    }
+
     const spreadsheetId = getOwnerSheetId(f.owner);
 
     // 날짜 파싱

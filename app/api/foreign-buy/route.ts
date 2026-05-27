@@ -5,6 +5,14 @@ import { getOwnerSheetId } from '@/lib/config';
 export async function POST(req: NextRequest) {
   try {
     const f = await req.json();
+
+    if (!String(f.accountOwner ?? '').trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Account Owner는 필수 항목입니다.' },
+        { status: 400 },
+      );
+    }
+
     const spreadsheetId = getOwnerSheetId(f.owner);
 
     const dateParts = String(f.date || '').split('-');
@@ -28,12 +36,11 @@ export async function POST(req: NextRequest) {
                        : 0;
     const withdrawKRW  = convertFX * rate;
 
-    const own  = f.owner   || '';
     const acct = f.account || '';
     const note = f.comment || '';
     const rows: any[][] = [];
 
-    const accountOwner = f.accountOwner || own;
+    const accountOwner = String(f.accountOwner).trim();
 
     // ① Withdraw (KRW 출금) — 환전 시에만
     if (convertFX > 0) {

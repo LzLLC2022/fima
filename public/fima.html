@@ -2658,10 +2658,17 @@
     clearAlert();
     document.getElementById('submitBtn').disabled = true;
 
+    const accountOwnerVal = (document.getElementById('navOwnerSelect').value || currentAccountOwner || '').trim();
+    if (!accountOwnerVal) {
+      showAlert('Account Owner를 선택해 주세요. (상단 드롭다운)', 'error');
+      document.getElementById('submitBtn').disabled = false;
+      return;
+    }
+
     const formData = {
       date:         document.getElementById('date').value,
       owner:        currentOwner,
-      accountOwner: document.getElementById('navOwnerSelect').value || currentAccountOwner,   // 투자계좌 소유자 (제출 시점 드롭다운 값 직접 읽기)
+      accountOwner: accountOwnerVal,   // 투자계좌 소유자 (제출 시점 드롭다운 값 직접 읽기)
       account: document.getElementById('account').value,
       region:       document.getElementById('region').value,
       assetType:    document.getElementById('assetType').value,
@@ -3681,6 +3688,15 @@
       var el = document.getElementById('ef_' + fieldId);
       fields[fieldId] = el ? el.value : '';
     });
+    // Account Owner 필수 검증
+    if (!(fields.accountOwner || '').trim()) {
+      alert('❌ Account Owner는 필수 항목입니다.');
+      btn.disabled = false;
+      btn.textContent = '저장';
+      var aoEl = document.getElementById('ef_accountOwner');
+      if (aoEl) aoEl.focus();
+      return;
+    }
     // Tax KRW 모드: KRW → 거래통화 역산
     if (editTaxIsKRW) {
       var krwTax = parseFloat(fields.tax) || 0;
