@@ -571,82 +571,133 @@ curl -X POST https://fima.lim.kr/api/report/email \
 
 ## 관심종목 변동 알림 (텔레그램)
 
-> 관심종목(`Favorate` 시트)의 현재가가 **전일 종가 대비 ±5% 이상** 변동되면 1시간마다 텔레그램으로 알림.
+> 관심종목(`Favorate` 시트)의 현재가가 **전일 종가 대비 사용자별 임계값(상승/하락 각각)** 이상 변동되면 1시간마다 텔레그램으로 알림.
 
 ### 작동 방식
 
 - GitHub Actions cron (`0 * * * *`)이 매시 정각에 `/api/watchlist/alert` 호출
 - 각 Owner의 Favorate 시트를 읽어 `getStockInfo()`로 현재가·전일종가·changepct 조회
-- `|changepct| >= 0.05` 인 종목을 모아 **Owner별로 한 메시지에 묶어** 발송
-- 봇 토큰은 환경변수, **chat_id는 Owner의 Master 시트에서** 관리 (Email 컬럼과 동일 패턴)
-- 토큰 미설정 또는 시트에 chat_id 없는 Owner는 자동 skip
+- `changepct >= upPct` (상승) 또는 `changepct <= -downPct` (하락) 종목을 모아 **Owner별로 한 메시지**로 발송
+- 봇 토큰은 Vercel 환경변수, 사용자별 설정(chat_id / 수신여부 / 상승·하락 임계값)은 **각 Owner의 Master 시트에서 관리** — 앱의 `정보 변경` 화면에서 입력하면 자동으로 시트에 저장됨
+- 봇 토큰이 없거나 사용자가 chat_id를 등록하지 않은 Owner는 자동 skip
 
-### Step 1 — 텔레그램 봇 생성
+---
 
-1. 텔레그램에서 `@BotFather` 검색 → `/newbot` 명령으로 봇 생성 → 토큰 발급.
-2. 봇과 1:1 대화창에서 아무 메시지나 한 번 보냄 (그래야 봇이 chat 알게 됨).
-3. `https://api.telegram.org/bot<TOKEN>/getUpdates` 호출하여 `result[*].message.chat.id` 확인.
+### Step 1 — 텔레그램 봇 생성 (관리자)
 
-### Step 2 — Vercel 환경변수 추가
+> 봇은 모든 Owner가 공유합니다. 한 번만 생성하면 됩니다.
+
+1. 텔레그램 앱에서 `@BotFather` 검색 → **파란 체크마크** 있는 공식 봇 선택
+2. 채팅창에서 `/start` → `/newbot` 입력
+3. 봇 이름(한글 가능) 입력 → 예: `FiMa 알림`
+4. 봇 username(영문, **반드시 `bot`으로 끝남**) 입력 → 예: `your_fima_alert_bot`
+5. 발급된 **토큰** 복사 (형태: `7891234567:AAH...46자_랜덤_문자열`)
+
+> ⚠️ 토큰은 봇 제어 권한이므로 절대 외부에 노출 금지.
+
+### Step 2 — Vercel 환경변수 등록 (관리자, 1회)
+
+Vercel → 프로젝트 → Settings → Environment Variables:
 
 | 변수 | 값 |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | BotFather 토큰 (모든 Owner 공유) |
-| `REPORT_SECRET` | 이메일 리포트와 동일한 Bearer 토큰 (이미 등록되어 있다면 그대로 사용) |
+| `TELEGRAM_BOT_TOKEN` | Step 1의 토큰 |
+| `REPORT_SECRET` | 이메일 리포트와 동일 (이미 등록되어 있으면 그대로) |
 
-> chat_id는 환경변수가 아니라 **각 Owner의 Master 시트**에서 관리합니다 (Step 3).
+등록 후 다음 main push 시 자동 반영됩니다.
 
-### Step 3 — 각 Owner의 Master 시트에 chat_id 등록
+---
 
-각 Owner의 Google Spreadsheet → **Master** 시트 첫 행에 `Telegram` 컬럼을 추가하고, 두 번째 행 셀에 자신의 `chat_id`를 입력합니다.
+### Step 3 — 각 사용자가 본인 chat_id 확인
 
-| Account Owner | Pin | Email | Telegram | TelegramRecv |
-|---|---|---|---|---|
-| Lz | 1234 | lz@example.com | 123456789 | (비워두면 수신함) |
+> 사용자별로 1회. 텔레그램 ID는 사람마다 다릅니다.
 
-- **컬럼명**: `Telegram` (대소문자 무관, `TelegramChatId` 도 인식)
-- **수신 거부 토글**: `TelegramRecv` 컬럼이 `N` / `0` / `false` 이면 발송 차단 (이메일의 `EmailRecv`와 동일 패턴)
-- chat_id 셀이 비어있는 Owner는 자동 skip
+1. 텔레그램에서 봇(Step 1에서 만든 username) 검색 → 1:1 대화창 열기
+2. `/start` 누르거나 아무 메시지(`hi` 등)를 봇에게 한 번 전송
+   - 봇이 응답하지 않아도 정상 (Telegram이 chat 관계를 기록함)
+3. PC 브라우저에서 다음 URL 호출 (관리자에게 토큰을 받아 사용):
+   ```
+   https://api.telegram.org/bot<TOKEN>/getUpdates
+   ```
+4. JSON 응답에서 `result[*].message.chat.id` 값을 복사 — 보통 9~10자리 정수
+   - 예: `"chat": { "id": 987654321, ... }` → `987654321`
+   - `"result": []` 빈 배열이 나오면 2단계의 메시지를 다시 보내고 재시도
 
-### Step 4 — GitHub Actions 워크플로 활성화
+> 빠른 대안: 검색에서 `@userinfobot` (verified 봇 아님) → `/start` 하면 본인 `Id`를 알려줌. 위 방법으로 검증 권장.
 
-이미 `.github/workflows/watchlist-alert.yml`이 등록되어 있으며 매시 정각 자동 실행됩니다.
-수동 실행은 Actions 탭 → **Watchlist Alert (Telegram)** → Run workflow.
+### Step 4 — fima 앱에서 텔레그램 설정 저장
 
-### 수동 호출 (curl)
+1. fima.lim.kr 로그인
+2. 우측 상단 **⚙️ 정보 변경** 버튼 클릭
+3. 모달 하단 **📨 관심종목 알람(텔레그램)** 섹션에서:
 
-```bash
-# 전체 Owner
-curl -X POST https://fima.lim.kr/api/watchlist/alert \
-  -H "Authorization: Bearer {REPORT_SECRET}" \
-  -H "Content-Type: application/json" -d '{}'
+   | 항목 | 입력값 |
+   |---|---|
+   | 텔레그램 ID | Step 3의 chat_id (숫자) |
+   | 알림 수신 | 체크 |
+   | 상승 % | 알림 받을 상승 임계값 (예: `5`) |
+   | 하락 % | 알림 받을 하락 임계값 (예: `5`) |
 
-# 특정 Owner + 임계값 10% (테스트)
-curl -X POST https://fima.lim.kr/api/watchlist/alert \
-  -H "Authorization: Bearer {REPORT_SECRET}" \
-  -H "Content-Type: application/json" \
-  -d '{"owner":"Lz","threshold":0.10}'
-```
+4. **텔레그램 설정 저장** 버튼 클릭 → 자동으로 Master 시트에 4개 컬럼(`Telegram`, `TelegramRecv`, `TelegramUpPct`, `TelegramDownPct`)이 만들어지거나 갱신됨
+
+> 임계값을 상승/하락 다르게 설정 가능 (예: 상승 `3%` / 하락 `7%`). 알림이 너무 잦으면 임계값을 올리고, 조용히 두고 싶으면 **알림 수신**을 해제하세요.
+
+---
 
 ### 메시지 예시
 
 ```
-🚨 관심종목 변동 알림 (Lz) — ±5% 이상
-🔴 [+8.20%] TSLA Tesla: 220.00 → 238.04 USD
-🔵 [-6.10%] AAPL Apple: 175.20 → 164.51 USD
-🔴 [+5.30%] 005930 삼성전자: 71,500.00 → 75,289.50 KRW
+[관심종목 변동 알림 (Lz) — ±5% 이상]
+
+🔴 TSLA Tesla, Inc.
+┃ +8.20%  +18.04 USD
+┃ 220.00 ⇒ 238.04 USD
+
+🔵 AAPL Apple Inc.
+┃ -6.10%  -10.69 USD
+┃ 175.20 ⇒ 164.51 USD
 ```
 
-> ⚠️ 변동률이 5% 이상 유지되는 한 **매시간 동일 알림이 반복 발송**됩니다.  
-> 조용해지길 원하면 GitHub Actions 워크플로를 비활성화하거나 임계값을 늘리세요.
+- 박스는 텔레그램 `<blockquote>` 효과 (좌측 세로선 + 우상단 따옴표).
+- 박스 색은 **사용자의 텔레그램 클라이언트 액센트 컬러** 따라 단일 색으로 표시됨 (분홍/파랑/녹색 등). Settings → Appearance → Color에서 변경 가능. **봇이 상승/하락별로 박스 색을 다르게 지정하는 것은 텔레그램 API 제약상 불가능.**
+- 종목 헤더의 🔴(상승) / 🔵(하락)으로 시각 구분.
+
+> ⚠️ 변동률이 임계값 이상 유지되는 한 **매시간 동일 알림이 반복 발송**됩니다.
+
+---
+
+### 워크플로 / 수동 호출
+
+GitHub Actions cron(`watchlist-alert.yml`)이 매시 정각 자동 실행. 수동 실행은 Actions 탭 → **Watchlist Alert (Telegram)** → Run workflow.
+
+curl로 강제 발송 (테스트용 — 임계값을 일시적으로 낮춰서 강제 발송):
+
+```bash
+# 특정 Owner + 임계값 0.01% (사실상 모든 변동 알림)
+curl -X POST https://fima.lim.kr/api/watchlist/alert \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"Lz","threshold":0.0001}'
+
+# 전체 Owner — 시트에 저장된 사용자별 임계값 사용
+curl -X POST https://fima.lim.kr/api/watchlist/alert \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+`body.threshold` 가 오면 모든 Owner에 동일 임계값 override. 없으면 각 Owner의 Master 시트에 저장된 `TelegramUpPct` / `TelegramDownPct` 사용.
+
+---
 
 ### 관련 파일
 
 | 파일 | 역할 |
 |---|---|
-| `app/api/watchlist/alert/route.ts` | 알림 API (POST) |
-| `lib/telegram.ts` | Bot API 발송 헬퍼 |
+| `app/api/watchlist/alert/route.ts` | 알림 API (POST) — Master 시트 사용자별 임계값 적용 |
+| `app/api/auth/change-telegram/route.ts` | 텔레그램 설정 GET/POST — 헤더 자동 생성 |
+| `lib/telegram.ts` | Bot API 발송 + `getOwnerTelegramSettings()` 헬퍼 |
 | `.github/workflows/watchlist-alert.yml` | 매시간 cron |
+| `public/fima.html` (정보 변경 모달) | 텔레그램 설정 UI |
 
 ---
 

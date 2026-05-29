@@ -91,6 +91,7 @@ fima/
 │       ├── auth/route.ts                (76줄) ★ 로그인 (GET owner 목록 / POST PIN 검증)
 │       ├── auth/change-email/route.ts   (124줄) 이메일 조회/변경
 │       ├── auth/change-pin/route.ts     ( 91줄) PIN 변경
+│       ├── auth/change-telegram/route.ts (~190줄) ★ 텔레그램 설정 GET/POST — chat_id/recv/upPct/downPct, 헤더 자동 생성
 │       ├── account-owners/route.ts      ( 38줄) Ledger 기반 투자 AccountOwner 목록
 │       ├── master/route.ts              ( 49줄) Master 시트 조회 (계좌·지역·통화)
 │       ├── owner-sheet/route.ts         ( 16줄) Owner → SheetId 조회 (디버그용)
@@ -385,23 +386,51 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 
 ### 6-8. 관심종목 변동 알림 (텔레그램, 2026-05-29)
 
-매시간 GitHub Actions cron이 `/api/watchlist/alert`를 호출해, 각 Owner의 Favorate 시트 종목 중 `|changepct| >= 5%`인 종목을 텔레그램으로 발송합니다.
+매시간 GitHub Actions cron이 `/api/watchlist/alert`를 호출해, 각 Owner의 Favorate 시트 종목 중 사용자별 임계값을 넘은 종목을 텔레그램으로 발송합니다. 사용자 설정 UI는 앱의 **⚙️ 정보 변경** 모달에 통합되어 있습니다.
+
+#### 데이터 흐름
+
+```
+사용자 입력 (UI 모달)
+   └─ submitTelegramChange() — public/fima.html
+        └─ POST /api/auth/change-telegram   { owner, chatId, recv, upPct, downPct }
+              └─ Master 시트 4개 컬럼 update (헤더 누락 시 자동 생성)
+                   Telegram / TelegramRecv / TelegramUpPct / TelegramDownPct
+
+cron 매시 정각
+   └─ POST /api/watchlist/alert
+        └─ getOwnerTelegramSettings(sheetId)  → { chatId, recv, upPct, downPct }
+        └─ Favorate 시트 종목별 getStockInfo()
+        └─ pct >= upPct/100 || pct <= -downPct/100 인 종목만 추출
+        └─ sendTelegram(chatId, html, {parseMode:'HTML'})
+              └─ <blockquote> + 🔴/🔵 헤더 형식
+```
+
+#### 주요 구성
 
 | 항목 | 위치 / 구현 |
 |---|---|
-| 알림 API | [app/api/watchlist/alert/route.ts](app/api/watchlist/alert/route.ts) — `OWNER_CONFIG` 순회, `getStockInfo()`의 `changepct` 사용. `Sample`은 제외. |
+| 알림 API | [app/api/watchlist/alert/route.ts](app/api/watchlist/alert/route.ts) — `OWNER_CONFIG` 순회. `body.threshold` override 시 모든 Owner 동일 임계값, 없으면 시트값. `Sample` 제외. |
 | 인증 | `Authorization: Bearer <REPORT_SECRET>` — 이메일 리포트와 동일 토큰 공유 |
-| 임계값 | 기본 `THRESHOLD = 0.05` (5%). 호출 시 `{"threshold":0.10}` 로 override 가능. |
-| 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `getOwnerChatId(sheetId)` 가 Owner Spreadsheet의 **Master 시트 `Telegram` 컬럼** 에서 chat_id 조회 (Email 컬럼과 동일 패턴, lowercase 매칭). `TelegramRecv=N`이면 발송 거부. `sendTelegram(chatId, text)`는 `TELEGRAM_BOT_TOKEN` 환경변수가 없거나 chatId가 빈 문자열이면 `skipped: true`로 fail-soft. |
+| 사용자 설정 API | [app/api/auth/change-telegram/route.ts](app/api/auth/change-telegram/route.ts) — GET(현재값) / POST(저장). `planColumns()` 가 4개 컬럼 인덱스 탐색 후 누락된 헤더는 헤더 행 우측에 차례로 자동 생성. |
+| 시트 컬럼 | Master 시트의 `Telegram` (chat_id, 숫자 문자열) / `TelegramRecv` (Y/N) / `TelegramUpPct` (숫자 %) / `TelegramDownPct` (숫자 %). 헤더 매칭은 소문자/언더스코어 무시. |
+| 임계값 정책 | 사용자 시트에 값이 있으면 그 값, 없거나 0 이하면 fallback `DEFAULT_THRESHOLD = 0.05` (5%). |
+| 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `getOwnerTelegramSettings(sheetId)` 가 4개 값 일괄 반환. `TelegramRecv` 명시 N/0/false → `chatId: ''` 로 반환되어 자연스럽게 skip. `sendTelegram(chatId, text, {parseMode})` — 토큰/chatId 미설정 시 `skipped: true` fail-soft. |
 | Cron | [.github/workflows/watchlist-alert.yml](.github/workflows/watchlist-alert.yml) — `cron: '0 * * * *'` (UTC). `workflow_dispatch` 입력으로 owner/threshold 수동 override 가능. |
-| 메시지 포맷 | `🚨 관심종목 변동 알림 (<Owner>) — ±5% 이상` 헤더 + 종목별 `🔴/🔵 [±N%] TICKER NAME: 어제 → 오늘 CUR` 라인 (한국 관행: 상승 🔴, 하락 🔵). 변동률 큰 순 정렬. |
+| 메시지 포맷 | `[관심종목 변동 알림 (<Owner>) — ±X% 이상]` 헤더 (상승/하락 임계값이 다르면 `상승 X% / 하락 Y%`) + 종목별 `🔴/🔵 티커 종목명` 헤더 + `<blockquote>` 박스 안에 `<b>±N% ±diff CUR</b>` / `어제 ⇒ 오늘 CUR`. parse_mode `HTML`. 변동률 큰 순 정렬. |
+| UI | [public/fima.html](public/fima.html) — 정보 변경 모달 내 `📨 관심종목 알람(텔레그램)` 섹션. 모달 열 때 `GET /api/auth/change-telegram` 으로 현재값 로딩. `submitTelegramChange()` 가 POST. |
 
-**중복 정책**: 사용자 결정에 따라 변동률이 5% 이상 유지되는 동안 매시간 반복 발송. 별도 dedup 상태(KV/시트 컬럼) 없음 — 필요해지면 시트에 `LastAlertedAt` 컬럼 추가하여 1일 1회 제한 등 정책 변경 가능.
+**텔레그램 표시 한계 (사용자 안내 시 주의)**:
+- 봇 메시지 HTML 화이트리스트: `<b><i><u><s><code><pre><a><tg-spoiler><tg-emoji><blockquote>` 만 허용.
+- **임의 색상/배경색/CSS 불가**. 상승/하락 색 분리는 박스로는 불가능하므로 종목 헤더의 🔴/🔵 이모지로 표현.
+- `<blockquote>` 박스 색은 사용자 클라이언트의 액센트 컬러(Settings → Appearance → Color) 따라 단일 색.
+
+**중복 정책**: 변동률이 임계값 이상 유지되는 동안 매시간 반복 발송. dedup 상태 없음 — 필요해지면 시트에 `TelegramLastAlertedAt` 컬럼 추가하여 1일 1회 제한 등 정책 변경 가능.
 
 **운영 설정**:
 - Vercel 환경변수: `TELEGRAM_BOT_TOKEN` (전 Owner 공유) + `REPORT_SECRET` (이메일 리포트와 동일 값).
-- Owner별 chat_id 는 각 Spreadsheet의 Master 시트 `Telegram` 컬럼에서 관리. 사용자가 직접 시트에 입력/변경 가능 (개발자 개입 불필요).
-- 토큰 미설정 또는 시트에 chat_id 없는 Owner는 단순 skip — 시스템 자체는 정상 동작.
+- 사용자별 chat_id / 수신여부 / 임계값은 **앱의 정보 변경 화면**에서 입력 → 자동으로 Master 시트에 저장됨. 사용자가 직접 시트 편집해도 동일하게 동작.
+- 토큰 미설정 또는 사용자 chat_id 없는 Owner는 단순 skip — 시스템 자체는 정상 동작.
 
 ---
 
