@@ -3554,7 +3554,7 @@
       const actionCell = '<td class="sticky-right" style="white-space:nowrap;background:white;" onclick="event.stopPropagation()">'
         + (sheetRow > 0
           ? '<button class="btn-edit" onclick="event.stopPropagation();openEditModal(' + sheetRow + ',' + rowIdx + ')">\u270F\uFE0F \uC218\uC815</button>'
-          + '<button class="btn-del" onclick="event.stopPropagation();deleteTransaction(' + sheetRow + ')">\uD83D\uDDD1 \uC0AD\uC81C</button>'
+          + '<button class="btn-del" onclick="event.stopPropagation();deleteTransaction(' + sheetRow + ', this)">\uD83D\uDDD1 \uC0AD\uC81C</button>'
           : '')
         + '</td>';
       return '<tr class="query-row-clickable" onclick="openDetailModal(' + rowIdx + ')">' + cells.join('') + actionCell + '</tr>';
@@ -4397,8 +4397,20 @@
     });
   }
 
-  async function deleteTransaction(sheetRow) {
+  async function deleteTransaction(sheetRow, btn) {
     if (!confirm('이 거래 내역을 삭제하시겠습니까?\n(되돌릴 수 없습니다)')) return;
+
+    // 처리 중 표시 + 버튼 잠금 (행 내 수정/삭제 버튼 모두)
+    var origText = '';
+    var cellBtns = [];
+    if (btn) {
+      origText = btn.textContent;
+      var cell = btn.closest('td');
+      cellBtns = cell ? Array.prototype.slice.call(cell.querySelectorAll('button')) : [btn];
+      cellBtns.forEach(function(b) { b.disabled = true; });
+      btn.textContent = '⏳ 삭제 중...';
+    }
+
     try {
       var res = await fetch('/api/delete-transaction', {
         method: 'POST',
@@ -4407,11 +4419,33 @@
       });
       var json = await res.json();
       if (!json.success) throw new Error(json.error || '삭제 실패');
-      alert('✅ 삭제 완료! 목록을 다시 조회합니다.');
-      runQuery();
+
+      // 삭제 성공 → 로컬 목록에서 즉시 제거 (재조회 지연과 무관하게 화면 반영)
+      // 시트에서 해당 행이 사라지면 그 아래 행 번호가 1씩 당겨지므로 rowIndices도 보정한다.
+      removeQueryRowBySheetRow(sheetRow);
     } catch (e) {
+      // 실패 시 버튼 원복
+      if (btn) {
+        cellBtns.forEach(function(b) { b.disabled = false; });
+        btn.textContent = origText;
+      }
       alert('❌ 오류: ' + e.message);
     }
+  }
+
+  // 삭제된 행을 rawQueryResult에서 제거하고, 그보다 아래 행의 sheetRow를 1씩 감소시킨 뒤 다시 렌더링한다.
+  function removeQueryRowBySheetRow(deletedSheetRow) {
+    if (!rawQueryResult || !rawQueryResult.rowIndices) return;
+    var idx = rawQueryResult.rowIndices.indexOf(deletedSheetRow);
+    if (idx !== -1) {
+      rawQueryResult.data.splice(idx, 1);
+      rawQueryResult.rowIndices.splice(idx, 1);
+    }
+    // 삭제된 행보다 아래에 있던 행들은 시트에서 한 칸씩 위로 당겨진다.
+    rawQueryResult.rowIndices = rawQueryResult.rowIndices.map(function(r) {
+      return r > deletedSheetRow ? r - 1 : r;
+    });
+    applyClientFilters();
   }
 
   // ====================================================
