@@ -458,6 +458,84 @@
       .input-popup-slot > #tab-input { padding: 0 12px; }
     }
 
+    /* ---- 거래 상세조회 모달 ---- */
+    .detail-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: flex-start; justify-content: center;
+      z-index: 1000; padding: 24px 16px; overflow-y: auto;
+    }
+    .detail-modal-box {
+      background: white; border-radius: 16px;
+      width: 100%; max-width: 640px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - 48px);
+    }
+    .detail-modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 22px; border-bottom: 1px solid #e5e1f5;
+      position: sticky; top: 0; background: white; border-radius: 16px 16px 0 0;
+      z-index: 2;
+    }
+    .detail-modal-header h3 {
+      font-size: 1.05rem; font-weight: 700; color: #3d2f7f; margin: 0;
+    }
+    .detail-modal-header .modal-close {
+      background: none; border: none; font-size: 1.4rem; color: #718096;
+      cursor: pointer; padding: 0 6px;
+    }
+    .detail-modal-header .modal-close:hover { color: #2d2747; }
+    .detail-modal-body { padding: 16px 22px 22px; overflow-y: auto; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section:last-child { margin-bottom: 0; }
+    .detail-section-title {
+      font-size: 0.78rem; font-weight: 700; color: #6b5cc4;
+      text-transform: uppercase; letter-spacing: 0.6px;
+      margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #ede9fa;
+    }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+    .detail-row { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .detail-row.full { grid-column: 1 / -1; }
+    .detail-label {
+      font-size: 0.72rem; font-weight: 600; color: #718096;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .detail-value {
+      font-size: 0.9rem; font-weight: 600; color: #2d2747; word-break: break-word;
+    }
+    .detail-value .krw-conv {
+      display: block; font-size: 0.75rem; font-weight: 500; color: #2f855a;
+      margin-top: 2px;
+    }
+    .detail-value .unit-tag {
+      font-size: 0.72em; color: #718096; font-weight: 500; margin-left: 4px;
+    }
+    .detail-trade-buy  { color: #c53030; }
+    .detail-trade-sell { color: #2f855a; }
+    .detail-modal-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      padding: 14px 22px; border-top: 1px solid #e5e1f5;
+      position: sticky; bottom: 0; background: white; border-radius: 0 0 16px 16px;
+    }
+    .detail-modal-footer .btn-detail-edit {
+      padding: 8px 18px; border-radius: 8px; border: 1px solid #c4b5fd;
+      background: #f7f5ff; color: #4a3d8f; cursor: pointer;
+      font-size: 0.875rem; font-weight: 600;
+    }
+    .detail-modal-footer .btn-detail-edit:hover { background: #ede9fa; }
+    .detail-modal-footer .btn-detail-close {
+      padding: 8px 18px; border-radius: 8px; border: none;
+      background: #7c6ce0; color: white; cursor: pointer;
+      font-size: 0.875rem; font-weight: 600;
+    }
+    .detail-modal-footer .btn-detail-close:hover { background: #4a3d8f; }
+    /* 거래조회 테이블 행 클릭 가능 표시 */
+    .query-row-clickable { cursor: pointer; }
+    .query-row-clickable:hover > td:not(.sticky-right) { background: #f7f5ff !important; }
+    @media (max-width: 768px) {
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+
     /* ---- 거래조회: 거래입력 호출 버튼 ---- */
     .btn-add-tx {
       padding: 9px 16px; border-radius: 8px; border: none;
@@ -1792,6 +1870,21 @@
       <button class="modal-close" onclick="closeInputPopupFromQuery()" title="닫기">✕</button>
     </div>
     <div class="input-popup-slot" id="inputPopupSlot"></div>
+  </div>
+</div>
+
+<!-- ===================== 거래 상세조회 모달 ===================== -->
+<div id="detailModal" class="detail-modal-backdrop hidden">
+  <div class="detail-modal-box">
+    <div class="detail-modal-header">
+      <h3>🔎 거래 상세</h3>
+      <button class="modal-close" onclick="closeDetailModal()" title="닫기">✕</button>
+    </div>
+    <div class="detail-modal-body" id="detailModalBody"></div>
+    <div class="detail-modal-footer">
+      <button class="btn-detail-edit" id="detailEditBtn" onclick="openEditFromDetail()">✏️ 수정</button>
+      <button class="btn-detail-close" onclick="closeDetailModal()">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -3364,13 +3457,13 @@
         if (i === insertAfter) cells.push(totalKRWCell);
       });
 
-      const actionCell = '<td class="sticky-right" style="white-space:nowrap;background:white;">'
+      const actionCell = '<td class="sticky-right" style="white-space:nowrap;background:white;" onclick="event.stopPropagation()">'
         + (sheetRow > 0
-          ? '<button class="btn-edit" onclick="openEditModal(' + sheetRow + ',' + rowIdx + ')">\u270F\uFE0F \uC218\uC815</button>'
-          + '<button class="btn-del" onclick="deleteTransaction(' + sheetRow + ')">\uD83D\uDDD1 \uC0AD\uC81C</button>'
+          ? '<button class="btn-edit" onclick="event.stopPropagation();openEditModal(' + sheetRow + ',' + rowIdx + ')">\u270F\uFE0F \uC218\uC815</button>'
+          + '<button class="btn-del" onclick="event.stopPropagation();deleteTransaction(' + sheetRow + ')">\uD83D\uDDD1 \uC0AD\uC81C</button>'
           : '')
         + '</td>';
-      return '<tr>' + cells.join('') + actionCell + '</tr>';
+      return '<tr class="query-row-clickable" onclick="openDetailModal(' + rowIdx + ')">' + cells.join('') + actionCell + '</tr>';
     }).join('') + '</tbody>';
 
     container.innerHTML = `
@@ -3380,7 +3473,7 @@
       <div class="table-wrap-scroll">
         <table>${thead}${tbody}</table>
       </div>`;
-    lastQueryResult = { headers: headers, data: rows, rowIndices: rowIndices || [] };
+    lastQueryResult = { headers: headers, data: rows, rowIndices: rowIndices || [], sorted: sortedData };
     var eb = document.getElementById('exportBtn'); if (eb) eb.disabled = false;
   }
 
@@ -3447,6 +3540,210 @@
     modal.classList.add('hidden');
     inputPopupMode = false;
     document.body.style.overflow = '';
+  }
+
+  // ---- 거래조회: 행 클릭 시 상세조회 ----
+  var _detailCurrentSheetRow = 0;
+  var _detailCurrentRowIdx   = -1;
+
+  function openDetailModal(rowIdx) {
+    if (!lastQueryResult || !lastQueryResult.sorted || !lastQueryResult.sorted[rowIdx]) return;
+    var item     = lastQueryResult.sorted[rowIdx];
+    var row      = item.row;
+    var sheetRow = item.sheetRow || 0;
+    var headers  = lastQueryResult.headers;
+
+    _detailCurrentSheetRow = sheetRow;
+    _detailCurrentRowIdx   = rowIdx;
+
+    // 헤더 길이로 패딩
+    var paddedRow = headers.map(function(_, i) {
+      var v = i < row.length ? row[i] : '';
+      return (v === null || v === undefined) ? '' : v;
+    });
+    var get = function(name) {
+      var i = headers.indexOf(name);
+      return i >= 0 ? String(paddedRow[i] === null || paddedRow[i] === undefined ? '' : paddedRow[i]).trim() : '';
+    };
+    var getNum = function(name) {
+      var s = get(name);
+      if (s === '') return 0;
+      var n = Number(String(s).replace(/,/g, ''));
+      return isNaN(n) ? 0 : n;
+    };
+
+    var region   = get('Region');
+    var currCode = regionMap[region] || 'KRW';
+    var isKRW    = currCode === 'KRW';
+    var rate     = getNum('Currency') || 1;
+    var price    = getNum('Price');
+    var qty      = getNum('Quantity');
+    var dividend = getNum('Dividend');
+    var tax      = getNum('Tax');
+    var charge   = getNum('Charge');
+    var purchase = getNum('Purchase');
+    var purchaseCurrency = getNum('Purchase Currency');
+
+    var fmt  = function(v, d) { return Number(v).toLocaleString('ko-KR', { maximumFractionDigits: d !== undefined ? d : 4 }); };
+    var fmtK = function(v) { return Math.floor(Number(v) || 0).toLocaleString('ko-KR'); };
+    var toKRW = function(v) { return isKRW ? v : v * rate; };
+
+    // 외화 금액 + KRW 환산 라인
+    var amtCell = function(v, opts) {
+      opts = opts || {};
+      var dec = opts.dec !== undefined ? opts.dec : 4;
+      if (!v) return '<span style="color:#a0aec0;">-</span>';
+      if (isKRW) {
+        return fmtK(v) + ' <span class="unit-tag">KRW</span>';
+      }
+      return fmt(v, dec) + ' <span class="unit-tag">' + currCode + '</span>'
+        + '<span class="krw-conv">≈ ' + fmtK(toKRW(v)) + ' KRW</span>';
+    };
+    var qtyCell = function(v) {
+      if (!v) return '<span style="color:#a0aec0;">-</span>';
+      return fmt(v, 4) + ' <span class="unit-tag">주</span>';
+    };
+    var rawCell = function(v) {
+      if (v === '' || v === null || v === undefined) return '<span style="color:#a0aec0;">-</span>';
+      return String(v);
+    };
+
+    var tradeVal = get('Trade');
+    var tradeLow = tradeVal.toLowerCase();
+    var tradeCls = tradeLow === 'buy' ? 'detail-trade-buy' : (tradeLow === 'sell' ? 'detail-trade-sell' : '');
+    var tradeHtml = tradeVal ? '<span class="' + tradeCls + '">' + tradeVal + '</span>' : '-';
+
+    var rowHtml = function(label, valueHtml, full) {
+      return '<div class="detail-row' + (full ? ' full' : '') + '">'
+        + '<span class="detail-label">' + label + '</span>'
+        + '<span class="detail-value">' + valueHtml + '</span>'
+        + '</div>';
+    };
+
+    // ── 기본 정보 ──
+    var sec1 =
+      rowHtml('Date',          rawCell(get('Date'))) +
+      rowHtml('Trade',         tradeHtml) +
+      rowHtml('Account',       rawCell(get('Account'))) +
+      rowHtml('Account Owner', rawCell(get('Account Owner')));
+
+    // ── 종목 정보 ──
+    var sec2 =
+      rowHtml('Region',     rawCell(region)) +
+      rowHtml('Asset Type', rawCell(get('Asset Type'))) +
+      rowHtml('Ticker',     rawCell(get('Ticker'))) +
+      rowHtml('Name',       rawCell(get('Name')));
+
+    // ── 거래 금액 ──
+    var sec3 = '';
+    sec3 += rowHtml('Price',    amtCell(price));
+    sec3 += rowHtml('Quantity', qtyCell(qty));
+    if (!isKRW) {
+      sec3 += rowHtml('환율 (KRW/' + currCode + ')', rate ? fmt(rate, 2) : '<span style="color:#a0aec0;">-</span>');
+    }
+    // 합계: Price × Quantity
+    if (price > 0) {
+      var total    = qty > 0 ? price * qty : price;
+      var totalKRW = isKRW ? total : total * rate;
+      var totalHtml;
+      if (isKRW) {
+        totalHtml = fmtK(totalKRW) + ' <span class="unit-tag">KRW</span>';
+      } else {
+        totalHtml = fmt(total, 4) + ' <span class="unit-tag">' + currCode + '</span>'
+          + '<span class="krw-conv">≈ ' + fmtK(totalKRW) + ' KRW</span>';
+      }
+      sec3 += rowHtml(qty > 0 ? '합계 (Price × Qty)' : '합계', totalHtml);
+    }
+    if (dividend) sec3 += rowHtml('Dividend', amtCell(dividend));
+    if (tax)      sec3 += rowHtml('Tax',      amtCell(tax));
+    if (charge)   sec3 += rowHtml('Charge',   amtCell(charge));
+
+    // ── 매입 정보 (Sell의 경우) ──
+    var sec4 = '';
+    if (purchase) {
+      // Purchase는 시트상 KRW로 저장됨
+      sec4 += rowHtml('Purchase (매입금액)',
+        fmtK(purchase) + ' <span class="unit-tag">KRW</span>');
+    }
+    if (purchaseCurrency) {
+      sec4 += rowHtml('Purchase Currency (매입평균환율)', fmt(purchaseCurrency, 4));
+    }
+
+    // ── Comment ──
+    var comment = get('Comment');
+    var sec5 = comment ? rowHtml('Comment', comment.replace(/</g, '&lt;').replace(/>/g, '&gt;'), true) : '';
+
+    // ── 기타 알려지지 않은 필드들 (스키마 확장 대비) ──
+    var KNOWN = ['Date','Trade','Account','Account Owner','Region','Asset Type','Ticker','Name',
+                 'Price','Currency','Quantity','Dividend','Tax','Charge','Purchase','Purchase Currency','Comment'];
+    var extraHtml = '';
+    headers.forEach(function(h, i) {
+      if (KNOWN.indexOf(h) !== -1) return;
+      var v = paddedRow[i];
+      if (v === '' || v === null || v === undefined) return;
+      extraHtml += rowHtml(h, String(v).replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+    });
+
+    var html = '';
+    html += '<div class="detail-section">'
+         +    '<div class="detail-section-title">거래 기본정보</div>'
+         +    '<div class="detail-grid">' + sec1 + '</div>'
+         +  '</div>';
+    html += '<div class="detail-section">'
+         +    '<div class="detail-section-title">종목정보</div>'
+         +    '<div class="detail-grid">' + sec2 + '</div>'
+         +  '</div>';
+    html += '<div class="detail-section">'
+         +    '<div class="detail-section-title">거래금액</div>'
+         +    '<div class="detail-grid">' + sec3 + '</div>'
+         +  '</div>';
+    if (sec4) {
+      html += '<div class="detail-section">'
+           +    '<div class="detail-section-title">매입정보</div>'
+           +    '<div class="detail-grid">' + sec4 + '</div>'
+           +  '</div>';
+    }
+    if (sec5) {
+      html += '<div class="detail-section">'
+           +    '<div class="detail-section-title">메모</div>'
+           +    '<div class="detail-grid">' + sec5 + '</div>'
+           +  '</div>';
+    }
+    if (extraHtml) {
+      html += '<div class="detail-section">'
+           +    '<div class="detail-section-title">기타</div>'
+           +    '<div class="detail-grid">' + extraHtml + '</div>'
+           +  '</div>';
+    }
+
+    document.getElementById('detailModalBody').innerHTML = html;
+
+    // 수정 버튼: 시트행이 없으면 비활성화
+    var ebtn = document.getElementById('detailEditBtn');
+    if (ebtn) {
+      if (sheetRow > 0) { ebtn.style.display = ''; ebtn.disabled = false; }
+      else              { ebtn.style.display = 'none'; }
+    }
+
+    document.getElementById('detailModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDetailModal() {
+    document.getElementById('detailModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    _detailCurrentSheetRow = 0;
+    _detailCurrentRowIdx   = -1;
+  }
+
+  function openEditFromDetail() {
+    var sheetRow = _detailCurrentSheetRow;
+    var rowIdx   = _detailCurrentRowIdx;
+    if (sheetRow <= 0 || rowIdx < 0) return;
+    closeDetailModal();
+    if (typeof openEditModal === 'function') {
+      openEditModal(sheetRow, rowIdx);
+    }
   }
 
   // ====================================================
