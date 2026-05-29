@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
       const purchaseAmt = Number(it.purchaseAmt) || 0;   // KRW
       const pnl         = Number(it.pnl)         || 0;   // KRW
       const marketValue = Number(it.marketValue) || 0;   // KRW
+      const divKRW      = Number(it.divKRW)      || 0;   // KRW (누적배당금, portfolio API 가 거래일별 환산 후 floor 누적)
       const currency    = String(it.currency || 'KRW');
       // 손익률은 KRW 기준으로 통일 (사용자에게 가장 직관적)
       const pnlPct      = purchaseAmt > 0 ? (pnl / purchaseAmt * 100) : 0;
@@ -115,11 +116,17 @@ export async function POST(req: NextRequest) {
         ? `<b>${esc(ticker)} ${esc(name)}</b>`
         : `<b>${esc(name || ticker)}</b>`;
 
+      // 배당이 있는 종목만 4번째 줄로 추가 (없는 종목은 노이즈 방지)
+      const divLine = divKRW > 0
+        ? `\n누적배당금 ${fmtK(divKRW)} KRW`
+        : '';
+
       return (
         `<blockquote>` +
         `${headLine}\n` +
         `보유 ${fmtN(qty, 4)}주 · 매입단가 ${fmtN(avgPrice, 2)} ${esc(currency)} · 매입금액 ${fmtK(purchaseAmt)} KRW\n` +
         `손익 <b>${fmtSigned(pnl)} KRW</b> (${fmtPct(pnlPct)}) · 평가 ${fmtK(marketValue)} KRW` +
+        divLine +
         `</blockquote>`
       );
     });
