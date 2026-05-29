@@ -4,6 +4,7 @@ import { getSheetValues } from '@/lib/sheets';
 import { getStockInfo } from '@/lib/stock';
 import { sendTelegram, getOwnerTelegramSettings } from '@/lib/telegram';
 import { getOwnedPositions } from '@/lib/positions';
+import { readAlertState, writeAlertState } from '@/lib/alertState';
 
 const WATCHLIST_SHEET_NAME = 'Favorate';
 const DEFAULT_THRESHOLD = 0.05;  // 5% (사용자가 시트에 임계값을 등록 안 한 경우 fallback)
@@ -129,8 +130,31 @@ export async function POST(req: NextRequest) {
       .filter(passes)
       .sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
 
-    if (ownedTriggered.length === 0 && favTriggered.length === 0) {
-      summary.push({ owner, ownedItems: owned.length, favItems: favItems.length, alerts: 0 });
+    // ── 직전 실행과 '동일 변동률'인 종목은 메시지에서 제외 ──
+    //   장 마감 후 가격 변화가 없어 매시간 같은 변동률로 반복 알림되는 것을 방지한다.
+    //   직전에 알림 대상이 아니었던 종목은 영향 없음(정상 알림).
+    const prevState = await readAlertState(cfg.sheetId);
+    const roundPct  = (p: number) => Math.round(p * 10000) / 10000;  // 표시 정밀도(소수 2자리 %) 기준
+    // 이번 실행에서 임계값을 통과한 모든 종목의 현재 변동률 → 다음 실행 비교용 상태
+    const newState = new Map<string, number>();
+    [...ownedTriggered, ...favTriggered].forEach(it => newState.set(it.ticker, roundPct(it.pct)));
+    // 메시지 발송 여부와 무관하게 '이번에 임계값 통과한' 종목 기준으로 상태 저장
+    // (이번·직전 모두 비어 있으면 쓸 필요 없음 → 불필요한 _AlertState 탭 생성 방지)
+    if (newState.size > 0 || prevState.size > 0) {
+      await writeAlertState(cfg.sheetId, newState).catch(() => { /* 상태 저장 실패는 알림을 막지 않음 */ });
+    }
+
+    const isChanged = (it: { ticker: string; pct: number }) =>
+      !prevState.has(it.ticker) || prevState.get(it.ticker) !== roundPct(it.pct);
+    const ownedToSend = ownedTriggered.filter(isChanged);
+    const favToSend   = favTriggered.filter(isChanged);
+
+    if (ownedToSend.length === 0 && favToSend.length === 0) {
+      summary.push({
+        owner, ownedItems: owned.length, favItems: favItems.length, alerts: 0,
+        triggered: ownedTriggered.length + favTriggered.length,
+        skippedSamePct: ownedTriggered.length + favTriggered.length,
+      });
       continue;
     }
 
@@ -165,18 +189,20 @@ export async function POST(req: NextRequest) {
       owner,
       ownedItems: owned.length,
       favItems:   favItems.length,
-      ownedAlerts: ownedTriggered.length,
-      favAlerts:   favTriggered.length,
+      ownedAlerts: ownedToSend.length,
+      favAlerts:   favToSend.length,
+      // 임계값은 통과했으나 직전과 변동률이 같아 제외된 건수
+      skippedSamePct: (ownedTriggered.length - ownedToSend.length) + (favTriggered.length - favToSend.length),
     };
 
-    if (ownedTriggered.length > 0) {
-      const ownedText = `[보유종목 변동 알림 (${esc(owner)}) — ${rangeText}]\n\n` + renderLines(ownedTriggered);
+    if (ownedToSend.length > 0) {
+      const ownedText = `[보유종목 변동 알림 (${esc(owner)}) — ${rangeText}]\n\n` + renderLines(ownedToSend);
       const tgOwned = await sendTelegram(chatId, ownedText, { parseMode: 'HTML' });
       ownerSummary.ownedSent = tgOwned.ok;
       ownerSummary.tgOwned   = tgOwned.ok ? { status: tgOwned.status } : tgOwned;
     }
-    if (favTriggered.length > 0) {
-      const favText = `[관심종목 변동 알림 (${esc(owner)}) — ${rangeText}]\n\n` + renderLines(favTriggered);
+    if (favToSend.length > 0) {
+      const favText = `[관심종목 변동 알림 (${esc(owner)}) — ${rangeText}]\n\n` + renderLines(favToSend);
       const tgFav = await sendTelegram(chatId, favText, { parseMode: 'HTML' });
       ownerSummary.favSent = tgFav.ok;
       ownerSummary.tgFav   = tgFav.ok ? { status: tgFav.status } : tgFav;
