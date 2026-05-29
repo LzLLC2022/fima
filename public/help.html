@@ -186,8 +186,8 @@
     <hr class="sidebar-divider">
     <a href="#input">✏️ 입력관리 &gt; 거래 입력</a>
     <hr class="sidebar-divider">
+    <a href="#change-info">⚙️ 정보 변경 (PIN · E-Mail · 텔레그램)</a>
     <a href="#stockpopup">🪟 종목 정보 팝업</a>
-    <a href="#settings">⚙️ 정보변경</a>
   </nav>
 
   <!-- 본문 -->
@@ -478,18 +478,76 @@
 
         <div class="sub">
           <div class="sub-title">📨 변동 알림 (텔레그램, 매시간)</div>
-          <p>관심종목의 현재가가 <b>전일 종가 대비 ±5% 이상</b> 변동되면 1시간마다 Owner별 텔레그램 채팅으로 알림이 전송됩니다.</p>
+          <p>관심종목의 현재가가 <b>전일 종가 대비 본인이 설정한 상승/하락 임계값 이상</b> 변동되면 1시간마다 텔레그램으로 알림이 전송됩니다. 임계값은 <a href="#change-info">우측 상단 ⚙️ 정보 변경</a>에서 사용자별로 설정합니다.</p>
           <ul class="info-list" style="margin-top:8px;">
-            <li><span class="dot"></span><b>기준가</b> — 직전 영업일 종가 (Yahoo Finance / NAVER 금융의 changePct 사용).</li>
+            <li><span class="dot"></span><b>기준가</b> — 직전 영업일 종가 (Yahoo Finance / NAVER 금융의 changepct 사용).</li>
             <li><span class="dot"></span><b>주기</b> — GitHub Actions cron(매시 정각, UTC) → <code>/api/watchlist/alert</code> 호출.</li>
-            <li><span class="dot"></span><b>발송 단위</b> — 한 Owner의 5% 변동 종목들을 <b>한 메시지에 묶어서</b> 발송. 큰 변동률 순으로 정렬.</li>
-            <li><span class="dot"></span><b>대상 채팅</b> — 각 Owner의 Google Spreadsheet <b>Master 시트의 <code>Telegram</code> 컬럼</b>에 chat_id를 직접 입력 (이메일과 동일 패턴). 비어있으면 자동 skip. <code>TelegramRecv</code> 컬럼을 <code>N</code> 으로 두면 명시적 수신 거부.</li>
-            <li><span class="dot"></span><b>중복 정책</b> — 변동률 유지 시 매시간 반복 발송. 조용히 두려면 GitHub Actions 워크플로를 비활성화하거나 시트에서 종목을 제거.</li>
+            <li><span class="dot"></span><b>판정 기준</b> — 상승 종목은 본인이 설정한 <code>상승 %</code> 이상, 하락 종목은 <code>하락 %</code> 이상일 때 알림. 두 값을 각각 다르게 설정 가능 (예: 상승 3% / 하락 7%).</li>
+            <li><span class="dot"></span><b>발송 단위</b> — 한 Owner의 변동 종목들을 <b>한 메시지에 묶어</b> 변동률 큰 순으로 정렬해 발송.</li>
+            <li><span class="dot"></span><b>박스 표시</b> — 텔레그램 인용 박스(<code>&lt;blockquote&gt;</code>)로 종목별 정보를 묶음. 박스 색은 본인 텔레그램의 테마 액센트 컬러(Settings → Appearance → Color)에 따라 표시되며, 상승/하락에 따른 박스 색 분리는 텔레그램 API 제약상 불가능합니다. 종목 앞 🔴(상승) / 🔵(하락)으로 시각 구분.</li>
+            <li><span class="dot"></span><b>수신 토글</b> — 정보 변경 화면의 <b>알림 수신</b> 체크박스를 해제하면 알림 일시 중지. 다시 켜기 전까지 발송 안 됨.</li>
+            <li><span class="dot"></span><b>중복 정책</b> — 변동률이 임계값 이상 유지되는 동안 매시간 반복 발송. 별도의 dedup 처리 없음.</li>
           </ul>
-          <div class="note">
+        </div>
+      </div>
+    </div>
+
+    <!-- 정보 변경 -->
+    <div class="section" id="change-info">
+      <div class="section-header">
+        <span class="section-icon">⚙️</span>
+        <h2>정보 변경 (PIN · E-Mail · 텔레그램 알람) <span class="badge badge-manage">우측 상단 버튼</span></h2>
+      </div>
+      <div class="section-body">
+        <p>로그인 후 우측 상단의 <b>⚙️ 정보 변경</b> 버튼을 클릭하면 모달이 열리며, 세 가지 사용자 설정을 한 곳에서 관리할 수 있습니다.</p>
+
+        <div class="sub">
+          <div class="sub-title">🔐 PIN 변경</div>
+          <p>현재 PIN을 확인한 뒤 새 PIN(4자리 이상)으로 변경. Master 시트의 <code>Pin</code> 컬럼에 저장됨.</p>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">✉️ E-Mail 변경</div>
+          <p>일일 리포트를 받을 이메일 주소와 수신 여부를 설정. Master 시트의 <code>Email</code> / <code>EmailRecv</code> 컬럼에 저장됨.</p>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📨 관심종목 알람(텔레그램)</div>
+          <p>관심종목 변동 알림을 텔레그램으로 받기 위한 설정. 입력값은 자동으로 Master 시트의 <code>Telegram</code> / <code>TelegramRecv</code> / <code>TelegramUpPct</code> / <code>TelegramDownPct</code> 컬럼에 저장됨 (헤더가 없으면 자동 생성).</p>
+          <table class="field-table">
+            <tr><th>항목</th><th>설명</th></tr>
+            <tr><td><b>텔레그램 ID</b></td><td>본인의 chat_id (숫자, 9~10자리). 채널은 <code>-100...</code> 형식 음수도 허용. 확인 방법은 아래 참조.</td></tr>
+            <tr><td><b>알림 수신</b></td><td>체크: 알림 발송 / 해제: 일시 중지. 일시적으로 끄고 싶을 때 사용.</td></tr>
+            <tr><td><b>상승 %</b></td><td>상승 알림 임계값. 예: <code>5</code>를 입력하면 +5% 이상 종목만 알림. 범위 0~100, 소수점 입력 가능 (예: <code>2.5</code>).</td></tr>
+            <tr><td><b>하락 %</b></td><td>하락 알림 임계값. 입력은 양수(예: <code>5</code>), 실제 판정은 <code>-5%</code> 이하.</td></tr>
+          </table>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">🆔 텔레그램 ID 확인 방법</div>
+          <ol style="margin-top:8px;padding-left:24px;line-height:1.7;color:#4a5568;font-size:0.87rem;">
+            <li style="margin-bottom:6px;"><b>봇 찾기</b> — 텔레그램에서 관리자가 알려준 봇 username(FiMa 알림) 검색 → 1:1 대화창 진입 → 하단 <code>Start</code> 버튼 클릭 (또는 <code>/start</code> 입력).</li>
+            <li style="margin-bottom:6px;"><b>봇의 응답에서 ID 확인</b> — 봇이 자동으로 <i>"당신의 텔레그램 ID 입니다: <code>123456789</code>"</i> 메시지를 보내줍니다. 그 숫자를 길게 눌러 <b>복사</b>.</li>
+            <li style="margin-bottom:6px;"><b>fima 정보 변경에 입력</b> — 위 chat_id를 <b>텔레그램 ID</b> 칸에 붙여넣기 → <b>알림 수신</b> 체크 → <b>상승 %</b> / <b>하락 %</b> 설정 → <b>텔레그램 설정 저장</b>.</li>
+          </ol>
+          <div class="note" style="margin-top:10px;">
             <span class="note-icon">ℹ️</span>
-            <span>봇/채팅 ID 등록 절차는 저장소 README의 "관심종목 변동 알림 (텔레그램)" 섹션을 참고하세요.</span>
+            <span>봇이 응답하지 않거나 ID를 다시 보고 싶을 때는 봇 대화창에서 <code>/start</code> 또는 <code>/myid</code> 를 다시 입력하세요. 봇 username을 모르면 관리자에게 문의.</span>
           </div>
+        </div>
+
+        <div class="sub">
+          <div class="sub-title">📋 메시지 예시</div>
+          <pre style="background:#f7f5ff;padding:14px 18px;border-radius:8px;font-size:13px;line-height:1.6;color:#2d2747;overflow-x:auto;">[관심종목 변동 알림 (Lz) — ±5% 이상]
+
+🔴 TSLA Tesla, Inc.
+┃ +8.20%  +18.04 USD
+┃ 220.00 ⇒ 238.04 USD
+
+🔵 AAPL Apple Inc.
+┃ -6.10%  -10.69 USD
+┃ 175.20 ⇒ 164.51 USD</pre>
+          <p style="margin-top:8px;font-size:13px;color:#718096;">박스(좌측 세로선 + 우상단 따옴표)는 텔레그램의 <code>&lt;blockquote&gt;</code> 효과. 박스 색상은 본인 클라이언트 테마에 따라 단일 색으로 표시.</p>
         </div>
       </div>
     </div>
@@ -592,25 +650,6 @@
         <div class="note">
           <span class="note-icon">ℹ️</span>
           <span>KRX 한국 종목은 티커 뒤에 <b>.KS</b>(코스피) 또는 <b>.KQ</b>(코스닥)를 자동으로 시도하여 조회합니다. 예: <code>005930</code> → <code>005930.KS</code></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 정보변경 -->
-    <div class="section" id="settings">
-      <div class="section-header">
-        <span class="section-icon">⚙️</span>
-        <h2>정보변경</h2>
-      </div>
-      <div class="section-body">
-        <p>우상단 <b>⚙️ 정보변경</b> 버튼을 누르면 열리는 설정 화면입니다.</p>
-        <ul class="info-list" style="margin-top:10px;">
-          <li><span class="dot"></span><b>PIN 변경</b> — 현재 PIN 확인 후 새 PIN으로 변경.</li>
-          <li><span class="dot"></span><b>이메일 변경</b> — 일일 포트폴리오 리포트 수신 이메일 주소 변경.</li>
-        </ul>
-        <div class="tip">
-          <span class="tip-icon">💡</span>
-          <span>매일 오전 자동으로 포트폴리오 리포트 이메일이 발송됩니다. 이메일 수신을 원하지 않는 경우 Google Sheets Master 시트의 <b>EmailRecv</b> 컬럼을 <code>N</code>으로 설정하세요.</span>
         </div>
       </div>
     </div>

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OWNER_CONFIG } from '@/lib/config';
 import { getSheetValues } from '@/lib/sheets';
 import { getStockInfo } from '@/lib/stock';
-import { sendTelegram, getOwnerChatId } from '@/lib/telegram';
+import { sendTelegram, getOwnerTelegramSettings } from '@/lib/telegram';
 
 const WATCHLIST_SHEET_NAME = 'Favorate';
-const THRESHOLD = 0.05;  // 5%
+const DEFAULT_THRESHOLD = 0.05;  // 5% (사용자가 시트에 임계값을 등록 안 한 경우 fallback)
 
 /**
  * POST /api/watchlist/alert
@@ -36,8 +36,9 @@ export async function POST(req: NextRequest) {
   // ── 파라미터 ──
   const params = await req.json().catch(() => ({} as any));
   const targetOwner = String(params?.owner ?? '').trim();
+  // body의 threshold가 오면 상승/하락 동일 적용으로 override (테스트용). 없으면 Master 시트값 사용.
   const thresholdNum = Number(params?.threshold);
-  const threshold = (thresholdNum > 0 && thresholdNum < 1) ? thresholdNum : THRESHOLD;
+  const overrideThreshold = (thresholdNum > 0 && thresholdNum < 1) ? thresholdNum : null;
 
   const owners = targetOwner
     ? [targetOwner]
@@ -75,13 +76,16 @@ export async function POST(req: NextRequest) {
 
     if (rows.length === 0) { summary.push({ owner, items: 0, alerts: 0 }); continue; }
 
-    // 채팅 ID 미설정 Owner는 시세 조회도 생략 (불필요한 API 호출 방지)
-    // chat_id 는 Owner Spreadsheet의 Master 시트 `Telegram` 컬럼에서 조회.
-    const chatId = await getOwnerChatId(cfg.sheetId);
-    if (!chatId) {
+    // 채팅 ID + 임계값 모두 Master 시트에서 조회
+    const settings = await getOwnerTelegramSettings(cfg.sheetId);
+    if (!settings.chatId) {
       summary.push({ owner, items: rows.length, alerts: 0, skipped: true, reason: 'Master 시트 Telegram 컬럼 미설정 또는 TelegramRecv=N' });
       continue;
     }
+    // 사용자별 상승/하락 임계값 (시트값 → ratio). override 가 오면 둘 다 동일.
+    const upThreshold   = overrideThreshold ?? (settings.upPct   > 0 ? settings.upPct   / 100 : DEFAULT_THRESHOLD);
+    const downThreshold = overrideThreshold ?? (settings.downPct > 0 ? settings.downPct / 100 : DEFAULT_THRESHOLD);
+    const chatId = settings.chatId;
 
     // 시세 병렬 조회
     const infos = await Promise.all(rows.map(r => getStockInfo(r[2]).catch(() => null)));
@@ -103,7 +107,11 @@ export async function POST(req: NextRequest) {
           currency: info?.currency || (r[1] === 'USA' ? 'USD' : 'KRW'),
         };
       })
-      .filter(it => it.price > 0 && Math.abs(it.pct) >= threshold);
+      .filter(it => {
+        if (it.price <= 0) return false;
+        // 상승은 upThreshold 이상, 하락은 downThreshold 이상 절댓값
+        return it.pct >= upThreshold || it.pct <= -downThreshold;
+      });
 
     if (triggered.length === 0) {
       summary.push({ owner, items: rows.length, alerts: 0 });
@@ -138,7 +146,10 @@ export async function POST(req: NextRequest) {
       );
     });
 
-    const header = `[관심종목 변동 알림 (${esc(owner)}) — ±${(threshold * 100).toFixed(0)}% 이상]`;
+    const upPctFmt   = (upThreshold   * 100).toFixed(upThreshold   < 0.01 ? 2 : 1).replace(/\.0$/, '');
+    const downPctFmt = (downThreshold * 100).toFixed(downThreshold < 0.01 ? 2 : 1).replace(/\.0$/, '');
+    const rangeText = upPctFmt === downPctFmt ? `±${upPctFmt}%` : `상승 ${upPctFmt}% / 하락 ${downPctFmt}%`;
+    const header = `[관심종목 변동 알림 (${esc(owner)}) — ${rangeText} 이상]`;
     const text = header + '\n\n' + lines.join('\n');
 
     const tg = await sendTelegram(chatId, text, { parseMode: 'HTML' });
@@ -151,5 +162,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ success: true, threshold, summary });
+  return NextResponse.json({
+    success: true,
+    threshold: overrideThreshold,    // override 가 적용된 경우만 단일 값, 없으면 null (Owner별 시트값 사용)
+    summary,
+  });
 }
