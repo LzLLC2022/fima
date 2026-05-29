@@ -659,7 +659,7 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 
 1. fima.lim.kr 로그인
 2. 우측 상단 **⚙️ 정보 변경** 버튼 클릭
-3. 모달 하단 **📨 관심종목 알람(텔레그램)** 섹션에서:
+3. 모달 하단 **📨 보유/관심종목 알람(텔레그램)** 섹션에서:
 
    | 항목 | 입력값 |
    |---|---|
@@ -741,6 +741,64 @@ curl -X POST https://fima.lim.kr/api/watchlist/alert \
 | `lib/positions.ts` | Ledger 누적으로 보유종목 추출 |
 | `.github/workflows/watchlist-alert.yml` | 매시간 cron |
 | `public/fima.html` (정보 변경 모달) | 텔레그램 설정 UI |
+
+---
+
+## 보유종목 일일 현황 (텔레그램, 화-토 아침 7시)
+
+> 매주 **화-토 07:00 KST**에 보유종목 전체의 평가·손익·누적배당금을 텔레그램으로 발송.
+
+### 작동 방식
+
+- GitHub Actions cron (`0 22 * * 1-5` UTC = **화-토 07:00 KST**)이 `/api/holdings-report` 호출
+- 라우트가 각 Owner마다 `/api/portfolio` 를 self-fetch 해 보유종목 정보 조회
+- Owner의 Master 시트 `Telegram` 컬럼 chat_id 로 발송 (`TelegramRecv=N` 이면 skip)
+- 메시지 본문이 텔레그램 4096자 제한을 넘으면 종목 단위로 자동 분할 (`— 1/2 —`, `— 2/2 —` 푸터)
+
+### 메시지 형식
+
+```
+[보유종목 현황 (Forest) — 2026-05-29(금)]
+📊 평가 324,361,612 KRW · 손익 +77,472,931 KRW (+31.39%)
+
+┃ 005930 삼성전자
+┃ 보유 100.0000주 · 매입단가 70,000.00 KRW · 매입금액 7,000,000 KRW
+┃ 손익 +500,000 KRW (+7.14%) · 평가 7,500,000 KRW
+┃ 누적배당금 30,000 KRW
+
+┃ TSLA Tesla, Inc.
+┃ 보유 6.0000주 · 매입단가 450.79 USD · 매입금액 3,828,694 KRW
+┃ 손익 +172,036 KRW (+4.49%) · 평가 4,000,730 KRW
+```
+
+- **3-4줄 구성**:
+  - 1줄: `TICKER 종목명`
+  - 2줄: `보유 X주 · 매입단가 Y CUR · 매입금액 Z KRW`
+  - 3줄: `손익 ±A KRW (±B%) · 평가 C KRW` (KRW 기준 통일)
+  - 4줄(선택): `누적배당금 D KRW` — 배당이 0인 종목은 줄 생략
+- 헤더에 **총 평가 / 총 손익 / 수익률** 요약
+- 박스는 텔레그램 `<blockquote>`. 색은 사용자 테마 액센트 컬러.
+
+### 수동 호출 (curl)
+
+```bash
+# 전체 Owner
+curl -X POST https://fima.lim.kr/api/holdings-report \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" -d '{}'
+
+# 특정 Owner
+curl -X POST https://fima.lim.kr/api/holdings-report \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" -d '{"owner":"Forest"}'
+```
+
+### 관련 파일
+
+| 파일 | 역할 |
+|---|---|
+| `app/api/holdings-report/route.ts` | 보유종목 현황 발송 API |
+| `.github/workflows/holdings-report.yml` | 화-토 07:00 KST cron |
 
 ---
 

@@ -112,6 +112,7 @@ fima/
 │       ├── watchlist/save/route.ts      (120줄) WatchList 수정
 │       ├── watchlist/alert/route.ts     ( ~110줄) ★ 관심종목 변동 알림 (텔레그램) — 매시 정각 cron
 │       ├── telegram/webhook/route.ts    ( ~75줄) 텔레그램 봇 webhook — /start /myid 시 본인 chat_id 자동 안내
+│       ├── holdings-report/route.ts     (~180줄) ★ 보유종목 현황 텔레그램 발송 (화-토 07:00 KST cron) — portfolio API self-fetch
 │       ├── stock-info/route.ts          (310줄) ★ 시세/환율/52주/배당 통합
 │       ├── bond-info/route.ts           (174줄) 채권 정보 (Naver)
 │       ├── cash-debug/route.ts          (102줄) 현금 잔액 디버깅
@@ -437,6 +438,24 @@ cron 매시 정각
 - Vercel 환경변수: `TELEGRAM_BOT_TOKEN` (전 Owner 공유) + `REPORT_SECRET` (이메일 리포트와 동일 값) + (선택) `TELEGRAM_WEBHOOK_SECRET`.
 - 사용자별 chat_id / 수신여부 / 임계값은 **앱의 정보 변경 화면**에서 입력 → 자동으로 Master 시트에 저장됨. 사용자가 직접 시트 편집해도 동일하게 동작.
 - 토큰 미설정 또는 사용자 chat_id 없는 Owner는 단순 skip — 시스템 자체는 정상 동작.
+
+### 6-9. 보유종목 일일 현황 리포트 (텔레그램, 2026-05-29)
+
+매주 화-토 07:00 KST에 보유종목 전체의 평가·손익·누적배당금을 텔레그램으로 발송합니다. 변동 알림과 별개의 정기 리포트.
+
+| 항목 | 위치 / 구현 |
+|---|---|
+| 리포트 API | [app/api/holdings-report/route.ts](app/api/holdings-report/route.ts) — `OWNER_CONFIG` 순회. 각 Owner에 대해 `${REPORT_BASE_URL}/api/portfolio` 를 **self-fetch** 해 보유 종목 정보 재사용. `Sample` 제외. |
+| 인증 | `Authorization: Bearer <REPORT_SECRET>` — 변동 알림 / 이메일 리포트와 동일 토큰 공유 |
+| 베이스 URL | `process.env.REPORT_BASE_URL` (없으면 `https://fima.lim.kr`). Vercel 환경에서 self-fetch 시 사용. |
+| Cron | [.github/workflows/holdings-report.yml](.github/workflows/holdings-report.yml) — `cron: '0 22 * * 1-5'` (UTC 월-금 22시 = **KST 화-토 07시**). `workflow_dispatch` 입력으로 특정 Owner override 가능. |
+| 메시지 포맷 | 헤더 `[보유종목 현황 (Owner) — YYYY-MM-DD(요일)]\n📊 평가 X KRW · 손익 ±Y KRW (±Z%)` + 종목별 `<blockquote>` 박스. 박스 내부 3-4줄: ① `TICKER 종목명` ② `보유 N주 · 매입단가 P CUR · 매입금액 K KRW` ③ `손익 ±A KRW (±B%) · 평가 V KRW` ④ (배당 > 0 인 경우) `누적배당금 D KRW`. 손익률은 KRW 기준 통일(`pnl / purchaseAmt * 100`). |
+| 메시지 분할 | 텔레그램 메시지 제한 4096자 초과 시 종목 청크 단위로 자동 분할 발송 (`MAX = 4000`, 청크 푸터에 `— N/M —` 표기). |
+| 날짜 라벨 | `kstDateLabel()` 헬퍼가 UTC + 9시간으로 KST 변환 후 `YYYY-MM-DD(요일)` 반환. 요일은 한글(일/월/화/.../토). |
+
+**보유종목 추출은 portfolio API에 위임** — 환율 환산, Split/Merge 누적, 보유 수량 계산 모두 그쪽에서 처리. 이 라우트는 단순히 결과를 텔레그램 메시지 형태로 포맷팅.
+
+**수신 토글**: 변동 알림과 동일한 `TelegramRecv` 컬럼을 공유. `N` 으로 두면 변동 알림과 일일 리포트가 모두 중지됨 — 둘을 분리하려면 시트에 새 컬럼(`HoldingsReportRecv` 등) 추가 + 헬퍼 분기 필요.
 
 #### 사용자 chat_id 확인 흐름 (webhook)
 
