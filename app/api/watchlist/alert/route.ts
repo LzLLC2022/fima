@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OWNER_CONFIG } from '@/lib/config';
 import { getSheetValues } from '@/lib/sheets';
 import { getStockInfo } from '@/lib/stock';
-import { sendTelegram, getChatIdForOwner, chatIdEnvKey } from '@/lib/telegram';
+import { sendTelegram, getOwnerChatId } from '@/lib/telegram';
 
 const WATCHLIST_SHEET_NAME = 'Favorate';
 const THRESHOLD = 0.05;  // 5%
@@ -20,8 +20,9 @@ const THRESHOLD = 0.05;  // 5%
  *
  * 동작:
  *   각 Owner의 Favorate 시트를 읽어 등록 종목의 현재가/전일종가 대비 변동률을 확인.
- *   |changepct| >= threshold 인 종목이 있으면 해당 Owner의 텔레그램 채팅(TELEGRAM_CHAT_ID_<OWNER>)으로
- *   한 건의 메시지에 묶어 발송. 변동률 유지되는 한 매시간 반복 발송 (사용자 요청).
+ *   |changepct| >= threshold 인 종목이 있으면 해당 Owner의 텔레그램 채팅으로 한 건의 메시지에 묶어 발송.
+ *   chat_id 는 Owner Spreadsheet의 Master 시트 `Telegram` 컬럼에서 조회 (Email 컬럼과 동일 패턴).
+ *   변동률 유지되는 한 매시간 반복 발송 (사용자 요청).
  */
 export async function POST(req: NextRequest) {
   // ── 인증 ──
@@ -75,9 +76,10 @@ export async function POST(req: NextRequest) {
     if (rows.length === 0) { summary.push({ owner, items: 0, alerts: 0 }); continue; }
 
     // 채팅 ID 미설정 Owner는 시세 조회도 생략 (불필요한 API 호출 방지)
-    const chatId = getChatIdForOwner(owner);
+    // chat_id 는 Owner Spreadsheet의 Master 시트 `Telegram` 컬럼에서 조회.
+    const chatId = await getOwnerChatId(cfg.sheetId);
     if (!chatId) {
-      summary.push({ owner, items: rows.length, alerts: 0, skipped: true, reason: `${chatIdEnvKey(owner)} 미설정` });
+      summary.push({ owner, items: rows.length, alerts: 0, skipped: true, reason: 'Master 시트 Telegram 컬럼 미설정 또는 TelegramRecv=N' });
       continue;
     }
 
@@ -126,7 +128,7 @@ export async function POST(req: NextRequest) {
     const header = `🚨 관심종목 변동 알림 (${owner}) — ±${(threshold * 100).toFixed(0)}% 이상`;
     const text = header + '\n' + lines.join('\n');
 
-    const tg = await sendTelegram(owner, text);
+    const tg = await sendTelegram(chatId, text);
     summary.push({
       owner,
       items: rows.length,

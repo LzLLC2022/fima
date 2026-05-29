@@ -119,7 +119,7 @@ fima/
 │   ├── config.ts               ( 92줄) ★ OWNER_CONFIG, 시트명
 │   ├── sheets.ts               (302줄) Google Sheets API 래퍼
 │   ├── stock.ts                (~1100줄) ★ Yahoo/Naver 시세·환율 (42KB)
-│   ├── telegram.ts             (  60줄) Telegram Bot API 발송 헬퍼 (Owner별 chat_id)
+│   ├── telegram.ts             (  ~90줄) Telegram Bot API 발송 헬퍼 (Master 시트 Telegram 컬럼에서 chat_id 조회)
 │   └── bookkeeping.ts          (~1100줄) ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26)
 ├── public/
 │   ├── fima.html               (298KB) ★★ 프론트엔드 SPA 단일 파일
@@ -392,13 +392,16 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 | 알림 API | [app/api/watchlist/alert/route.ts](app/api/watchlist/alert/route.ts) — `OWNER_CONFIG` 순회, `getStockInfo()`의 `changepct` 사용. `Sample`은 제외. |
 | 인증 | `Authorization: Bearer <REPORT_SECRET>` — 이메일 리포트와 동일 토큰 공유 |
 | 임계값 | 기본 `THRESHOLD = 0.05` (5%). 호출 시 `{"threshold":0.10}` 로 override 가능. |
-| 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `chatIdEnvKey(owner)` → `TELEGRAM_CHAT_ID_<OWNER_UPPER>`. `TELEGRAM_BOT_TOKEN` 또는 chat_id 환경변수 미설정이면 `skipped: true`로 fail-soft. |
+| 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `getOwnerChatId(sheetId)` 가 Owner Spreadsheet의 **Master 시트 `Telegram` 컬럼** 에서 chat_id 조회 (Email 컬럼과 동일 패턴, lowercase 매칭). `TelegramRecv=N`이면 발송 거부. `sendTelegram(chatId, text)`는 `TELEGRAM_BOT_TOKEN` 환경변수가 없거나 chatId가 빈 문자열이면 `skipped: true`로 fail-soft. |
 | Cron | [.github/workflows/watchlist-alert.yml](.github/workflows/watchlist-alert.yml) — `cron: '0 * * * *'` (UTC). `workflow_dispatch` 입력으로 owner/threshold 수동 override 가능. |
 | 메시지 포맷 | `🚨 관심종목 변동 알림 (<Owner>) — ±5% 이상` 헤더 + 종목별 `🔴/🔵 [±N%] TICKER NAME: 어제 → 오늘 CUR` 라인 (한국 관행: 상승 🔴, 하락 🔵). 변동률 큰 순 정렬. |
 
 **중복 정책**: 사용자 결정에 따라 변동률이 5% 이상 유지되는 동안 매시간 반복 발송. 별도 dedup 상태(KV/시트 컬럼) 없음 — 필요해지면 시트에 `LastAlertedAt` 컬럼 추가하여 1일 1회 제한 등 정책 변경 가능.
 
-**운영 환경변수**: Vercel에 `TELEGRAM_BOT_TOKEN` + Owner별 `TELEGRAM_CHAT_ID_<OWNER>` 미등록 시 알림은 단순 skip되며 시스템 자체는 정상 동작.
+**운영 설정**:
+- Vercel 환경변수: `TELEGRAM_BOT_TOKEN` (전 Owner 공유) + `REPORT_SECRET` (이메일 리포트와 동일 값).
+- Owner별 chat_id 는 각 Spreadsheet의 Master 시트 `Telegram` 컬럼에서 관리. 사용자가 직접 시트에 입력/변경 가능 (개발자 개입 불필요).
+- 토큰 미설정 또는 시트에 chat_id 없는 Owner는 단순 skip — 시스템 자체는 정상 동작.
 
 ---
 

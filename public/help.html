@@ -483,7 +483,7 @@
             <li><span class="dot"></span><b>기준가</b> — 직전 영업일 종가 (Yahoo Finance / NAVER 금융의 changePct 사용).</li>
             <li><span class="dot"></span><b>주기</b> — GitHub Actions cron(매시 정각, UTC) → <code>/api/watchlist/alert</code> 호출.</li>
             <li><span class="dot"></span><b>발송 단위</b> — 한 Owner의 5% 변동 종목들을 <b>한 메시지에 묶어서</b> 발송. 큰 변동률 순으로 정렬.</li>
-            <li><span class="dot"></span><b>대상 채팅</b> — Vercel 환경변수 <code>TELEGRAM_CHAT_ID_&lt;OWNER&gt;</code>로 Owner별 분리. 미설정 Owner는 자동 skip.</li>
+            <li><span class="dot"></span><b>대상 채팅</b> — 각 Owner의 Google Spreadsheet <b>Master 시트의 <code>Telegram</code> 컬럼</b>에 chat_id를 직접 입력 (이메일과 동일 패턴). 비어있으면 자동 skip. <code>TelegramRecv</code> 컬럼을 <code>N</code> 으로 두면 명시적 수신 거부.</li>
             <li><span class="dot"></span><b>중복 정책</b> — 변동률 유지 시 매시간 반복 발송. 조용히 두려면 GitHub Actions 워크플로를 비활성화하거나 시트에서 종목을 제거.</li>
           </ul>
           <div class="note">

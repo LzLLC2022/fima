@@ -578,7 +578,8 @@ curl -X POST https://fima.lim.kr/api/report/email \
 - GitHub Actions cron (`0 * * * *`)이 매시 정각에 `/api/watchlist/alert` 호출
 - 각 Owner의 Favorate 시트를 읽어 `getStockInfo()`로 현재가·전일종가·changepct 조회
 - `|changepct| >= 0.05` 인 종목을 모아 **Owner별로 한 메시지에 묶어** 발송
-- `TELEGRAM_BOT_TOKEN` 또는 `TELEGRAM_CHAT_ID_<OWNER>` 환경변수가 없으면 해당 Owner는 skip
+- 봇 토큰은 환경변수, **chat_id는 Owner의 Master 시트에서** 관리 (Email 컬럼과 동일 패턴)
+- 토큰 미설정 또는 시트에 chat_id 없는 Owner는 자동 skip
 
 ### Step 1 — 텔레그램 봇 생성
 
@@ -591,11 +592,23 @@ curl -X POST https://fima.lim.kr/api/report/email \
 | 변수 | 값 |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | BotFather 토큰 (모든 Owner 공유) |
-| `TELEGRAM_CHAT_ID_LZ` | Lz의 chat_id |
-| `TELEGRAM_CHAT_ID_FOREST` | Forest의 chat_id (없으면 Forest는 알림 skip) |
 | `REPORT_SECRET` | 이메일 리포트와 동일한 Bearer 토큰 (이미 등록되어 있다면 그대로 사용) |
 
-### Step 3 — GitHub Actions 워크플로 활성화
+> chat_id는 환경변수가 아니라 **각 Owner의 Master 시트**에서 관리합니다 (Step 3).
+
+### Step 3 — 각 Owner의 Master 시트에 chat_id 등록
+
+각 Owner의 Google Spreadsheet → **Master** 시트 첫 행에 `Telegram` 컬럼을 추가하고, 두 번째 행 셀에 자신의 `chat_id`를 입력합니다.
+
+| Account Owner | Pin | Email | Telegram | TelegramRecv |
+|---|---|---|---|---|
+| Lz | 1234 | lz@example.com | 123456789 | (비워두면 수신함) |
+
+- **컬럼명**: `Telegram` (대소문자 무관, `TelegramChatId` 도 인식)
+- **수신 거부 토글**: `TelegramRecv` 컬럼이 `N` / `0` / `false` 이면 발송 차단 (이메일의 `EmailRecv`와 동일 패턴)
+- chat_id 셀이 비어있는 Owner는 자동 skip
+
+### Step 4 — GitHub Actions 워크플로 활성화
 
 이미 `.github/workflows/watchlist-alert.yml`이 등록되어 있으며 매시 정각 자동 실행됩니다.
 수동 실행은 Actions 탭 → **Watchlist Alert (Telegram)** → Run workflow.
