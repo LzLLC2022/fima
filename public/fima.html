@@ -4445,7 +4445,14 @@
     rawQueryResult.rowIndices = rawQueryResult.rowIndices.map(function(r) {
       return r > deletedSheetRow ? r - 1 : r;
     });
-    applyClientFilters();
+    // 마지막 한 건을 지운 경우 applyClientFilters()가 빈 데이터에서 조기 return 하므로
+    // (기존 '삭제 중' 버튼이 박힌 화면이 그대로 남음) 빈 상태를 직접 렌더링한다.
+    if (!rawQueryResult.data.length) {
+      lastQueryResult = { headers: rawQueryResult.headers, data: [], rowIndices: [], sorted: [] };
+      renderTable(rawQueryResult.headers, [], []);
+    } else {
+      applyClientFilters();
+    }
   }
 
   // ====================================================
