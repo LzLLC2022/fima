@@ -119,16 +119,18 @@ export async function POST(req: NextRequest) {
       return parts.join('.');
     };
     const fmtPct = (v: number) => (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%';
+    // HTML parse_mode 용 escape
+    const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const lines = triggered.map(it => {
       const arrow = it.pct >= 0 ? '🔴' : '🔵';  // 한국 관행: 상승 빨강 / 하락 파랑
-      return `${arrow} [${fmtPct(it.pct)}] ${it.ticker} ${it.name}: ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)} ${it.currency}`;
+      return `${arrow} <code>${fmtPct(it.pct)}</code> ${esc(it.ticker)} ${esc(it.name)}: ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)} ${esc(it.currency)}`;
     });
 
-    const header = `🚨 관심종목 변동 알림 (${owner}) — ±${(threshold * 100).toFixed(0)}% 이상`;
+    const header = `🚨 관심종목 변동 알림 (${esc(owner)}) — ±${(threshold * 100).toFixed(0)}% 이상`;
     const text = header + '\n' + lines.join('\n');
 
-    const tg = await sendTelegram(chatId, text);
+    const tg = await sendTelegram(chatId, text, { parseMode: 'HTML' });
     summary.push({
       owner,
       items: rows.length,
