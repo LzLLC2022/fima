@@ -569,15 +569,23 @@ curl -X POST https://fima.lim.kr/api/report/email \
 
 ---
 
-## 관심종목 변동 알림 (텔레그램)
+## 보유/관심종목 변동 알림 (텔레그램)
 
-> 관심종목(`Favorate` 시트)의 현재가가 **전일 종가 대비 사용자별 임계값(상승/하락 각각)** 이상 변동되면 1시간마다 텔레그램으로 알림.
+> **보유종목**(Ledger 누적)과 **관심종목**(Favorate 시트)의 현재가가 **전일 종가 대비 사용자별 임계값(상승/하락 각각)** 이상 변동되면 1시간마다 텔레그램으로 알림.
 
 ### 작동 방식
 
 - GitHub Actions cron (`0 * * * *`)이 매시 정각에 `/api/watchlist/alert` 호출
-- 각 Owner의 Favorate 시트를 읽어 `getStockInfo()`로 현재가·전일종가·changepct 조회
-- `changepct >= upPct` (상승) 또는 `changepct <= -downPct` (하락) 종목을 모아 **Owner별로 한 메시지**로 발송
+- 각 Owner의 **Ledger** 누적으로 보유 종목 추출 (`getOwnedPositions()`) + **Favorate** 시트로 관심종목 추출
+- 두 그룹에 겹치는 ticker는 **보유종목 섹션에만** 표시 (중복 제거)
+- 각 종목별로 `getStockInfo()`로 현재가·전일종가·changepct 조회
+- `changepct >= upPct` (상승) 또는 `changepct <= -downPct` (하락) 종목을 모아 **두 섹션** 한 메시지로 발송:
+  ```
+  [보유종목 변동 알림 (Owner) — ±X% 이상]
+  ...
+  [관심종목 변동 알림 (Owner) — ±X% 이상]
+  ...
+  ```
 - 봇 토큰은 Vercel 환경변수, 사용자별 설정(chat_id / 수신여부 / 상승·하락 임계값)은 **각 Owner의 Master 시트에서 관리** — 앱의 `정보 변경` 화면에서 입력하면 자동으로 시트에 저장됨
 - 봇 토큰이 없거나 사용자가 chat_id를 등록하지 않은 Owner는 자동 skip
 
@@ -666,17 +674,25 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 ### 메시지 예시
 
 ```
-[관심종목 변동 알림 (Lz) — ±5% 이상]
+[보유종목 변동 알림 (Forest) — ±5% 이상]
+
+🔵 347850 디앤디파마텍
+┃ -12.19%  -13,100.00 KRW
+┃ 107,500.00 ⇒ 94,400.00 KRW
+
+🔴 PLTR Palantir Technologies Inc.
+┃ +8.17%  +10.83 USD
+┃ 132.51 ⇒ 143.34 USD
+
+
+[관심종목 변동 알림 (Forest) — ±5% 이상]
 
 🔴 TSLA Tesla, Inc.
 ┃ +8.20%  +18.04 USD
 ┃ 220.00 ⇒ 238.04 USD
-
-🔵 AAPL Apple Inc.
-┃ -6.10%  -10.69 USD
-┃ 175.20 ⇒ 164.51 USD
 ```
 
+- 두 섹션은 한 텔레그램 메시지 안에 함께 표시. 변동된 종목이 있는 섹션만 노출 (둘 다 변동이면 두 섹션, 한쪽만이면 그 섹션만).
 - 박스는 텔레그램 `<blockquote>` 효과 (좌측 세로선 + 우상단 따옴표).
 - 박스 색은 **사용자의 텔레그램 클라이언트 액센트 컬러** 따라 단일 색으로 표시됨 (분홍/파랑/녹색 등). Settings → Appearance → Color에서 변경 가능. **봇이 상승/하락별로 박스 색을 다르게 지정하는 것은 텔레그램 API 제약상 불가능.**
 - 종목 헤더의 🔴(상승) / 🔵(하락)으로 시각 구분.
@@ -712,9 +728,11 @@ curl -X POST https://fima.lim.kr/api/watchlist/alert \
 
 | 파일 | 역할 |
 |---|---|
-| `app/api/watchlist/alert/route.ts` | 알림 API (POST) — Master 시트 사용자별 임계값 적용 |
+| `app/api/watchlist/alert/route.ts` | 알림 API (POST) — 보유/관심 두 그룹, 사용자별 임계값 적용 |
 | `app/api/auth/change-telegram/route.ts` | 텔레그램 설정 GET/POST — 헤더 자동 생성 |
+| `app/api/telegram/webhook/route.ts` | 봇 `/start` /myid 응답 + PUT 으로 setWebhook 등록 |
 | `lib/telegram.ts` | Bot API 발송 + `getOwnerTelegramSettings()` 헬퍼 |
+| `lib/positions.ts` | Ledger 누적으로 보유종목 추출 |
 | `.github/workflows/watchlist-alert.yml` | 매시간 cron |
 | `public/fima.html` (정보 변경 모달) | 텔레그램 설정 UI |
 
