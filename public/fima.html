@@ -1716,9 +1716,9 @@
                 onkeydown="if(event.key==='Enter')confirmWlAddItem()">
             </div>
             <div style="display:flex;gap:6px;padding-bottom:1px;">
-              <button onclick="confirmWlAddItem()"
+              <button id="wlAddConfirmBtn" onclick="confirmWlAddItem()"
                 style="padding:6px 16px;font-size:0.85rem;background:#c05621;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;">추가</button>
-              <button onclick="hideWlAddForm()"
+              <button id="wlAddCancelBtn" onclick="hideWlAddForm()"
                 style="padding:6px 12px;font-size:0.85rem;background:#ede9fe;color:#4a5568;border:1px solid #c4b5fd;border-radius:6px;cursor:pointer;">취소</button>
             </div>
           </div>
@@ -5734,6 +5734,19 @@
     var ticker = (document.getElementById('wlAddTickerInput').value || '').trim().toUpperCase();
     if (!ticker) { alert('Ticker를 입력하세요.'); return; }
 
+    // 진행 중 버튼 잠금 + 텍스트 변경 (중복 클릭 방지 / 사용자 피드백)
+    var btn       = document.getElementById('wlAddConfirmBtn');
+    var cancelBtn = document.getElementById('wlAddCancelBtn');
+    if (btn && btn.disabled) return;  // 이미 처리 중이면 무시
+    var originalText = btn ? btn.textContent : '추가';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ 추가 중...';
+      btn.style.cursor = 'wait';
+      btn.style.opacity = '0.7';
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
+
     try {
       var res = await fetch('/api/watchlist/save', {
         method: 'POST',
@@ -5751,6 +5764,14 @@
       loadWatchlistData(true);
     } catch(e) {
       alert('추가 오류: ' + e.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.style.cursor = 'pointer';
+        btn.style.opacity = '1';
+      }
+      if (cancelBtn) cancelBtn.disabled = false;
     }
   }
 
