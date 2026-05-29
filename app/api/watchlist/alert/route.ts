@@ -124,11 +124,11 @@ export async function POST(req: NextRequest) {
 
     const lines = triggered.map(it => {
       const arrow = it.pct >= 0 ? '🔴' : '🔵';  // 한국 관행: 상승 빨강 / 하락 파랑
-      return `${arrow} <code>${fmtPct(it.pct)}</code> ${esc(it.ticker)} ${esc(it.name)}: ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)} ${esc(it.currency)}`;
+      return `${arrow} <b>${fmtPct(it.pct)}</b> ${esc(it.ticker)} ${esc(it.name)}\n   ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)} ${esc(it.currency)}`;
     });
 
     const header = `🚨 관심종목 변동 알림 (${esc(owner)}) — ±${(threshold * 100).toFixed(0)}% 이상`;
-    const text = header + '\n' + lines.join('\n');
+    const text = header + '\n\n' + lines.join('\n\n');
 
     const tg = await sendTelegram(chatId, text, { parseMode: 'HTML' });
     summary.push({
