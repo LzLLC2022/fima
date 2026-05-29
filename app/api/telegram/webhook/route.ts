@@ -81,3 +81,62 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({ ok: true, hint: 'Telegram webhook endpoint. Use POST.' });
 }
+
+/**
+ * PUT /api/telegram/webhook
+ *
+ * 운영 환경변수 TELEGRAM_BOT_TOKEN 으로 텔레그램 setWebhook 을 호출하는 setup 엔드포인트.
+ * 인증: Authorization: Bearer <REPORT_SECRET>
+ *
+ * Body (모두 optional):
+ *   { url?: string, secret_token?: string }
+ *     - url:          기본 https://fima.lim.kr/api/telegram/webhook
+ *     - secret_token: 명시되면 그 값으로 등록. 빈 문자열이면 환경변수 TELEGRAM_WEBHOOK_SECRET 사용.
+ *       그것도 빈 값이면 secret 미사용으로 등록.
+ *
+ * 이 라우트는 setup용 — webhook 등록 후 일상적으로 호출할 일 없음. 인증된 호출만 허용.
+ */
+export async function PUT(req: NextRequest) {
+  const auth = req.headers.get('authorization') || '';
+  const got  = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const expected = String(process.env.REPORT_SECRET ?? '').trim();
+  if (!expected || got !== expected) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const botToken = String(process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
+  if (!botToken) {
+    return NextResponse.json({ ok: false, error: 'TELEGRAM_BOT_TOKEN missing' }, { status: 500 });
+  }
+
+  const body = await req.json().catch(() => ({} as any));
+  const url  = String(body?.url ?? '').trim() || 'https://fima.lim.kr/api/telegram/webhook';
+  // secret_token: body 값이 있으면 그것 / 없으면 환경변수 / 둘 다 없으면 미사용
+  let secretToken = String(body?.secret_token ?? '').trim();
+  if (!secretToken) secretToken = String(process.env.TELEGRAM_WEBHOOK_SECRET ?? '').trim();
+
+  const params: any = { url };
+  if (secretToken) params.secret_token = secretToken;
+
+  try {
+    const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(params),
+    });
+    const tgJson = await tgRes.json().catch(() => ({}));
+
+    // getWebhookInfo 도 같이 호출해서 등록 상태 반환
+    const infoRes = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`).catch(() => null);
+    const infoJson = infoRes ? await infoRes.json().catch(() => ({})) : null;
+
+    return NextResponse.json({
+      ok:           tgRes.ok && tgJson?.ok === true,
+      setWebhook:   tgJson,
+      webhookInfo:  infoJson?.result ?? infoJson ?? null,
+      secretUsed:   !!secretToken,
+    });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || 'fetch failed' }, { status: 500 });
+  }
+}
