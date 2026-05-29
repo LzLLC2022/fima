@@ -3486,7 +3486,7 @@
     const dispHeaders = [];
     headers.forEach(function(h, i) {
       dispHeaders.push(h);
-      if (i === insertAfter) dispHeaders.push('\uD569\uACC4(KRW)');
+      if (i === insertAfter) dispHeaders.push('\uAC70\uB798\uD569\uACC4(KRW)');
     });
     const theadCells = dispHeaders.map(function(h) {
       if (h === 'Date') {
@@ -3562,7 +3562,7 @@
 
     container.innerHTML = `
       <div class="result-info-row">
-        <div class="result-info">\uCD1D <strong>${rows.length}\uAC74</strong>\uC758 \uAC70\uB798 \uB0B4\uC5ED &nbsp;\u00B7&nbsp; \uD569\uACC4(KRW) = Price \u00D7 Qty \u00D7 \uD658\uC728</div>
+        <div class="result-info">\uCD1D <strong>${rows.length}\uAC74</strong>\uC758 \uAC70\uB798 \uB0B4\uC5ED &nbsp;\u00B7&nbsp; \uAC70\uB798\uD569\uACC4(KRW) = Price \u00D7 Qty \u00D7 \uD658\uC728</div>
       </div>
       <div class="table-wrap-scroll">
         <table>${thead}${tbody}</table>
