@@ -23,7 +23,7 @@
 | 탭 | 기능 |
 |---|---|
 | 현황 | 자산별 평가금액·손익·수익률, Region 그룹핑 |
-| 거래 조회 | 기간·계좌·티커 필터, 수정/삭제, CSV |
+| 거래 조회 | 기간·계좌·티커 필터, 행 클릭 → 상세조회 모달(KRW 환산), 결과 화면에서 거래입력 팝업 호출(저장 후 자동 새로고침), 수정/삭제, CSV |
 | 리포트 | YTD/MTD/Daily 손익, 월별 수익률 차트, 배당 |
 | 리밸런싱 | 목표 비중 → 매수/매도 수량 자동 |
 | 관심종목 | WatchList 시트 기반 실시간 시세 |
@@ -354,6 +354,32 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 | 분기 상태 | `pendingEditMode` / `pendingEditFields` / `editingAccountOwner` [public/fima.html:1764-1766](public/fima.html#L1764-L1766) |
 
 > 새 필드를 추가할 때는 입력 화면 + 수정 모달 + `HEADER_TO_FIELD` 매핑 [public/fima.html:3585](public/fima.html#L3585) 세 곳을 모두 갱신해야 합니다.
+
+### 6-7. 거래조회 — 거래입력 팝업 & 상세조회 모달 (2026-05-29)
+
+거래조회 결과 화면에서 두 가지 모달을 추가로 호출할 수 있습니다.
+
+**(A) 거래입력 팝업 (조회 결과에서 바로 신규 입력)**
+
+| 항목 | 구현 |
+|---|---|
+| 트리거 버튼 | 거래조회 조건 영역 우측의 `#qAddTxBtn` — `runQuery()` 성공 시 노출 / `resetQuery()` 시 숨김 |
+| 모달 컨테이너 | `#inputPopupModal` (`.input-popup-backdrop` / `.input-popup-box`) — 빈 슬롯 `#inputPopupSlot` 보유 |
+| 핵심 트릭 | `openInputPopupFromQuery()`가 **`#tab-input` DOM 자체를 슬롯으로 `appendChild`** — 입력 폼의 모든 핸들러·상태가 그대로 재사용됨. `closeInputPopupFromQuery()`는 원래 부모/형제 위치로 복원 (`_inputOrigParent` / `_inputOrigNext`) |
+| 가시성 | `.tab-content { display: none }` 기본값을 덮어쓰는 `.input-popup-slot > #tab-input { display: block !important; }` 규칙 |
+| 저장 분기 | `confirmSave()`의 `onSaveSuccess`에서 `inputPopupMode`가 true이면 `closeInputPopupFromQuery() + runQuery()`로 종료하고 `queryAlertBox`에 임시 성공 알림 — 일반 입력 탭과는 `resetFormKeepBasic()` 호출이 갈림 [public/fima.html:2963-2982](public/fima.html#L2963-L2982) |
+
+**(B) 거래 상세조회 모달 (행 클릭)**
+
+| 항목 | 구현 |
+|---|---|
+| 트리거 | `renderTable()`의 각 `<tr>`에 `class="query-row-clickable"` + `onclick="openDetailModal(rowIdx)"`. 수정/삭제 버튼은 `event.stopPropagation()`으로 분리 |
+| 데이터 소스 | `lastQueryResult.sorted` — `renderTable()`에서 정렬된 `[{row, sheetRow}]` 배열을 저장해 두고 `rowIdx`로 접근 |
+| 렌더링 | `openDetailModal()` [public/fima.html:3458+](public/fima.html#L3458) — 헤더 기반 동적 렌더링으로 시트의 모든 컬럼을 5개 섹션(기본/종목/금액/매입/메모/기타)으로 그룹핑 |
+| KRW 환산 | `Region`이 KRW가 아니면 Price · 합계(Price×Qty) · Dividend · Tax · Charge에 현지통화 + `≈ X KRW` 보조 라인을 같이 표시 (`amtCell()` 헬퍼) |
+| 수정 연계 | `_detailCurrentSheetRow` / `_detailCurrentRowIdx`를 저장해 두고 푸터 ✏️ 수정 버튼 → `openEditFromDetail()`이 상세를 닫고 기존 `openEditModal(sheetRow, rowIdx)` 호출 |
+
+> 표에 잘려 보이는 컬럼이나 외화 거래의 KRW 환산을 한 번에 확인하기 위한 화면. 표 자체에 열을 추가하지 않고 모달로 상세를 분리한 게 핵심.
 
 ---
 
