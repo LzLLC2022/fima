@@ -123,11 +123,17 @@ export async function POST(req: NextRequest) {
     const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const lines = triggered.map(it => {
-      const arrow = it.pct >= 0 ? '🔴' : '🔵';  // 한국 관행: 상승 빨강 / 하락 파랑
-      return `${arrow} <b>${fmtPct(it.pct)}</b> ${esc(it.ticker)} ${esc(it.name)}\n   ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)} ${esc(it.currency)}`;
+      const diff = it.price - it.yesterday;
+      const diffStr = (diff >= 0 ? '+' : '') + fmtPrice(diff);
+      // 1줄째: 변동률 + 변동금액 (Bold + Underline 으로 강조 — 텔레그램은 색상 미지원)
+      // 2줄째: 종목명 + 어제 → 오늘 가격
+      return (
+        `<b><u>${fmtPct(it.pct)}  ${diffStr} ${esc(it.currency)}</u></b>\n` +
+        `${esc(it.ticker)} ${esc(it.name)}  ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)}`
+      );
     });
 
-    const header = `🚨 관심종목 변동 알림 (${esc(owner)}) — ±${(threshold * 100).toFixed(0)}% 이상`;
+    const header = `[관심종목 변동 알림 (${esc(owner)}) — ±${(threshold * 100).toFixed(0)}% 이상]`;
     const text = header + '\n\n' + lines.join('\n\n');
 
     const tg = await sendTelegram(chatId, text, { parseMode: 'HTML' });
