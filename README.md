@@ -579,11 +579,14 @@ curl -X POST https://fima.lim.kr/api/report/email \
 - 각 Owner의 **Ledger** 누적으로 보유 종목 추출 (`getOwnedPositions()`) + **Favorate** 시트로 관심종목 추출
 - 두 그룹에 겹치는 ticker는 **보유종목 섹션에만** 표시 (중복 제거)
 - 각 종목별로 `getStockInfo()`로 현재가·전일종가·changepct 조회
-- `changepct >= upPct` (상승) 또는 `changepct <= -downPct` (하락) 종목을 모아 **두 섹션** 한 메시지로 발송:
+- `changepct >= upPct` (상승) 또는 `changepct <= -downPct` (하락) 종목을 모아 **보유 / 관심을 별도의 텔레그램 메시지**로 각각 발송:
   ```
-  [보유종목 변동 알림 (Owner) — ±X% 이상]
+  메시지 1:
+  [보유종목 변동 알림 (Owner) — +X% 이상, -Y% 이하]
   ...
-  [관심종목 변동 알림 (Owner) — ±X% 이상]
+
+  메시지 2:
+  [관심종목 변동 알림 (Owner) — +X% 이상, -Y% 이하]
   ...
   ```
 - 봇 토큰은 Vercel 환경변수, 사용자별 설정(chat_id / 수신여부 / 상승·하락 임계값)은 **각 Owner의 Master 시트에서 관리** — 앱의 `정보 변경` 화면에서 입력하면 자동으로 시트에 저장됨
@@ -673,8 +676,9 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 
 ### 메시지 예시
 
+**메시지 1 (보유종목)**
 ```
-[보유종목 변동 알림 (Forest) — ±5% 이상]
+[보유종목 변동 알림 (Forest) — +5% 이상, -5% 이하]
 
 🔵 347850 디앤디파마텍
 ┃ -12.19%  -13,100.00 KRW
@@ -683,16 +687,18 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
 🔴 PLTR Palantir Technologies Inc.
 ┃ +8.17%  +10.83 USD
 ┃ 132.51 ⇒ 143.34 USD
+```
 
-
-[관심종목 변동 알림 (Forest) — ±5% 이상]
+**메시지 2 (관심종목)**
+```
+[관심종목 변동 알림 (Forest) — +5% 이상, -5% 이하]
 
 🔴 TSLA Tesla, Inc.
 ┃ +8.20%  +18.04 USD
 ┃ 220.00 ⇒ 238.04 USD
 ```
 
-- 두 섹션은 한 텔레그램 메시지 안에 함께 표시. 변동된 종목이 있는 섹션만 노출 (둘 다 변동이면 두 섹션, 한쪽만이면 그 섹션만).
+- 보유/관심 두 그룹을 **각각 독립된 텔레그램 메시지**로 발송. 변동된 종목이 있는 그룹만 발송 (둘 다면 메시지 2건, 한쪽만이면 1건).
 - 박스는 텔레그램 `<blockquote>` 효과 (좌측 세로선 + 우상단 따옴표).
 - 박스 색은 **사용자의 텔레그램 클라이언트 액센트 컬러** 따라 단일 색으로 표시됨 (분홍/파랑/녹색 등). Settings → Appearance → Color에서 변경 가능. **봇이 상승/하락별로 박스 색을 다르게 지정하는 것은 텔레그램 API 제약상 불가능.**
 - 종목 헤더의 🔴(상승) / 🔵(하락)으로 시각 구분.
