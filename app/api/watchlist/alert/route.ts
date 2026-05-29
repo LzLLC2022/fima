@@ -125,16 +125,21 @@ export async function POST(req: NextRequest) {
     const lines = triggered.map(it => {
       const diff = it.price - it.yesterday;
       const diffStr = (diff >= 0 ? '+' : '') + fmtPrice(diff);
-      // 1줄째: 변동률 + 변동금액 (Bold + Underline 으로 강조 — 텔레그램은 색상 미지원)
-      // 2줄째: 종목명 + 어제 → 오늘 가격
+      const emoji  = it.pct >= 0 ? '🔴' : '🔵';  // 한국 관행: 상승 빨강 / 하락 파랑
+      // 박스 밖: 이모지 + 티커 + 종목명
+      // 박스 안 1줄: 변동률 + 변동금액 (Bold)
+      // 박스 안 2줄: 전일가 => 현재가 (한 줄)
       return (
-        `<b><u>${fmtPct(it.pct)}  ${diffStr} ${esc(it.currency)}</u></b>\n` +
-        `${esc(it.ticker)} ${esc(it.name)}  ${fmtPrice(it.yesterday)} → ${fmtPrice(it.price)}`
+        `${emoji} ${esc(it.ticker)} ${esc(it.name)}\n` +
+        `<blockquote>` +
+        `<b>${fmtPct(it.pct)}  ${diffStr} ${esc(it.currency)}</b>\n` +
+        `${fmtPrice(it.yesterday)} ⇒ ${fmtPrice(it.price)} ${esc(it.currency)}` +
+        `</blockquote>`
       );
     });
 
     const header = `[관심종목 변동 알림 (${esc(owner)}) — ±${(threshold * 100).toFixed(0)}% 이상]`;
-    const text = header + '\n\n' + lines.join('\n\n');
+    const text = header + '\n\n' + lines.join('\n');
 
     const tg = await sendTelegram(chatId, text, { parseMode: 'HTML' });
     summary.push({
