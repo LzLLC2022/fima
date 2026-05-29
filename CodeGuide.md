@@ -122,6 +122,7 @@ fima/
 │   ├── sheets.ts               (302줄) Google Sheets API 래퍼
 │   ├── stock.ts                (~1100줄) ★ Yahoo/Naver 시세·환율 (42KB)
 │   ├── telegram.ts             (  ~90줄) Telegram Bot API 발송 헬퍼 (Master 시트 Telegram 컬럼에서 chat_id 조회)
+│   ├── positions.ts            (  ~80줄) Ledger 누적으로 보유 종목 추출 (alert route 에서 사용)
 │   └── bookkeeping.ts          (~1100줄) ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26)
 ├── public/
 │   ├── fima.html               (298KB) ★★ 프론트엔드 SPA 단일 파일
@@ -385,9 +386,9 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 
 > 표에 잘려 보이는 컬럼이나 외화 거래의 KRW 환산을 한 번에 확인하기 위한 화면. 표 자체에 열을 추가하지 않고 모달로 상세를 분리한 게 핵심.
 
-### 6-8. 관심종목 변동 알림 (텔레그램, 2026-05-29)
+### 6-8. 보유/관심종목 변동 알림 (텔레그램, 2026-05-29)
 
-매시간 GitHub Actions cron이 `/api/watchlist/alert`를 호출해, 각 Owner의 Favorate 시트 종목 중 사용자별 임계값을 넘은 종목을 텔레그램으로 발송합니다. 사용자 설정 UI는 앱의 **⚙️ 정보 변경** 모달에 통합되어 있습니다.
+매시간 GitHub Actions cron이 `/api/watchlist/alert`를 호출해, 각 Owner의 **보유종목(Ledger 누적)** 과 **관심종목(Favorate)** 중 사용자별 임계값을 넘은 종목을 텔레그램으로 발송합니다. 사용자 설정 UI는 앱의 **⚙️ 정보 변경** 모달에 통합되어 있습니다.
 
 #### 데이터 흐름
 
@@ -401,24 +402,28 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 cron 매시 정각
    └─ POST /api/watchlist/alert
         └─ getOwnerTelegramSettings(sheetId)  → { chatId, recv, upPct, downPct }
-        └─ Favorate 시트 종목별 getStockInfo()
+        ├─ getOwnedPositions(sheetId)         → Ledger 누적 보유 ticker
+        ├─ Favorate 시트                       → 관심 ticker (보유 중복은 제외)
+        ├─ 각 ticker 별 getStockInfo()          (병렬)
         └─ pct >= upPct/100 || pct <= -downPct/100 인 종목만 추출
-        └─ sendTelegram(chatId, html, {parseMode:'HTML'})
-              └─ <blockquote> + 🔴/🔵 헤더 형식
+              ├─ [보유종목 변동 알림 …] 섹션 빌드
+              └─ [관심종목 변동 알림 …] 섹션 빌드
+                 → sendTelegram(chatId, html, {parseMode:'HTML'})
 ```
 
 #### 주요 구성
 
 | 항목 | 위치 / 구현 |
 |---|---|
-| 알림 API | [app/api/watchlist/alert/route.ts](app/api/watchlist/alert/route.ts) — `OWNER_CONFIG` 순회. `body.threshold` override 시 모든 Owner 동일 임계값, 없으면 시트값. `Sample` 제외. |
+| 알림 API | [app/api/watchlist/alert/route.ts](app/api/watchlist/alert/route.ts) — `OWNER_CONFIG` 순회. 보유종목(`getOwnedPositions`) + 관심종목(`Favorate` 시트) 두 그룹 처리. 같은 ticker 가 두 그룹에 있으면 **보유종목 섹션에만 표시**(중복 제거). `body.threshold` override 시 모든 Owner 동일 임계값, 없으면 시트값. `Sample` 제외. |
+| 보유 종목 추출 | [lib/positions.ts](lib/positions.ts) — `getOwnedPositions(sheetId)` 가 Ledger 시트에서 ticker별 `buyQty + splitAdj - sellQty > 0` 계산. portfolio API 의 누적 로직 ([app/api/portfolio/route.ts](app/api/portfolio/route.ts#L260-L294)) 을 가볍게 재현. Cash 행은 제외. |
 | 인증 | `Authorization: Bearer <REPORT_SECRET>` — 이메일 리포트와 동일 토큰 공유 |
 | 사용자 설정 API | [app/api/auth/change-telegram/route.ts](app/api/auth/change-telegram/route.ts) — GET(현재값) / POST(저장). `planColumns()` 가 4개 컬럼 인덱스 탐색 후 누락된 헤더는 헤더 행 우측에 차례로 자동 생성. |
 | 시트 컬럼 | Master 시트의 `Telegram` (chat_id, 숫자 문자열) / `TelegramRecv` (Y/N) / `TelegramUpPct` (숫자 %) / `TelegramDownPct` (숫자 %). 헤더 매칭은 소문자/언더스코어 무시. |
 | 임계값 정책 | 사용자 시트에 값이 있으면 그 값, 없거나 0 이하면 fallback `DEFAULT_THRESHOLD = 0.05` (5%). |
 | 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `getOwnerTelegramSettings(sheetId)` 가 4개 값 일괄 반환. `TelegramRecv` 명시 N/0/false → `chatId: ''` 로 반환되어 자연스럽게 skip. `sendTelegram(chatId, text, {parseMode})` — 토큰/chatId 미설정 시 `skipped: true` fail-soft. |
 | Cron | [.github/workflows/watchlist-alert.yml](.github/workflows/watchlist-alert.yml) — `cron: '0 * * * *'` (UTC). `workflow_dispatch` 입력으로 owner/threshold 수동 override 가능. |
-| 메시지 포맷 | `[관심종목 변동 알림 (<Owner>) — ±X% 이상]` 헤더 (상승/하락 임계값이 다르면 `상승 X% / 하락 Y%`) + 종목별 `🔴/🔵 티커 종목명` 헤더 + `<blockquote>` 박스 안에 `<b>±N% ±diff CUR</b>` / `어제 ⇒ 오늘 CUR`. parse_mode `HTML`. 변동률 큰 순 정렬. |
+| 메시지 포맷 | `[보유종목 변동 알림 (<Owner>) — ±X% 이상]` + `[관심종목 변동 알림 …]` 두 섹션을 한 메시지에 배치 (상승/하락 임계값이 다르면 `상승 X% / 하락 Y%`). 종목별 `🔴/🔵 티커 종목명` 헤더 + `<blockquote>` 박스 안에 `<b>±N% ±diff CUR</b>` / `어제 ⇒ 오늘 CUR`. parse_mode `HTML`. 변동률 큰 순 정렬. 한쪽 섹션이 비면 그 섹션 생략. |
 | UI | [public/fima.html](public/fima.html) — 정보 변경 모달 내 `📨 관심종목 알람(텔레그램)` 섹션. 모달 열 때 `GET /api/auth/change-telegram` 으로 현재값 로딩. `submitTelegramChange()` 가 POST. |
 
 **텔레그램 표시 한계 (사용자 안내 시 주의)**:
