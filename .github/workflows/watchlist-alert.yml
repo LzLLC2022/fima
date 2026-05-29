@@ -1,0 +1,47 @@
+name: Watchlist Alert (Telegram)
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # 매시 정각 (UTC)
+  workflow_dispatch:
+    inputs:
+      owner:
+        description: '특정 Owner만 발송 (비워두면 전체)'
+        required: false
+        default: ''
+      threshold:
+        description: '임계값 (0.05 = 5%, 비워두면 기본 5%)'
+        required: false
+        default: ''
+
+jobs:
+  send-alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger watchlist alert
+        run: |
+          OWNER="${{ github.event.inputs.owner }}"
+          THRESHOLD="${{ github.event.inputs.threshold }}"
+          BODY="{}"
+          if [ -n "$OWNER" ] && [ -n "$THRESHOLD" ]; then
+            BODY="{\"owner\":\"$OWNER\",\"threshold\":$THRESHOLD}"
+          elif [ -n "$OWNER" ]; then
+            BODY="{\"owner\":\"$OWNER\"}"
+          elif [ -n "$THRESHOLD" ]; then
+            BODY="{\"threshold\":$THRESHOLD}"
+          fi
+          echo "=== body: $BODY ==="
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST https://fima.lim.kr/api/watchlist/alert \
+            -H "Authorization: Bearer ${{ secrets.REPORT_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "$BODY")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY_RESP=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP Status: $HTTP_CODE"
+          echo "$BODY_RESP" | python3 -m json.tool 2>/dev/null || echo "$BODY_RESP"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Error: API returned $HTTP_CODE"
+            exit 1
+          fi

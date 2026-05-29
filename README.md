@@ -569,6 +569,87 @@ curl -X POST https://fima.lim.kr/api/report/email \
 
 ---
 
+## 관심종목 변동 알림 (텔레그램)
+
+> 관심종목(`Favorate` 시트)의 현재가가 **전일 종가 대비 ±5% 이상** 변동되면 1시간마다 텔레그램으로 알림.
+
+### 작동 방식
+
+- GitHub Actions cron (`0 * * * *`)이 매시 정각에 `/api/watchlist/alert` 호출
+- 각 Owner의 Favorate 시트를 읽어 `getStockInfo()`로 현재가·전일종가·changepct 조회
+- `|changepct| >= 0.05` 인 종목을 모아 **Owner별로 한 메시지에 묶어** 발송
+- 봇 토큰은 환경변수, **chat_id는 Owner의 Master 시트에서** 관리 (Email 컬럼과 동일 패턴)
+- 토큰 미설정 또는 시트에 chat_id 없는 Owner는 자동 skip
+
+### Step 1 — 텔레그램 봇 생성
+
+1. 텔레그램에서 `@BotFather` 검색 → `/newbot` 명령으로 봇 생성 → 토큰 발급.
+2. 봇과 1:1 대화창에서 아무 메시지나 한 번 보냄 (그래야 봇이 chat 알게 됨).
+3. `https://api.telegram.org/bot<TOKEN>/getUpdates` 호출하여 `result[*].message.chat.id` 확인.
+
+### Step 2 — Vercel 환경변수 추가
+
+| 변수 | 값 |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | BotFather 토큰 (모든 Owner 공유) |
+| `REPORT_SECRET` | 이메일 리포트와 동일한 Bearer 토큰 (이미 등록되어 있다면 그대로 사용) |
+
+> chat_id는 환경변수가 아니라 **각 Owner의 Master 시트**에서 관리합니다 (Step 3).
+
+### Step 3 — 각 Owner의 Master 시트에 chat_id 등록
+
+각 Owner의 Google Spreadsheet → **Master** 시트 첫 행에 `Telegram` 컬럼을 추가하고, 두 번째 행 셀에 자신의 `chat_id`를 입력합니다.
+
+| Account Owner | Pin | Email | Telegram | TelegramRecv |
+|---|---|---|---|---|
+| Lz | 1234 | lz@example.com | 123456789 | (비워두면 수신함) |
+
+- **컬럼명**: `Telegram` (대소문자 무관, `TelegramChatId` 도 인식)
+- **수신 거부 토글**: `TelegramRecv` 컬럼이 `N` / `0` / `false` 이면 발송 차단 (이메일의 `EmailRecv`와 동일 패턴)
+- chat_id 셀이 비어있는 Owner는 자동 skip
+
+### Step 4 — GitHub Actions 워크플로 활성화
+
+이미 `.github/workflows/watchlist-alert.yml`이 등록되어 있으며 매시 정각 자동 실행됩니다.
+수동 실행은 Actions 탭 → **Watchlist Alert (Telegram)** → Run workflow.
+
+### 수동 호출 (curl)
+
+```bash
+# 전체 Owner
+curl -X POST https://fima.lim.kr/api/watchlist/alert \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" -d '{}'
+
+# 특정 Owner + 임계값 10% (테스트)
+curl -X POST https://fima.lim.kr/api/watchlist/alert \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"Lz","threshold":0.10}'
+```
+
+### 메시지 예시
+
+```
+🚨 관심종목 변동 알림 (Lz) — ±5% 이상
+🔴 [+8.20%] TSLA Tesla: 220.00 → 238.04 USD
+🔵 [-6.10%] AAPL Apple: 175.20 → 164.51 USD
+🔴 [+5.30%] 005930 삼성전자: 71,500.00 → 75,289.50 KRW
+```
+
+> ⚠️ 변동률이 5% 이상 유지되는 한 **매시간 동일 알림이 반복 발송**됩니다.  
+> 조용해지길 원하면 GitHub Actions 워크플로를 비활성화하거나 임계값을 늘리세요.
+
+### 관련 파일
+
+| 파일 | 역할 |
+|---|---|
+| `app/api/watchlist/alert/route.ts` | 알림 API (POST) |
+| `lib/telegram.ts` | Bot API 발송 헬퍼 |
+| `.github/workflows/watchlist-alert.yml` | 매시간 cron |
+
+---
+
 ## 라이선스
 
 개인 사용 목적으로 제작된 프로젝트입니다.
