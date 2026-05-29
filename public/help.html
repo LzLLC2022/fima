@@ -526,14 +526,13 @@
         <div class="sub">
           <div class="sub-title">🆔 텔레그램 ID 확인 방법</div>
           <ol style="margin-top:8px;padding-left:24px;line-height:1.7;color:#4a5568;font-size:0.87rem;">
-            <li style="margin-bottom:6px;"><b>봇 추가</b> — 텔레그램에서 관리자가 알려준 봇 username(FiMa 알림) 검색 → 1:1 대화창 진입 → 하단 <code>Start</code> 버튼 클릭 (또는 <code>/start</code> 입력).</li>
-            <li style="margin-bottom:6px;"><b>첫 메시지 전송</b> — 봇과의 채팅창에서 아무 텍스트(<code>hi</code> 등)를 한 번 전송. 봇이 응답하지 않아도 정상.</li>
-            <li style="margin-bottom:6px;"><b>chat_id 조회</b> — PC 브라우저에서 <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code> 호출 (TOKEN은 관리자에게 문의). JSON 응답의 <code>result[*].message.chat.id</code> 값이 본인 chat_id (보통 9~10자리 정수).</li>
-            <li style="margin-bottom:6px;"><b>fima 정보 변경에 입력</b> — 위 chat_id를 <b>텔레그램 ID</b> 칸에 입력 → <b>알림 수신</b> 체크 → <b>상승 %</b> / <b>하락 %</b> 설정 → <b>텔레그램 설정 저장</b>.</li>
+            <li style="margin-bottom:6px;"><b>봇 찾기</b> — 텔레그램에서 관리자가 알려준 봇 username(FiMa 알림) 검색 → 1:1 대화창 진입 → 하단 <code>Start</code> 버튼 클릭 (또는 <code>/start</code> 입력).</li>
+            <li style="margin-bottom:6px;"><b>봇의 응답에서 ID 확인</b> — 봇이 자동으로 <i>"당신의 텔레그램 ID 입니다: <code>123456789</code>"</i> 메시지를 보내줍니다. 그 숫자를 길게 눌러 <b>복사</b>.</li>
+            <li style="margin-bottom:6px;"><b>fima 정보 변경에 입력</b> — 위 chat_id를 <b>텔레그램 ID</b> 칸에 붙여넣기 → <b>알림 수신</b> 체크 → <b>상승 %</b> / <b>하락 %</b> 설정 → <b>텔레그램 설정 저장</b>.</li>
           </ol>
           <div class="note" style="margin-top:10px;">
             <span class="note-icon">ℹ️</span>
-            <span><code>"result": []</code> 빈 배열이 나오면 2단계의 메시지를 다시 보내고 재호출. 시간이 너무 지나면 텔레그램이 버립니다. 빠른 대안으로 <code>@userinfobot</code> 도 있으나 공식 verified 봇이 아니므로 위 방법을 권장합니다.</span>
+            <span>봇이 응답하지 않거나 ID를 다시 보고 싶을 때는 봇 대화창에서 <code>/start</code> 또는 <code>/myid</code> 를 다시 입력하세요. 봇 username을 모르면 관리자에게 문의.</span>
           </div>
         </div>
 

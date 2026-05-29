@@ -111,6 +111,7 @@ fima/
 │       ├── watchlist/route.ts           ( 79줄) WatchList 조회
 │       ├── watchlist/save/route.ts      (120줄) WatchList 수정
 │       ├── watchlist/alert/route.ts     ( ~110줄) ★ 관심종목 변동 알림 (텔레그램) — 매시 정각 cron
+│       ├── telegram/webhook/route.ts    ( ~75줄) 텔레그램 봇 webhook — /start /myid 시 본인 chat_id 자동 안내
 │       ├── stock-info/route.ts          (310줄) ★ 시세/환율/52주/배당 통합
 │       ├── bond-info/route.ts           (174줄) 채권 정보 (Naver)
 │       ├── cash-debug/route.ts          (102줄) 현금 잔액 디버깅
@@ -428,9 +429,28 @@ cron 매시 정각
 **중복 정책**: 변동률이 임계값 이상 유지되는 동안 매시간 반복 발송. dedup 상태 없음 — 필요해지면 시트에 `TelegramLastAlertedAt` 컬럼 추가하여 1일 1회 제한 등 정책 변경 가능.
 
 **운영 설정**:
-- Vercel 환경변수: `TELEGRAM_BOT_TOKEN` (전 Owner 공유) + `REPORT_SECRET` (이메일 리포트와 동일 값).
+- Vercel 환경변수: `TELEGRAM_BOT_TOKEN` (전 Owner 공유) + `REPORT_SECRET` (이메일 리포트와 동일 값) + (선택) `TELEGRAM_WEBHOOK_SECRET`.
 - 사용자별 chat_id / 수신여부 / 임계값은 **앱의 정보 변경 화면**에서 입력 → 자동으로 Master 시트에 저장됨. 사용자가 직접 시트 편집해도 동일하게 동작.
 - 토큰 미설정 또는 사용자 chat_id 없는 Owner는 단순 skip — 시스템 자체는 정상 동작.
+
+#### 사용자 chat_id 확인 흐름 (webhook)
+
+| 단계 | 상세 |
+|---|---|
+| 사용자 진입 | 텔레그램에서 봇 username 검색 → 1:1 대화에서 `/start` 또는 `/myid` 입력 |
+| 텔레그램 → fima | `POST /api/telegram/webhook` 호출 ([app/api/telegram/webhook/route.ts](app/api/telegram/webhook/route.ts)) — message.chat.id 추출 |
+| fima → 사용자 | `sendMessage` 로 chat_id 를 본인 채팅에 응답 (HTML, `<code>` 박스로 복사 편의) |
+| 사용자 입력 | 정보 변경 모달의 `텔레그램 ID` 칸에 붙여넣기 → `텔레그램 설정 저장` |
+
+**setWebhook 등록 (관리자 1회)**:
+```bash
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -d "url=https://fima.lim.kr/api/telegram/webhook" \
+  -d "secret_token=<RANDOM>"
+```
+`secret_token` 사용 시 Vercel `TELEGRAM_WEBHOOK_SECRET` 환경변수에 동일 값 등록. 미사용 시 webhook URL 공개 노출에 따른 abuse 가능 (sendMessage 호출만 가능하지만 rate limit 없음).
+
+`/start` 외 다른 메시지는 webhook 라우트에서 무시 — 봇은 chat_id 안내 외 다른 기능 없음.
 
 ---
 

@@ -603,29 +603,48 @@ Vercel → 프로젝트 → Settings → Environment Variables:
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Step 1의 토큰 |
 | `REPORT_SECRET` | 이메일 리포트와 동일 (이미 등록되어 있으면 그대로) |
+| `TELEGRAM_WEBHOOK_SECRET` | (선택) Step 3에서 `setWebhook` 호출 시 사용한 `secret_token` 과 동일 값. 미설정 시 webhook 인증 검증 스킵 (보안상 권장 X). |
 
 등록 후 다음 main push 시 자동 반영됩니다.
 
 ---
 
-### Step 3 — 각 사용자가 본인 chat_id 확인
+### Step 3 — 봇 Webhook 활성화 (관리자, 1회)
 
-> 사용자별로 1회. 텔레그램 ID는 사람마다 다릅니다.
+> 사용자가 봇에 `/start` 만 입력하면 본인 chat_id를 봇이 자동 응답합니다. 이를 위해 webhook을 한 번 등록.
 
-1. 텔레그램에서 봇(Step 1에서 만든 username) 검색 → 1:1 대화창 열기
-2. `/start` 누르거나 아무 메시지(`hi` 등)를 봇에게 한 번 전송
-   - 봇이 응답하지 않아도 정상 (Telegram이 chat 관계를 기록함)
-3. PC 브라우저에서 다음 URL 호출 (관리자에게 토큰을 받아 사용):
+```bash
+# url 은 운영 도메인. secret_token 은 임의 랜덤 문자열 (Vercel TELEGRAM_WEBHOOK_SECRET 에 동일 값 등록 권장)
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -d "url=https://fima.lim.kr/api/telegram/webhook" \
+  -d "secret_token=$(openssl rand -hex 16)"
+```
+
+응답이 `{"ok":true,"result":true,...}` 면 등록 성공. 등록된 webhook 상태는 `https://api.telegram.org/bot<TOKEN>/getWebhookInfo` 로 확인.
+
+> ⚠️ `secret_token` 사용을 권장합니다. 미사용 시 webhook URL을 아는 사람이 임의로 POST 호출 가능. 사용 시 `TELEGRAM_WEBHOOK_SECRET` 환경변수에 동일 값 등록 필요 (Step 2 표에 추가).
+
+### Step 4 — 각 사용자가 본인 chat_id 확인
+
+> 사용자별로 1회. 봇이 자동으로 알려줍니다.
+
+1. 텔레그램에서 봇(Step 1의 username, 예: `FiMa 알림`) 검색 → 1:1 대화창 열기
+2. 하단 **Start** 버튼 클릭 (또는 `/start` 입력)
+3. 봇이 자동으로 다음 메시지 응답:
    ```
-   https://api.telegram.org/bot<TOKEN>/getUpdates
+   ○○○님, 안녕하세요!
+
+   당신의 텔레그램 ID 입니다:
+   123456789
+
+   fima 앱에서 ⚙️ 정보 변경 → 📨 관심종목 알람(텔레그램) 의
+   텔레그램 ID 칸에 위 숫자를 입력하시면 ...
    ```
-4. JSON 응답에서 `result[*].message.chat.id` 값을 복사 — 보통 9~10자리 정수
-   - 예: `"chat": { "id": 987654321, ... }` → `987654321`
-   - `"result": []` 빈 배열이 나오면 2단계의 메시지를 다시 보내고 재시도
+4. 숫자를 길게 눌러 복사. ID를 다시 보고 싶으면 `/myid` 입력.
 
-> 빠른 대안: 검색에서 `@userinfobot` (verified 봇 아님) → `/start` 하면 본인 `Id`를 알려줌. 위 방법으로 검증 권장.
+> 💡 **사용자에게 봇 토큰을 절대 공유하지 마세요.** 토큰은 봇 제어 권한 자체이므로, 사용자는 위 흐름으로만 chat_id를 알아낼 수 있어야 합니다.
 
-### Step 4 — fima 앱에서 텔레그램 설정 저장
+### Step 5 — fima 앱에서 텔레그램 설정 저장
 
 1. fima.lim.kr 로그인
 2. 우측 상단 **⚙️ 정보 변경** 버튼 클릭
@@ -633,7 +652,7 @@ Vercel → 프로젝트 → Settings → Environment Variables:
 
    | 항목 | 입력값 |
    |---|---|
-   | 텔레그램 ID | Step 3의 chat_id (숫자) |
+   | 텔레그램 ID | Step 4에서 봇이 알려준 chat_id (숫자) |
    | 알림 수신 | 체크 |
    | 상승 % | 알림 받을 상승 임계값 (예: `5`) |
    | 하락 % | 알림 받을 하락 임계값 (예: `5`) |
