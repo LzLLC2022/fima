@@ -421,6 +421,52 @@
     .btn-save-edit:hover { background: #4a3d8f; }
     .btn-save-edit:disabled { background: #ddd8ff; cursor: not-allowed; }
 
+    /* ---- 거래 입력 팝업 (거래조회에서 호출) ---- */
+    .input-popup-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: flex; align-items: flex-start; justify-content: center;
+      z-index: 1000; padding: 24px 16px; overflow-y: auto;
+    }
+    .input-popup-box {
+      background: white; border-radius: 16px;
+      width: 100%; max-width: 880px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+      display: flex; flex-direction: column;
+      max-height: calc(100vh - 48px);
+    }
+    .input-popup-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 22px; border-bottom: 1px solid #e5e1f5;
+      position: sticky; top: 0; background: white; border-radius: 16px 16px 0 0;
+      z-index: 2;
+    }
+    .input-popup-header h3 {
+      font-size: 1.05rem; font-weight: 700; color: #3d2f7f; margin: 0;
+    }
+    .input-popup-header .modal-close {
+      background: none; border: none; font-size: 1.4rem; color: #718096;
+      cursor: pointer; padding: 0 6px;
+    }
+    .input-popup-header .modal-close:hover { color: #2d2747; }
+    .input-popup-slot { padding: 4px 0 18px; overflow-y: auto; }
+    /* 팝업 안에서 보일 때는 tab-content가 active가 아니어도 표시 */
+    .input-popup-slot > #tab-input { display: block !important; padding: 0 22px; }
+    /* 팝업 모드에서 거래입력 화면의 하단 버튼은 모달 footer 역할 */
+    .input-popup-slot .btn-row { margin-top: 8px; }
+    @media (max-width: 768px) {
+      .input-popup-backdrop { padding: 8px; }
+      .input-popup-slot > #tab-input { padding: 0 12px; }
+    }
+
+    /* ---- 거래조회: 거래입력 호출 버튼 ---- */
+    .btn-add-tx {
+      padding: 9px 16px; border-radius: 8px; border: none;
+      background: #38a169; color: white; font-weight: 700; cursor: pointer;
+      font-size: 0.86rem;
+    }
+    .btn-add-tx:hover { background: #2f855a; }
+    .btn-add-tx:disabled { background: #c6f6d5; color: #f0fff4; cursor: not-allowed; }
+
     /* ---- 현황 탭 ---- */
     .total-asset-box {
       background: linear-gradient(135deg, #3d2f7f 0%, #6b5cc4 100%);
@@ -1637,6 +1683,7 @@
               <button class="btn btn-search" id="qSearchBtn" onclick="runQuery()">조회</button>
               <button class="btn btn-reset-filter" onclick="resetQuery()">초기화</button>
               <button class="btn-export" id="exportBtn" onclick="exportToCSV()" disabled>CSV 내보내기</button>
+              <button class="btn-add-tx hidden" id="qAddTxBtn" onclick="openInputPopupFromQuery()">➕ 거래입력</button>
             </div>
           </div>
         </div>
@@ -1734,6 +1781,17 @@
       <button class="btn-cancel-edit" onclick="closeEditModal()">취소</button>
       <button class="btn-save-edit" id="editSaveBtn" onclick="submitEditForm()">저장</button>
     </div>
+  </div>
+</div>
+
+<!-- ===================== 거래 입력 팝업 모달 (거래조회에서 호출) ===================== -->
+<div id="inputPopupModal" class="input-popup-backdrop hidden">
+  <div class="input-popup-box">
+    <div class="input-popup-header">
+      <h3>➕ 거래 입력</h3>
+      <button class="modal-close" onclick="closeInputPopupFromQuery()" title="닫기">✕</button>
+    </div>
+    <div class="input-popup-slot" id="inputPopupSlot"></div>
   </div>
 </div>
 
@@ -2959,10 +3017,22 @@
       pendingFgnBuy   = false;
       if (result.success) {
         const cnt = result.recordsCreated > 1 ? ` (${result.recordsCreated}\uAC74 \uC790\uB3D9 \uC0DD\uC131)` : '';
-        showAlert('\u2705 \uAC70\uB798\uAC00 \uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!' + cnt, 'success');
-        resetFormKeepBasic();
         if (formData.ticker && !tickerList.some(t => t.ticker === formData.ticker)) {
           tickerList.push({ ticker: formData.ticker, name: formData.name });
+        }
+        if (inputPopupMode) {
+          // \uAC70\uB798\uC870\uD68C\uC5D0\uC11C \uD638\uCD9C\uB41C \uD31D\uC5C5 \u2192 \uB2EB\uACE0 \uBAA9\uB85D \uC7AC\uC870\uD68C
+          closeInputPopupFromQuery();
+          try { runQuery(); } catch(_) {}
+          // \uAC70\uB798\uC870\uD68C \uD0ED \uC0C1\uB2E8\uC5D0 \uC131\uACF5 \uC54C\uB9BC \uB178\uCD9C
+          var qab = document.getElementById('queryAlertBox');
+          if (qab) {
+            qab.innerHTML = '<div class="alert alert-success"><span>\u2705</span><span>\uAC70\uB798\uAC00 \uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!' + cnt + '</span></div>';
+            setTimeout(function() { if (qab) qab.innerHTML = ''; }, 4000);
+          }
+        } else {
+          showAlert('\u2705 \uAC70\uB798\uAC00 \uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!' + cnt, 'success');
+          resetFormKeepBasic();
         }
       } else {
         showAlert('\uC800\uC7A5 \uC2E4\uD328: ' + (result.error || '\uC54C \uC218 \uC5C6\uB294 \uC624\uB958'), 'error');
@@ -3077,6 +3147,9 @@
         rawQueryResult = { headers: result.headers, data: result.data, rowIndices: result.rowIndices || [] };
         populateNameList();
         applyClientFilters();
+        // \uC870\uD68C \uC131\uACF5 \uC2DC \uAC70\uB798\uC785\uB825 \uBC84\uD2BC \uB178\uCD9C
+        var addBtn = document.getElementById('qAddTxBtn');
+        if (addBtn) addBtn.classList.remove('hidden');
       }).catch(function(err) {
         showLoading(false);
         document.getElementById('queryResult').innerHTML =
@@ -3325,6 +3398,55 @@
     qNameOptions    = [];
     var qdd = document.getElementById('qNameDropdown'); if (qdd) qdd.classList.add('hidden');
     var eb  = document.getElementById('exportBtn');     if (eb)  eb.disabled = true;
+    var ab  = document.getElementById('qAddTxBtn');     if (ab)  ab.classList.add('hidden');
+  }
+
+  // ---- 거래조회에서 거래입력 팝업 호출 ----
+  // 입력 폼 DOM(#tab-input)을 그대로 모달 슬롯으로 옮겨 동일 UX/로직 재사용
+  var inputPopupMode = false;
+  var _inputOrigParent = null;
+  var _inputOrigNext   = null;
+
+  function openInputPopupFromQuery() {
+    var inputEl = document.getElementById('tab-input');
+    var slot    = document.getElementById('inputPopupSlot');
+    var modal   = document.getElementById('inputPopupModal');
+    if (!inputEl || !slot || !modal) return;
+    if (inputPopupMode) return;  // 중복 오픈 방지
+
+    // 폼 초기화 (오늘 날짜, Trade/Account 등 기본값)
+    try { resetForm(); } catch(_) {}
+
+    // 원래 위치 기억
+    _inputOrigParent = inputEl.parentNode;
+    _inputOrigNext   = inputEl.nextSibling;
+
+    slot.appendChild(inputEl);
+    modal.classList.remove('hidden');
+    inputPopupMode = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeInputPopupFromQuery() {
+    var inputEl = document.getElementById('tab-input');
+    var modal   = document.getElementById('inputPopupModal');
+    if (!inputPopupMode || !inputEl || !_inputOrigParent) {
+      if (modal) modal.classList.add('hidden');
+      inputPopupMode = false;
+      document.body.style.overflow = '';
+      return;
+    }
+    // 원래 위치로 복귀
+    if (_inputOrigNext && _inputOrigNext.parentNode === _inputOrigParent) {
+      _inputOrigParent.insertBefore(inputEl, _inputOrigNext);
+    } else {
+      _inputOrigParent.appendChild(inputEl);
+    }
+    _inputOrigParent = null;
+    _inputOrigNext   = null;
+    modal.classList.add('hidden');
+    inputPopupMode = false;
+    document.body.style.overflow = '';
   }
 
   // ====================================================
