@@ -124,6 +124,7 @@ fima/
 │   ├── stock.ts                (~1100줄) ★ Yahoo/Naver 시세·환율 (42KB)
 │   ├── telegram.ts             (  ~90줄) Telegram Bot API 발송 헬퍼 (Master 시트 Telegram 컬럼에서 chat_id 조회)
 │   ├── positions.ts            (  ~80줄) Ledger 누적으로 보유 종목 추출 (alert route 에서 사용)
+│   ├── alertState.ts           (  ~75줄) 변동 알림 '직전 변동률' 상태 저장 (_AlertState 탭 read/write)
 │   └── bookkeeping.ts          (~1100줄) ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26)
 ├── public/
 │   ├── fima.html               (298KB) ★★ 프론트엔드 SPA 단일 파일
@@ -406,7 +407,10 @@ cron 매시 정각
         ├─ getOwnedPositions(sheetId)         → Ledger 누적 보유 ticker
         ├─ Favorate 시트                       → 관심 ticker (보유 중복은 제외)
         ├─ 각 ticker 별 getStockInfo()          (병렬)
-        └─ pct >= upPct/100 || pct <= -downPct/100 인 종목만 추출
+        ├─ pct >= upPct/100 || pct <= -downPct/100 인 종목만 추출 (triggered)
+        ├─ readAlertState(sheetId)   → 직전 실행 변동률 맵 (_AlertState 탭)
+        ├─ writeAlertState(sheetId)  → 이번 triggered 변동률 저장(덮어쓰기)
+        └─ 직전과 변동률 동일한 종목 제외 후 남은 것만 빌드
               ├─ [보유종목 변동 알림 …] 섹션 빌드
               └─ [관심종목 변동 알림 …] 섹션 빌드
                  → sendTelegram(chatId, html, {parseMode:'HTML'})
@@ -422,6 +426,7 @@ cron 매시 정각
 | 사용자 설정 API | [app/api/auth/change-telegram/route.ts](app/api/auth/change-telegram/route.ts) — GET(현재값) / POST(저장). `planColumns()` 가 4개 컬럼 인덱스 탐색 후 누락된 헤더는 헤더 행 우측에 차례로 자동 생성. |
 | 시트 컬럼 | Master 시트의 `Telegram` (chat_id, 숫자 문자열) / `TelegramRecv` (Y/N) / `TelegramUpPct` (숫자 %) / `TelegramDownPct` (숫자 %). 헤더 매칭은 소문자/언더스코어 무시. |
 | 임계값 정책 | 사용자 시트에 값이 있으면 그 값, 없거나 0 이하면 fallback `DEFAULT_THRESHOLD = 0.05` (5%). |
+| 동일 변동률 제외 | [lib/alertState.ts](lib/alertState.ts) — 직전 실행에서 임계값을 통과한 종목의 변동률을 각 Owner 스프레드시트의 `_AlertState` 탭(Ticker/Pct/UpdatedAt)에 저장. 다음 실행에서 `직전 변동률 == 현재 변동률(소수 2자리 % 반올림)`이면 메시지에서 제외. 직전에 대상이 아니었던(맵에 없던) 종목은 영향 없음. 상태는 **메시지 발송 여부와 무관하게 이번에 triggered된 종목 기준**으로 저장하므로, 동일 변동으로 제외돼도 다음 실행까지 억제가 유지됨. 임계값 밖으로 빠지면 맵에서 사라져 재진입 시 다시 알림. Vercel 서버리스라 메모리 대신 시트에 저장. |
 | 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `getOwnerTelegramSettings(sheetId)` 가 4개 값 일괄 반환. `TelegramRecv` 명시 N/0/false → `chatId: ''` 로 반환되어 자연스럽게 skip. `sendTelegram(chatId, text, {parseMode})` — 토큰/chatId 미설정 시 `skipped: true` fail-soft. |
 | Cron | [.github/workflows/watchlist-alert.yml](.github/workflows/watchlist-alert.yml) — `cron: '0 * * * *'` (UTC). `workflow_dispatch` 입력으로 owner/threshold 수동 override 가능. |
 | 메시지 포맷 | 보유/관심 그룹을 **각각 독립된 sendTelegram 호출**로 발송 (둘 다 변동이면 메시지 2건). 제목: `[보유종목 변동 알림 (<Owner>) — +X% 이상, -Y% 이하]` / `[관심종목 변동 알림 (...) — ...]`. 종목별 `🔴/🔵 티커 종목명` 헤더 + `<blockquote>` 박스 안에 `<b>±N% ±diff CUR</b>` / `어제 ⇒ 오늘 CUR`. parse_mode `HTML`. 변동률 큰 순 정렬. 변동 없는 그룹은 발송 생략. |
