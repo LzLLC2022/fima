@@ -423,7 +423,7 @@ cron 매시 정각
 | 임계값 정책 | 사용자 시트에 값이 있으면 그 값, 없거나 0 이하면 fallback `DEFAULT_THRESHOLD = 0.05` (5%). |
 | 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `getOwnerTelegramSettings(sheetId)` 가 4개 값 일괄 반환. `TelegramRecv` 명시 N/0/false → `chatId: ''` 로 반환되어 자연스럽게 skip. `sendTelegram(chatId, text, {parseMode})` — 토큰/chatId 미설정 시 `skipped: true` fail-soft. |
 | Cron | [.github/workflows/watchlist-alert.yml](.github/workflows/watchlist-alert.yml) — `cron: '0 * * * *'` (UTC). `workflow_dispatch` 입력으로 owner/threshold 수동 override 가능. |
-| 메시지 포맷 | `[보유종목 변동 알림 (<Owner>) — ±X% 이상]` + `[관심종목 변동 알림 …]` 두 섹션을 한 메시지에 배치 (상승/하락 임계값이 다르면 `상승 X% / 하락 Y%`). 종목별 `🔴/🔵 티커 종목명` 헤더 + `<blockquote>` 박스 안에 `<b>±N% ±diff CUR</b>` / `어제 ⇒ 오늘 CUR`. parse_mode `HTML`. 변동률 큰 순 정렬. 한쪽 섹션이 비면 그 섹션 생략. |
+| 메시지 포맷 | 보유/관심 그룹을 **각각 독립된 sendTelegram 호출**로 발송 (둘 다 변동이면 메시지 2건). 제목: `[보유종목 변동 알림 (<Owner>) — +X% 이상, -Y% 이하]` / `[관심종목 변동 알림 (...) — ...]`. 종목별 `🔴/🔵 티커 종목명` 헤더 + `<blockquote>` 박스 안에 `<b>±N% ±diff CUR</b>` / `어제 ⇒ 오늘 CUR`. parse_mode `HTML`. 변동률 큰 순 정렬. 변동 없는 그룹은 발송 생략. |
 | UI | [public/fima.html](public/fima.html) — 정보 변경 모달 내 `📨 관심종목 알람(텔레그램)` 섹션. 모달 열 때 `GET /api/auth/change-telegram` 으로 현재값 로딩. `submitTelegramChange()` 가 POST. |
 
 **텔레그램 표시 한계 (사용자 안내 시 주의)**:

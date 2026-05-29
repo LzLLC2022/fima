@@ -484,7 +484,7 @@
             <li><span class="dot"></span><b>기준가</b> — 직전 영업일 종가 (Yahoo Finance / NAVER 금융의 changepct 사용).</li>
             <li><span class="dot"></span><b>주기</b> — GitHub Actions cron(매시 정각, UTC) → <code>/api/watchlist/alert</code> 호출.</li>
             <li><span class="dot"></span><b>판정 기준</b> — 상승 종목은 본인이 설정한 <code>상승 %</code> 이상, 하락 종목은 <code>하락 %</code> 이상일 때 알림. 두 값을 각각 다르게 설정 가능 (예: 상승 3% / 하락 7%).</li>
-            <li><span class="dot"></span><b>발송 단위</b> — 한 Owner의 변동 종목들을 한 메시지에 묶어 <b>[보유종목 변동 알림 …]</b> · <b>[관심종목 변동 알림 …]</b> 두 섹션으로 나눠 발송. 각 섹션 내에서는 변동률 큰 순으로 정렬.</li>
+            <li><span class="dot"></span><b>발송 단위</b> — 보유종목과 관심종목을 <b>각각 독립된 텔레그램 메시지</b>로 발송. 변동된 종목이 있는 그룹만 발송 (둘 다면 메시지 2건). 각 그룹 내에서는 변동률 큰 순으로 정렬. 메시지 제목에는 임계값을 <code>+X% 이상, -Y% 이하</code> 형태로 표기.</li>
             <li><span class="dot"></span><b>중복 제거</b> — 보유종목과 관심종목에 같은 ticker가 있으면 <b>보유종목 섹션</b>에만 표시.</li>
             <li><span class="dot"></span><b>박스 표시</b> — 텔레그램 인용 박스(<code>&lt;blockquote&gt;</code>)로 종목별 정보를 묶음. 박스 색은 본인 텔레그램의 테마 액센트 컬러(Settings → Appearance → Color)에 따라 표시되며, 상승/하락에 따른 박스 색 분리는 텔레그램 API 제약상 불가능합니다. 종목 앞 🔴(상승) / 🔵(하락)으로 시각 구분.</li>
             <li><span class="dot"></span><b>수신 토글</b> — 정보 변경 화면의 <b>알림 수신</b> 체크박스를 해제하면 알림 일시 중지. 다시 켜기 전까지 발송 안 됨.</li>

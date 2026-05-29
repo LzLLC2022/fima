@@ -158,27 +158,31 @@ export async function POST(req: NextRequest) {
 
     const upPctFmt   = (upThreshold   * 100).toFixed(upThreshold   < 0.01 ? 2 : 1).replace(/\.0$/, '');
     const downPctFmt = (downThreshold * 100).toFixed(downThreshold < 0.01 ? 2 : 1).replace(/\.0$/, '');
-    const rangeText  = upPctFmt === downPctFmt ? `±${upPctFmt}%` : `상승 ${upPctFmt}% / 하락 ${downPctFmt}%`;
+    const rangeText  = `+${upPctFmt}% 이상, -${downPctFmt}% 이하`;
 
-    const sections: string[] = [];
-    if (ownedTriggered.length > 0) {
-      sections.push(`[보유종목 변동 알림 (${esc(owner)}) — ${rangeText} 이상]\n\n` + renderLines(ownedTriggered));
-    }
-    if (favTriggered.length > 0) {
-      sections.push(`[관심종목 변동 알림 (${esc(owner)}) — ${rangeText} 이상]\n\n` + renderLines(favTriggered));
-    }
-    const text = sections.join('\n\n');
-
-    const tg = await sendTelegram(chatId, text, { parseMode: 'HTML' });
-    summary.push({
+    // 보유종목 / 관심종목은 각각 별도 텔레그램 메시지로 발송 (사용자 요청)
+    const ownerSummary: any = {
       owner,
       ownedItems: owned.length,
       favItems:   favItems.length,
       ownedAlerts: ownedTriggered.length,
       favAlerts:   favTriggered.length,
-      sent: tg.ok,
-      tg:   tg.ok ? { status: tg.status } : tg,
-    });
+    };
+
+    if (ownedTriggered.length > 0) {
+      const ownedText = `[보유종목 변동 알림 (${esc(owner)}) — ${rangeText}]\n\n` + renderLines(ownedTriggered);
+      const tgOwned = await sendTelegram(chatId, ownedText, { parseMode: 'HTML' });
+      ownerSummary.ownedSent = tgOwned.ok;
+      ownerSummary.tgOwned   = tgOwned.ok ? { status: tgOwned.status } : tgOwned;
+    }
+    if (favTriggered.length > 0) {
+      const favText = `[관심종목 변동 알림 (${esc(owner)}) — ${rangeText}]\n\n` + renderLines(favTriggered);
+      const tgFav = await sendTelegram(chatId, favText, { parseMode: 'HTML' });
+      ownerSummary.favSent = tgFav.ok;
+      ownerSummary.tgFav   = tgFav.ok ? { status: tgFav.status } : tgFav;
+    }
+
+    summary.push(ownerSummary);
   }
 
   return NextResponse.json({
