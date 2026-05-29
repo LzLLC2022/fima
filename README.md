@@ -569,6 +569,74 @@ curl -X POST https://fima.lim.kr/api/report/email \
 
 ---
 
+## 관심종목 변동 알림 (텔레그램)
+
+> 관심종목(`Favorate` 시트)의 현재가가 **전일 종가 대비 ±5% 이상** 변동되면 1시간마다 텔레그램으로 알림.
+
+### 작동 방식
+
+- GitHub Actions cron (`0 * * * *`)이 매시 정각에 `/api/watchlist/alert` 호출
+- 각 Owner의 Favorate 시트를 읽어 `getStockInfo()`로 현재가·전일종가·changepct 조회
+- `|changepct| >= 0.05` 인 종목을 모아 **Owner별로 한 메시지에 묶어** 발송
+- `TELEGRAM_BOT_TOKEN` 또는 `TELEGRAM_CHAT_ID_<OWNER>` 환경변수가 없으면 해당 Owner는 skip
+
+### Step 1 — 텔레그램 봇 생성
+
+1. 텔레그램에서 `@BotFather` 검색 → `/newbot` 명령으로 봇 생성 → 토큰 발급.
+2. 봇과 1:1 대화창에서 아무 메시지나 한 번 보냄 (그래야 봇이 chat 알게 됨).
+3. `https://api.telegram.org/bot<TOKEN>/getUpdates` 호출하여 `result[*].message.chat.id` 확인.
+
+### Step 2 — Vercel 환경변수 추가
+
+| 변수 | 값 |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | BotFather 토큰 (모든 Owner 공유) |
+| `TELEGRAM_CHAT_ID_LZ` | Lz의 chat_id |
+| `TELEGRAM_CHAT_ID_FOREST` | Forest의 chat_id (없으면 Forest는 알림 skip) |
+| `REPORT_SECRET` | 이메일 리포트와 동일한 Bearer 토큰 (이미 등록되어 있다면 그대로 사용) |
+
+### Step 3 — GitHub Actions 워크플로 활성화
+
+이미 `.github/workflows/watchlist-alert.yml`이 등록되어 있으며 매시 정각 자동 실행됩니다.
+수동 실행은 Actions 탭 → **Watchlist Alert (Telegram)** → Run workflow.
+
+### 수동 호출 (curl)
+
+```bash
+# 전체 Owner
+curl -X POST https://fima.lim.kr/api/watchlist/alert \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" -d '{}'
+
+# 특정 Owner + 임계값 10% (테스트)
+curl -X POST https://fima.lim.kr/api/watchlist/alert \
+  -H "Authorization: Bearer {REPORT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"Lz","threshold":0.10}'
+```
+
+### 메시지 예시
+
+```
+🚨 관심종목 변동 알림 (Lz) — ±5% 이상
+🔴 [+8.20%] TSLA Tesla: 220.00 → 238.04 USD
+🔵 [-6.10%] AAPL Apple: 175.20 → 164.51 USD
+🔴 [+5.30%] 005930 삼성전자: 71,500.00 → 75,289.50 KRW
+```
+
+> ⚠️ 변동률이 5% 이상 유지되는 한 **매시간 동일 알림이 반복 발송**됩니다.  
+> 조용해지길 원하면 GitHub Actions 워크플로를 비활성화하거나 임계값을 늘리세요.
+
+### 관련 파일
+
+| 파일 | 역할 |
+|---|---|
+| `app/api/watchlist/alert/route.ts` | 알림 API (POST) |
+| `lib/telegram.ts` | Bot API 발송 헬퍼 |
+| `.github/workflows/watchlist-alert.yml` | 매시간 cron |
+
+---
+
 ## 라이선스
 
 개인 사용 목적으로 제작된 프로젝트입니다.

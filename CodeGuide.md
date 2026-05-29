@@ -109,6 +109,7 @@ fima/
 │       ├── rebalancing/save/route.ts    (132줄) 목표 비중 저장
 │       ├── watchlist/route.ts           ( 79줄) WatchList 조회
 │       ├── watchlist/save/route.ts      (120줄) WatchList 수정
+│       ├── watchlist/alert/route.ts     ( ~110줄) ★ 관심종목 변동 알림 (텔레그램) — 매시 정각 cron
 │       ├── stock-info/route.ts          (310줄) ★ 시세/환율/52주/배당 통합
 │       ├── bond-info/route.ts           (174줄) 채권 정보 (Naver)
 │       ├── cash-debug/route.ts          (102줄) 현금 잔액 디버깅
@@ -118,6 +119,7 @@ fima/
 │   ├── config.ts               ( 92줄) ★ OWNER_CONFIG, 시트명
 │   ├── sheets.ts               (302줄) Google Sheets API 래퍼
 │   ├── stock.ts                (~1100줄) ★ Yahoo/Naver 시세·환율 (42KB)
+│   ├── telegram.ts             (  60줄) Telegram Bot API 발송 헬퍼 (Owner별 chat_id)
 │   └── bookkeeping.ts          (~1100줄) ⚠️ deprecated — bookkeeping 저장소로 이전됨 (2026-05-26)
 ├── public/
 │   ├── fima.html               (298KB) ★★ 프론트엔드 SPA 단일 파일
@@ -380,6 +382,23 @@ runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
 | 수정 연계 | `_detailCurrentSheetRow` / `_detailCurrentRowIdx`를 저장해 두고 푸터 ✏️ 수정 버튼 → `openEditFromDetail()`이 상세를 닫고 기존 `openEditModal(sheetRow, rowIdx)` 호출 |
 
 > 표에 잘려 보이는 컬럼이나 외화 거래의 KRW 환산을 한 번에 확인하기 위한 화면. 표 자체에 열을 추가하지 않고 모달로 상세를 분리한 게 핵심.
+
+### 6-8. 관심종목 변동 알림 (텔레그램, 2026-05-29)
+
+매시간 GitHub Actions cron이 `/api/watchlist/alert`를 호출해, 각 Owner의 Favorate 시트 종목 중 `|changepct| >= 5%`인 종목을 텔레그램으로 발송합니다.
+
+| 항목 | 위치 / 구현 |
+|---|---|
+| 알림 API | [app/api/watchlist/alert/route.ts](app/api/watchlist/alert/route.ts) — `OWNER_CONFIG` 순회, `getStockInfo()`의 `changepct` 사용. `Sample`은 제외. |
+| 인증 | `Authorization: Bearer <REPORT_SECRET>` — 이메일 리포트와 동일 토큰 공유 |
+| 임계값 | 기본 `THRESHOLD = 0.05` (5%). 호출 시 `{"threshold":0.10}` 로 override 가능. |
+| 발송 헬퍼 | [lib/telegram.ts](lib/telegram.ts) — `chatIdEnvKey(owner)` → `TELEGRAM_CHAT_ID_<OWNER_UPPER>`. `TELEGRAM_BOT_TOKEN` 또는 chat_id 환경변수 미설정이면 `skipped: true`로 fail-soft. |
+| Cron | [.github/workflows/watchlist-alert.yml](.github/workflows/watchlist-alert.yml) — `cron: '0 * * * *'` (UTC). `workflow_dispatch` 입력으로 owner/threshold 수동 override 가능. |
+| 메시지 포맷 | `🚨 관심종목 변동 알림 (<Owner>) — ±5% 이상` 헤더 + 종목별 `🔴/🔵 [±N%] TICKER NAME: 어제 → 오늘 CUR` 라인 (한국 관행: 상승 🔴, 하락 🔵). 변동률 큰 순 정렬. |
+
+**중복 정책**: 사용자 결정에 따라 변동률이 5% 이상 유지되는 동안 매시간 반복 발송. 별도 dedup 상태(KV/시트 컬럼) 없음 — 필요해지면 시트에 `LastAlertedAt` 컬럼 추가하여 1일 1회 제한 등 정책 변경 가능.
+
+**운영 환경변수**: Vercel에 `TELEGRAM_BOT_TOKEN` + Owner별 `TELEGRAM_CHAT_ID_<OWNER>` 미등록 시 알림은 단순 skip되며 시스템 자체는 정상 동작.
 
 ---
 

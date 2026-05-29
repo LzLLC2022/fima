@@ -475,6 +475,22 @@
           <li><span class="dot"></span>현재가, 등락률, 52주 고가/저가, 배당률(TTM) 등을 표시합니다.</li>
           <li><span class="dot"></span>종목명 클릭 시 <a href="#stockpopup">종목 정보 팝업</a>이 열립니다.</li>
         </ul>
+
+        <div class="sub">
+          <div class="sub-title">📨 변동 알림 (텔레그램, 매시간)</div>
+          <p>관심종목의 현재가가 <b>전일 종가 대비 ±5% 이상</b> 변동되면 1시간마다 Owner별 텔레그램 채팅으로 알림이 전송됩니다.</p>
+          <ul class="info-list" style="margin-top:8px;">
+            <li><span class="dot"></span><b>기준가</b> — 직전 영업일 종가 (Yahoo Finance / NAVER 금융의 changePct 사용).</li>
+            <li><span class="dot"></span><b>주기</b> — GitHub Actions cron(매시 정각, UTC) → <code>/api/watchlist/alert</code> 호출.</li>
+            <li><span class="dot"></span><b>발송 단위</b> — 한 Owner의 5% 변동 종목들을 <b>한 메시지에 묶어서</b> 발송. 큰 변동률 순으로 정렬.</li>
+            <li><span class="dot"></span><b>대상 채팅</b> — Vercel 환경변수 <code>TELEGRAM_CHAT_ID_&lt;OWNER&gt;</code>로 Owner별 분리. 미설정 Owner는 자동 skip.</li>
+            <li><span class="dot"></span><b>중복 정책</b> — 변동률 유지 시 매시간 반복 발송. 조용히 두려면 GitHub Actions 워크플로를 비활성화하거나 시트에서 종목을 제거.</li>
+          </ul>
+          <div class="note">
+            <span class="note-icon">ℹ️</span>
+            <span>봇/채팅 ID 등록 절차는 저장소 README의 "관심종목 변동 알림 (텔레그램)" 섹션을 참고하세요.</span>
+          </div>
+        </div>
       </div>
     </div>
 
