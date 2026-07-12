@@ -1540,6 +1540,15 @@
           <div id="pfDivTable" style="margin-top:16px;overflow-x:auto;"></div>
         </div>
 
+        <!-- 해외주식 배당소득세 납부현황 -->
+        <div class="card" style="margin-bottom:20px;" id="pfTaxCard">
+          <div style="font-weight:700;color:#2d2747;margin-bottom:4px;">&#x1F9FE; 해외주식 배당소득세 납부현황</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:12px;">&#x203B; 배당 발생 당시 기록된 환율 기준 KRW 환산, 소수점 이하 버림</div>
+          <!-- 연도 탭 -->
+          <div id="pfTaxTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+          <!-- 종목별 테이블 -->
+          <div id="pfTaxTableWrap" style="overflow-x:auto;"></div>
+        </div>
 
         <!-- 종목별 수익률 테이블 -->
         <div class="card">
@@ -4719,6 +4728,7 @@
       renderPfAmtChart(pfChartMonthly, data.basePnl || 0);
       renderPfAssetChart(pfChartMonthly);
       renderPfDivChart(data.dividends || [], data.stocks || [], data.divDetail || {}, data.tickerMonthlyDivKRW || {});
+      renderForeignTaxTable(data.foreignTaxByYear || {});
 
       // ── 종목 테이블 ───────────────────────────────────────
       var tbody = document.getElementById('pfStockBody');
@@ -5520,6 +5530,147 @@
 
     tblHtml += '</tbody></table>';
     if (tableEl) tableEl.innerHTML = tblHtml;
+  }
+
+  // ── 해외주식 배당소득세 납부현황 렌더링 ────────────────────────────
+  function renderForeignTaxTable(foreignTaxByYear) {
+    var tabsEl = document.getElementById('pfTaxTabs');
+    var wrapEl = document.getElementById('pfTaxTableWrap');
+    var cardEl = document.getElementById('pfTaxCard');
+    if (!tabsEl || !wrapEl) return;
+
+    // 데이터 없으면 섹션 숨김
+    var years = Object.keys(foreignTaxByYear || {}).sort();
+    if (years.length === 0) {
+      if (cardEl) cardEl.style.display = 'none';
+      return;
+    }
+    if (cardEl) cardEl.style.display = '';
+
+    // 연도 탭 렌더링 (최신 연도 기본 선택)
+    var selectedYear = years[years.length - 1];
+    function buildTabs(activeYear) {
+      tabsEl.innerHTML = years.map(function(yr) {
+        var isActive = yr === activeYear;
+        var ydata = foreignTaxByYear[yr] || {};
+        var total = ydata.total || 0;
+        return '<button onclick="window._pfTaxSelectYear(\'' + yr + '\')" style="'
+          + 'padding:5px 14px;border-radius:20px;border:1.5px solid '
+          + (isActive ? '#7c6ce0' : '#ddd8ff') + ';background:'
+          + (isActive ? '#7c6ce0' : 'white') + ';color:'
+          + (isActive ? 'white' : '#7c6ce0')
+          + ';font-weight:700;font-size:0.82rem;cursor:pointer;transition:all 0.15s;">'
+          + yr + ' <span style="font-size:0.75rem;opacity:0.85;">'
+          + Math.floor(total).toLocaleString('ko-KR') + ' KRW</span>'
+          + '</button>';
+      }).join('');
+    }
+
+    function buildTable(yr) {
+      var ydata = foreignTaxByYear[yr];
+      if (!ydata || !ydata.byTicker || ydata.byTicker.length === 0) {
+        wrapEl.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:20px;">세금 데이터 없음</div>';
+        return;
+      }
+
+      // 통화별 소계 계산
+      var byCurrency = {};
+      ydata.byTicker.forEach(function(v) {
+        if (!byCurrency[v.currency]) byCurrency[v.currency] = 0;
+        byCurrency[v.currency] += v.taxFX;
+      });
+      var multiCurrency = Object.keys(byCurrency).length > 1;
+
+      var fmtFX = function(v, cur) {
+        if (cur === 'KRW') return Math.floor(v).toLocaleString('ko-KR') + ' KRW';
+        return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' ' + cur;
+      };
+      var fmtKRW = function(v) { return Math.floor(v).toLocaleString('ko-KR') + ' KRW'; };
+
+      var thStyle = 'padding:9px 12px;font-size:0.8rem;font-weight:700;color:#4a5568;border-bottom:2px solid #ddd8ff;white-space:nowrap;';
+      var tdStyle = 'padding:8px 12px;font-size:0.83rem;border-bottom:1px solid #f0eeff;';
+
+      var html = '<table style="width:100%;border-collapse:collapse;min-width:480px;">'
+        + '<thead><tr style="background:#faf7ff;">'
+        + '<th style="' + thStyle + 'text-align:left;">종목명</th>'
+        + '<th style="' + thStyle + 'text-align:left;">Ticker</th>'
+        + '<th style="' + thStyle + 'text-align:right;">세금 (현지통화)</th>'
+        + '<th style="' + thStyle + 'text-align:right;">세금 (KRW 환산)</th>'
+        + '</tr></thead><tbody>';
+
+      // 통화 그룹별로 렌더링
+      if (multiCurrency) {
+        // 통화별로 그룹핑
+        var curGroups = {};
+        ydata.byTicker.forEach(function(v) {
+          if (!curGroups[v.currency]) curGroups[v.currency] = [];
+          curGroups[v.currency].push(v);
+        });
+        Object.keys(curGroups).sort().forEach(function(cur) {
+          var items = curGroups[cur];
+          // 통화 소제목 행
+          html += '<tr style="background:#f5f3ff;"><td colspan="4" style="'
+            + tdStyle + 'font-weight:700;font-size:0.76rem;color:#7c6ce0;padding:5px 12px;">'
+            + cur + ' 종목</td></tr>';
+          items.forEach(function(v) {
+            html += '<tr>'
+              + '<td style="' + tdStyle + '">' + (v.name || '-') + '</td>'
+              + '<td style="' + tdStyle + 'font-family:monospace;color:#7c6ce0;">' + v.ticker + '</td>'
+              + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.taxFX, v.currency) + '</td>'
+              + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.taxKRW) + '</td>'
+              + '</tr>';
+          });
+          // 통화별 소계
+          var subFX  = items.reduce(function(s, v) { return s + v.taxFX; }, 0);
+          var subKRW = items.reduce(function(s, v) { return s + v.taxKRW; }, 0);
+          html += '<tr style="background:#fff8f1;">'
+            + '<td style="' + tdStyle + 'font-weight:700;font-size:0.79rem;color:#a05a00;" colspan="2">' + cur + ' 소계</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtFX(subFX, cur) + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtKRW(subKRW) + '</td>'
+            + '</tr>';
+        });
+      } else {
+        // 단일 통화: 통화 그룹 없이 바로 나열
+        ydata.byTicker.forEach(function(v) {
+          html += '<tr>'
+            + '<td style="' + tdStyle + '">' + (v.name || '-') + '</td>'
+            + '<td style="' + tdStyle + 'font-family:monospace;color:#7c6ce0;">' + v.ticker + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.taxFX, v.currency) + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.taxKRW) + '</td>'
+            + '</tr>';
+        });
+      }
+
+      // 합계 행
+      var grandFXByCur = {};
+      ydata.byTicker.forEach(function(v) {
+        grandFXByCur[v.currency] = (grandFXByCur[v.currency] || 0) + v.taxFX;
+      });
+      var fxSumStr = Object.entries(grandFXByCur).sort().map(function(kv) {
+        return fmtFX(kv[1], kv[0]);
+      }).join(' + ');
+      var grandKRW = ydata.total || 0;
+
+      html += '<tr style="background:#faf7ff;border-top:2px solid #ddd8ff;">'
+        + '<td style="padding:10px 12px;font-weight:700;" colspan="2">합계 (' + yr + '년)</td>'
+        + '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#553c9a;">' + fxSumStr + '</td>'
+        + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:0.95rem;color:#c05621;">'
+        + fmtKRW(grandKRW) + '</td>'
+        + '</tr>';
+
+      html += '</tbody></table>';
+      wrapEl.innerHTML = html;
+    }
+
+    // 연도 탭 클릭 핸들러 (window에 등록 — onclick에서 직접 호출)
+    window._pfTaxSelectYear = function(yr) {
+      selectedYear = yr;
+      buildTabs(yr);
+      buildTable(yr);
+    };
+
+    buildTabs(selectedYear);
+    buildTable(selectedYear);
   }
 
   // ================================================================
