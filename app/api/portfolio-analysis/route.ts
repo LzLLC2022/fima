@@ -223,9 +223,32 @@ export async function POST(req: NextRequest) {
         divFX  = div2;
         divKRW = Math.floor(div2 * eff2);  // 거래일별 환산 후 소수점 버림
       }
-      if (divKRW <= 0) return;
+      // ── 해외주식 배당소득세 집계 (divKRW 여부와 무관하게 항상 처리) ────
+      // ※ divKRW <= 0 early return 전에 실행해야 함
+      //   (배당금은 0이어도 세금이 있는 거래, 또는 환율 누락으로 divKRW=0인 거래 포함)
       const yr = String(date.getUTCFullYear());
       const mo = String(date.getUTCMonth() + 1).padStart(2, '0');
+      if (tax2 > 0 && ticker2) {
+        const taxCurrency = currencyMap[region2] || 'KRW';
+        if (taxCurrency !== 'KRW') {
+          // 배당 발생 당시 기록된 환율(rate2) 우선, 없으면 최근 캐시 사용
+          const taxRate = rate2 > 0 ? rate2 : (divRateCache[region2] || 1);
+          // 배당 발생 당시 환율로 KRW 환산, 소수점 이하 버림 (다른 KRW 환산과 동일 방식)
+          const taxKRW = Math.floor(tax2 * taxRate);
+          const name2  = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
+          if (!foreignTaxMap[yr]) foreignTaxMap[yr] = {};
+          if (!foreignTaxMap[yr][ticker2]) {
+            foreignTaxMap[yr][ticker2] = { name: name2, taxFX: 0, taxKRW: 0, currency: taxCurrency };
+          }
+          foreignTaxMap[yr][ticker2].taxFX  += tax2;
+          foreignTaxMap[yr][ticker2].taxKRW += taxKRW;
+          if (!foreignTaxMap[yr][ticker2].name && name2) {
+            foreignTaxMap[yr][ticker2].name = name2;
+          }
+        }
+      }
+
+      if (divKRW <= 0) return;
       if (!divByYearMonth[yr]) divByYearMonth[yr] = {};
       divByYearMonth[yr][mo] = (divByYearMonth[yr][mo] || 0) + divKRW;
 
@@ -241,30 +264,8 @@ export async function POST(req: NextRequest) {
           divDetailMap[yr][mo][ticker2].qty = qtyAtDiv;
         }
       }
-
-      // ── 해외주식 배당소득세 집계 ───────────────────────────────────
-      // 해외 여부: currencyMap으로 해당 Region의 통화가 KRW가 아닌 경우
-      if (tax2 > 0 && ticker2) {
-        const taxCurrency = currencyMap[region2] || 'KRW';
-        if (taxCurrency !== 'KRW') {
-          // 배당 발생 당시 기록된 환율(rate2) 우선, 없으면 최근 캐시 사용
-          const taxRate = rate2 > 0 ? rate2 : (divRateCache[region2] || 1);
-          // 배당 발생 당시 환율로 KRW 환산, 소수점 이하 버림 (다른 KRW 환산과 동일 방식)
-          const taxKRW = Math.floor(tax2 * taxRate);
-          const name2  = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
-          if (!foreignTaxMap[yr]) foreignTaxMap[yr] = {};
-          if (!foreignTaxMap[yr][ticker2]) {
-            foreignTaxMap[yr][ticker2] = { name: name2, taxFX: 0, taxKRW: 0, currency: taxCurrency };
-          }
-          foreignTaxMap[yr][ticker2].taxFX  += tax2;
-          foreignTaxMap[yr][ticker2].taxKRW += taxKRW;
-          // 종목명이 비어 있으면 나중에 채워진 값으로 갱신
-          if (!foreignTaxMap[yr][ticker2].name && name2) {
-            foreignTaxMap[yr][ticker2].name = name2;
-          }
-        }
-      }
     });
+
 
     // ── 종목별 누적 배당금 합계 (전체 기간) ──────────────────────
     const cumDivByTicker:   Record<string, number> = {};
