@@ -183,6 +183,11 @@ export async function POST(req: NextRequest) {
     const divDetailMap: Record<string, Record<string, Record<string, { divKRW: number; divFX: number; qty: number }>>> = {};
     const runQtyMap: Record<string, number> = {};  // 배당 시점 수량 추적
 
+    // ── 해외주식 배당소득세 집계 (연도×종목) ──────────────────────────
+    // [year][ticker] = { name, taxFX, taxKRW, currency }
+    type TaxEntry = { name: string; taxFX: number; taxKRW: number; currency: string };
+    const foreignTaxMap: Record<string, Record<string, TaxEntry>> = {};
+
     sorted.forEach(({ row, date }) => {
       if (date.getTime() === 0) return;
       const t2      = String(row[tradeIdx]  ?? '').trim().toLowerCase().replace(/[-\s]/g, '');
@@ -236,6 +241,29 @@ export async function POST(req: NextRequest) {
           divDetailMap[yr][mo][ticker2].qty = qtyAtDiv;
         }
       }
+
+      // ── 해외주식 배당소득세 집계 ───────────────────────────────────
+      // 해외 여부: currencyMap으로 해당 Region의 통화가 KRW가 아닌 경우
+      if (tax2 > 0 && ticker2) {
+        const taxCurrency = currencyMap[region2] || 'KRW';
+        if (taxCurrency !== 'KRW') {
+          // 배당 발생 당시 기록된 환율(rate2) 우선, 없으면 최근 캐시 사용
+          const taxRate = rate2 > 0 ? rate2 : (divRateCache[region2] || 1);
+          // 배당 발생 당시 환율로 KRW 환산, 소수점 이하 버림 (다른 KRW 환산과 동일 방식)
+          const taxKRW = Math.floor(tax2 * taxRate);
+          const name2  = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
+          if (!foreignTaxMap[yr]) foreignTaxMap[yr] = {};
+          if (!foreignTaxMap[yr][ticker2]) {
+            foreignTaxMap[yr][ticker2] = { name: name2, taxFX: 0, taxKRW: 0, currency: taxCurrency };
+          }
+          foreignTaxMap[yr][ticker2].taxFX  += tax2;
+          foreignTaxMap[yr][ticker2].taxKRW += taxKRW;
+          // 종목명이 비어 있으면 나중에 채워진 값으로 갱신
+          if (!foreignTaxMap[yr][ticker2].name && name2) {
+            foreignTaxMap[yr][ticker2].name = name2;
+          }
+        }
+      }
     });
 
     // ── 종목별 누적 배당금 합계 (전체 기간) ──────────────────────
@@ -259,6 +287,21 @@ export async function POST(req: NextRequest) {
         ),
         total: Math.round(Object.values(months).reduce((s, v) => s + v, 0)),
       }));
+
+    // ── foreignTaxByYear 직렬화 ──────────────────────────────────────
+    // { [year]: { total: KRW합계, byTicker: [ { ticker, name, taxFX, taxKRW, currency } ] } }
+    const foreignTaxByYear = Object.fromEntries(
+      Object.entries(foreignTaxMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([yr, tickers]) => {
+          const byTicker = Object.entries(tickers)
+            .map(([ticker, v]) => ({ ticker, ...v }))
+            .filter(v => v.taxKRW > 0)
+            .sort((a, b) => b.taxKRW - a.taxKRW);
+          const total = byTicker.reduce((s, v) => s + v.taxKRW, 0);
+          return [yr, { total, byTicker }];
+        })
+    );
 
     // ── 분석 대상 월 목록 (최근 13개월) ─────────────────────────────
     const firstDate = firstActual;
@@ -792,7 +835,7 @@ export async function POST(req: NextRequest) {
         ),
       ])
     );
-    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, tickerMonthlyDivKRW, basePnl });
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, tickerMonthlyDivKRW, basePnl, foreignTaxByYear });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
