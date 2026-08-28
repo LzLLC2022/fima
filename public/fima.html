@@ -6359,7 +6359,26 @@
           + '</tr>';
 
         tbody.innerHTML = pfSortedRegions.map(function(region) {
-          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)"><td colspan="8"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td></tr>';
+          var rBuy = 0, rMv = 0, rPnl = 0, rDiv = 0;
+          pfGrouped[region].forEach(function(s) {
+            rBuy += Number(s.buyCostKRW) || 0;
+            rMv  += Number(s.marketValueKRW) || 0;
+            rPnl += Number(s.pnlKRW) || 0;
+            rDiv += Number(s.cumDividendKRW) || 0;
+          });
+          var rPct = rBuy > 0 ? (rPnl / rBuy * 100) : 0;
+          var rGainCol = rPnl >= 0 ? '#c53030' : '#7c6ce0';
+          var rGainSign = rPnl >= 0 ? '+' : '';
+          var hdr = '<tr class="region-group-hdr" data-region="' + region + '" onclick="toggleRegionGroup(this)">'
+            + '<td style="font-weight:700;"><span class="rg-toggle">▼</span> 🌏 ' + region + '</td>'
+            + '<td style="text-align:right; font-size:0.8rem; color:#718096;">' + fmtK(rBuy) + ' KRW</td>'
+            + '<td style="text-align:right; font-size:0.8rem; color:#718096;">' + fmtK(rMv) + ' KRW</td>'
+            + '<td style="text-align:right; font-size:0.8rem; font-weight:600; color:' + rGainCol + ';">' + rGainSign + fmtK(rPnl) + ' KRW</td>'
+            + '<td style="text-align:right; font-size:0.8rem; font-weight:600; color:' + pnlCol(rPct) + ';">' + fmtPct(rPct) + '</td>'
+            + '<td style="text-align:right; font-size:0.8rem; font-weight:600; color:#276749;">' + fmtK(rDiv) + ' KRW</td>'
+            + '<td style="text-align:right; font-size:0.8rem; color:#a0aec0;">-</td>'
+            + '<td style="text-align:right; font-size:0.8rem; color:#a0aec0;">-</td>'
+            + '</tr>';
           var rows = pfGrouped[region].map(function(st) {
           var cur   = st.currency || 'KRW';
           var isKRW = (cur === 'KRW');
