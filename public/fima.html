@@ -2510,7 +2510,7 @@
 
   // ---- 서브탭 전환 (2단계) ----
   function switchTab(tab) {
-    ['overview', 'input', 'query', 'portfolio', 'rebalance', 'watchlist'].forEach(function(id) {
+    ['overview', 'input', 'query', 'portfolio', 'rebalance', 'watchlist', 'lab'].forEach(function(id) {
       var btn = document.getElementById('subtab-' + id);
       if (btn) btn.classList.toggle('active', id === tab);
       var content = document.getElementById('tab-' + id);
