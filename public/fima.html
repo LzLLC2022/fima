@@ -1746,10 +1746,178 @@
 
     <!-- ===================== 실험실 탭 ===================== -->
     <div id="tab-lab" class="tab-content">
-      <div class="card">
-        <div class="card-title">🧪 실험실</div>
-        <div style="padding:20px; color:#4a5568;">
-          이곳은 실험실입니다. 새로운 기능을 테스트하고 확인할 수 있습니다.
+      <!-- 포트폴리오 필터 카드 -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">🔎 조회 조건</div>
+        <div class="pf-filter-row">
+          <div class="field pf-account-field">
+            <label>Account</label>
+            <select id="labPfAccount">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>시작월</label>
+            <input type="month" id="labPfStartMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
+          </div>
+          <div class="field">
+            <label>종료월</label>
+            <input type="month" id="labPfEndMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
+          </div>
+          <div class="field pf-btn-field">
+            <label class="lbl-hidden">&nbsp;</label>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyLabFilter()">조회</button>
+              <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetLabFilter()">초기화</button>
+            </div>
+          </div>
+        </div>
+        <div id="labPfFilterBadge" class="ov-filter-badge hidden"></div>
+      </div>
+
+      <div id="labPfLoading" style="text-align:center;padding:40px;color:#718096;display:none;">⏳ 데이터 조회 중... (역사적 시세 포함, 수십 초 소요될 수 있습니다)</div>
+      <div id="labPfError" style="color:#e53e3e;padding:16px;display:none;"></div>
+      <div id="labPfContent" style="display:none;">
+
+        <!-- 기준값 디버그 패널 -->
+        <div class="card" style="margin-bottom:14px;padding:10px 16px;background:#f5f3ff;border:1px dashed #ddd8ff;">
+          <div style="font-size:0.72rem;font-weight:700;color:#ddd8ff;margin-bottom:10px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액 / 순투자액 / 평가손익</div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+            <thead>
+              <tr>
+                <th style="text-align:left;color:#a0aec0;font-weight:600;padding:3px 8px 6px 0;width:72px;"></th>
+                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전년 12월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(YTD 기준)</span></th>
+                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(MTD 기준)</span></th>
+                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전일<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(Daily 기준)</span></th>
+                <th style="text-align:right;color:#4a5568;font-weight:700;padding:3px 8px 6px;border-bottom:2px solid #4a5568;border-left:2px solid #e5e1f5;">현재일</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color:#a0aec0;padding:4px 8px 3px 0;font-size:0.72rem;">평가액</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="labPfDbgYtdVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="labPfDbgMtdVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="labPfDbgDailyVal">-</td>
+                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="labPfDbgCurVal">-</td>
+              </tr>
+              <tr>
+                <td style="color:#a0aec0;padding:3px 8px 3px 0;font-size:0.72rem;">순투자액</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="labPfDbgYtdNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="labPfDbgMtdNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#718096;" id="labPfDbgDailyNetInv">-</td>
+                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="labPfDbgCurNetInv">-</td>
+              </tr>
+              <tr>
+                <td style="color:#a0aec0;padding:3px 8px 4px 0;font-size:0.72rem;border-top:1px solid #ede9fe;">평가손익</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="labPfDbgYtdPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="labPfDbgMtdPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="labPfDbgDailyPnl">-</td>
+                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;border-left:2px solid #e5e1f5;" id="labPfDbgCurPnl">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div class="pf-summary-grid">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">순 투자액</div>
+            <div id="labPfNetInv" style="font-size:1.3rem;font-weight:700;color:#2d2747;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">평가액</div>
+            <div id="labPfMarket" style="font-size:1.3rem;font-weight:700;color:#2d2747;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">평가 손익</div>
+            <div id="labPfPnl" style="font-size:1.3rem;font-weight:700;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">수익률</div>
+            <div id="labPfPnlPct" style="font-size:1.3rem;font-weight:700;">-</div>
+          </div>
+        </div>
+
+        <!-- YTD / MTD 손익 카드 -->
+        <div class="pf-period-grid">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">YTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(연초 이후)</span></div>
+            <div id="labPfYtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d2747;">-</div>
+            <div id="labPfYtdPct" style="font-size:0.9rem;font-weight:600;color:#2d2747;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">MTD 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(월초 이후)</span></div>
+            <div id="labPfMtdPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d2747;">-</div>
+            <div id="labPfMtdPct" style="font-size:0.9rem;font-weight:600;color:#2d2747;">-</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div style="font-size:0.78rem;color:#718096;margin-bottom:6px;">Daily 평가 손익 <span style="font-size:0.7rem;color:#a0aec0;">(전일 대비)</span></div>
+            <div id="labPfDailyPnl" style="font-size:1.15rem;font-weight:700;margin-bottom:3px;color:#2d2747;">-</div>
+            <div id="labPfDailyPct" style="font-size:0.9rem;font-weight:600;color:#2d2747;">-</div>
+          </div>
+        </div>
+
+        <!-- 월별 수익률 차트 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <div style="font-weight:700;color:#2d2747;">📈 월별 누적 수익률 비교</div>
+            <div id="labPfChartToggles" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          </div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 포트폴리오·지수 모두 분석 시작 시점 대비 누적 등락률</div>
+          <div id="labPfChart"></div>
+          <div id="labPfChartNote" style="font-size:0.75rem;color:#a0aec0;margin-top:8px;"></div>
+        </div>
+
+        <!-- 월별 수익금액 차트 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">💰 월별 수익금액</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 (평가액 − 순투자액)</div>
+          <div id="labPfAmtChart"></div>
+        </div>
+
+        <!-- 월별 자산총액 차트 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">🏦 월별 자산총액</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 평가액 (KRW)</div>
+          <div id="labPfAssetChart"></div>
+        </div>
+
+        <!-- 월별 배당 현황 -->
+        <div class="card" style="margin-bottom:20px;">
+          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">&#x1F4CA; 월별 배당 현황</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">&#x203B; 세금&#xB7;수수료 차감 후 KRW 환산 기준</div>
+          <div id="labPfDivChart"></div>
+          <div id="labPfDivTable" style="margin-top:16px;overflow-x:auto;"></div>
+        </div>
+
+        <!-- 해외주식 배당소득세 납부현황 -->
+        <div class="card" style="margin-bottom:20px;" id="labPfTaxCard">
+          <div style="font-weight:700;color:#2d2747;margin-bottom:4px;">&#x1F9FE; 해외주식 배당소득세 납부현황</div>
+          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:12px;">&#x203B; 배당 발생 당시 기록된 환율 기준 KRW 환산, 소수점 이하 버림</div>
+          <!-- 연도 탭 -->
+          <div id="labPfTaxTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+          <!-- 종목별 테이블 -->
+          <div id="labPfTaxTableWrap" style="overflow-x:auto;"></div>
+        </div>
+
+        <!-- 종목별 수익률 테이블 -->
+        <div class="card">
+          <div style="font-weight:700;color:#2d2747;margin-bottom:12px;">📋 보유 종목별 수익률</div>
+          <div class="table-wrap">
+            <table id="labPfStockTable">
+              <thead><tr>
+                <th>Name</th>
+                <th style="text-align:right;">매입금액</th>
+                <th style="text-align:right;">평가금액</th>
+                <th style="text-align:right;">손익</th>
+                <th style="text-align:right;">투자수익률</th>
+                <th style="text-align:right;">누적배당금</th>
+                <th style="text-align:right;">연간 수익률 (YTD)</th>
+                <th style="text-align:right;">월간 수익률 (MTD)</th>
+              </tr></thead>
+              <tbody id="labPfStockBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
