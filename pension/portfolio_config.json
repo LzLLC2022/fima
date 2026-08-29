@@ -1,130 +1,86 @@
 {
-    "email": {
-        "sender_address": "bootaik@lim.or.kr",
-        "receiver_address": "bootaik@lim.or.kr",
-        "app_password": "ENV_GMAIL_APP_PASSWORD"
-    },
-    "Target": {
-        "Account Owner": "Forest",
-        "Account": "연금",
-        "Region": "Korea"
-    },
-    "portfolio": {
-        "total_investment": 414448248,
-        "cash_balance": 614585,
-        "holdings": [
-            {
-                "ticker": "459580",
-                "name": "KODEX CD금리액티브(합성)",
-                "category": "안전자산",
-                "target_weight": 10.0,
-                "shares": 192,
-                "avg_price": 1075677
-            },
-            {
-                "ticker": "088980",
-                "name": "맥쿼리인프라",
-                "category": "인컴-확정",
-                "target_weight": 18.0,
-                "shares": 7179,
-                "avg_price": 11277
-            },
-            {
-                "ticker": "476550",
-                "name": "TIGER 미국30년국채커버드콜액티브(H)",
-                "category": "인컴-확정",
-                "target_weight": 5.0,
-                "shares": 2150,
-                "avg_price": 8981
-            },
-            {
-                "ticker": "498410",
-                "name": "KODEX 금융고배당TOP10타겟위클리커버드콜",
-                "category": "인컴-변동",
-                "target_weight": 4.0,
-                "shares": 1230,
-                "avg_price": 11555
-            },
-            {
-                "ticker": "466940",
-                "name": "TIGER 은행고배당플러스TOP10",
-                "category": "인컴-변동",
-                "target_weight": 0.0,
-                "shares": 0,
-                "avg_price": 0
-            },
-            {
-                "ticker": "402970",
-                "name": "ACE 미국배당다우존스",
-                "category": "인컴-변동",
-                "target_weight": 0.0,
-                "shares": 0,
-                "avg_price": 0
-            },
-            {
-                "ticker": "0018C0",
-                "name": "PLUS 고배당주위클리고정커버드콜",
-                "category": "인컴-파생",
-                "target_weight": 4.0,
-                "shares": 1250,
-                "avg_price": 10345
-            },
-            {
-                "ticker": "498400",
-                "name": "KODEX 200타겟위클리커버드콜",
-                "category": "인컴-파생",
-                "target_weight": 2.0,
-                "shares": 270,
-                "avg_price": 9445
-            },
-            {
-                "ticker": "475080",
-                "name": "Kodex 테슬라커버드콜채권혼합액티브",
-                "category": "파생",
-                "target_weight": 5.0,
-                "shares": 3038,
-                "avg_price": 9192
-            },
-            {
-                "ticker": "0040Y0",
-                "name": "SOL 팔란티어커버드콜OTM채권혼합",
-                "category": "파생",
-                "target_weight": 5.0,
-                "shares": 1800,
-                "avg_price": 8350
-            },
-            {
-                "ticker": "0040X0",
-                "name": "SOL 팔란티어미국채커버드콜혼합",
-                "category": "파생",
-                "target_weight": 5.0,
-                "shares": 1510,
-                "avg_price": 9940
-            },
-            {
-                "ticker": "494300",
-                "name": "KODEX 미국나스닥100데일리커버드콜OTM",
-                "category": "파생",
-                "target_weight": 5.0,
-                "shares": 1880,
-                "avg_price": 10633
-            },
-            {
-                "ticker": "379810",
-                "name": "KODEX 미국나스닥100TR",
-                "category": "성장자산",
-                "target_weight": 18.0,
-                "shares": 0,
-                "avg_price": 0
-            },
-            {
-                "ticker": "379800",
-                "name": "KODEX 미국S&P500TR",
-                "category": "성장자산",
-                "target_weight": 19.0,
-                "shares": 0,
-                "avg_price": 0
-            }
-        ]
-    }
+  "email": {
+    "sender_address": "bootaik@lim.or.kr",
+    "receiver_address": "bootaik@lim.or.kr",
+    "app_password": "ENV_GMAIL_APP_PASSWORD"
+  },
+  "Target": {
+    "Account Owner": "Forest",
+    "Account": "연금",
+    "Region": "Korea"
+  },
+  "portfolio": {
+    "holdings": [
+      {
+        "ticker": "459580",
+        "name": "KODEX CD금리액티브(합성)",
+        "category": "안전자산"
+      },
+      {
+        "ticker": "088980",
+        "name": "맥쿼리인프라",
+        "category": "인컴-확정"
+      },
+      {
+        "ticker": "476550",
+        "name": "TIGER 미국30년국채커버드콜액티브(H)",
+        "category": "인컴-확정"
+      },
+      {
+        "ticker": "498410",
+        "name": "KODEX 금융고배당TOP10타겟위클리커버드콜",
+        "category": "인컴-변동"
+      },
+      {
+        "ticker": "466940",
+        "name": "TIGER 은행고배당플러스TOP10",
+        "category": "인컴-변동"
+      },
+      {
+        "ticker": "402970",
+        "name": "ACE 미국배당다우존스",
+        "category": "인컴-변동"
+      },
+      {
+        "ticker": "0018C0",
+        "name": "PLUS 고배당주위클리고정커버드콜",
+        "category": "인컴-파생"
+      },
+      {
+        "ticker": "498400",
+        "name": "KODEX 200타겟위클리커버드콜",
+        "category": "인컴-파생"
+      },
+      {
+        "ticker": "475080",
+        "name": "Kodex 테슬라커버드콜채권혼합액티브",
+        "category": "파생"
+      },
+      {
+        "ticker": "0040Y0",
+        "name": "SOL 팔란티어커버드콜OTM채권혼합",
+        "category": "파생"
+      },
+      {
+        "ticker": "0040X0",
+        "name": "SOL 팔란티어미국채커버드콜혼합",
+        "category": "파생"
+      },
+      {
+        "ticker": "494300",
+        "name": "KODEX 미국나스닥100데일리커버드콜OTM",
+        "category": "파생"
+      },
+      {
+        "ticker": "379810",
+        "name": "KODEX 미국나스닥100TR",
+        "category": "성장자산"
+      },
+      {
+        "ticker": "379800",
+        "name": "KODEX 미국S&P500TR",
+        "category": "성장자산"
+      }
+    ]
+  }
 }

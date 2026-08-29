@@ -19,13 +19,14 @@ if ($password -eq "YOUR_APP_PASSWORD_HERE" -or [string]::IsNullOrWhiteSpace($pas
     exit
 }
 
-$totalInvest = $config.portfolio.total_investment
-$cash = $config.portfolio.cash_balance
+$totalInvest = 0
+$cash = 0
 
-# Fetch from FiMa API to dynamically update portfolio holdings and cash
+# Fetch from FiMa API to dynamically update portfolio holdings, cash, and target weights
 if ($null -ne $config.Target) {
     $targetOwner = $config.Target.'Account Owner'
     $targetAccount = $config.Target.Account
+    $targetRegion = $config.Target.Region
     if ($null -ne $targetOwner -and $null -ne $targetAccount) {
         $bodyJson = @{
             owner = $targetOwner
@@ -36,17 +37,49 @@ if ($null -ne $config.Target) {
         # GitHub Actions (windows-latest) 환경에서 한글 깨짐을 방지하기 위해 UTF-8 바이트 배열로 변환
         $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($bodyJson)
         
+        $rebalJson = @{
+            owner = $targetOwner
+            region = $targetRegion
+        } | ConvertTo-Json -Depth 2
+        $rebalBytes = [System.Text.Encoding]::UTF8.GetBytes($rebalJson)
+        
         try {
             $fimaRes = Invoke-RestMethod -Uri "https://fima.lim.kr/api/portfolio" -Method POST -Body $bodyBytes -ContentType "application/json; charset=utf-8"
+            $rebalRes = Invoke-RestMethod -Uri "https://fima.lim.kr/api/rebalancing" -Method POST -Body $rebalBytes -ContentType "application/json; charset=utf-8"
+            
             if ($fimaRes.success -eq $true) {
                 $cash = $fimaRes.totalCashKRW
+                $totalInvest = $cash
                 
                 $fimaHoldings = @{}
-                if ($null -ne $fimaRes.stocks) { foreach ($s in $fimaRes.stocks) { $fimaHoldings[$s.ticker] = $s } }
-                if ($null -ne $fimaRes.funds)  { foreach ($f in $fimaRes.funds)  { $fimaHoldings[$f.ticker] = $f } }
+                if ($null -ne $fimaRes.stocks) { 
+                    foreach ($s in $fimaRes.stocks) { 
+                        $fimaHoldings[$s.ticker] = $s
+                        $totalInvest += $s.purchaseAmt
+                    }
+                }
+                if ($null -ne $fimaRes.funds) { 
+                    foreach ($f in $fimaRes.funds) { 
+                        $fimaHoldings[$f.ticker] = $f
+                        $totalInvest += $f.purchaseAmt
+                    }
+                }
+                
+                $rebalMap = @{}
+                if ($null -ne $rebalRes.items) {
+                    foreach ($r in $rebalRes.items) {
+                        $rebalMap[$r.ticker] = $r.targetPct
+                    }
+                }
                 
                 $newHoldings = @()
                 foreach ($item in $config.portfolio.holdings) {
+                    if ($rebalMap.ContainsKey($item.ticker)) {
+                        $item.target_weight = $rebalMap[$item.ticker]
+                    } else {
+                        $item.target_weight = 0.0
+                    }
+
                     if ($fimaHoldings.ContainsKey($item.ticker)) {
                         $fi = $fimaHoldings[$item.ticker]
                         $item.shares = $fi.quantity
@@ -61,11 +94,13 @@ if ($null -ne $config.Target) {
                 
                 foreach ($fi in $fimaHoldings.Values) {
                     if ($fi.quantity -gt 0) {
+                        $tw = 0.0
+                        if ($rebalMap.ContainsKey($fi.ticker)) { $tw = $rebalMap[$fi.ticker] }
                         $newItem = [PSCustomObject]@{
                             ticker = $fi.ticker
                             name = $fi.name
                             category = "기타"
-                            target_weight = 0.0
+                            target_weight = $tw
                             shares = $fi.quantity
                             avg_price = $fi.avgPrice
                         }
