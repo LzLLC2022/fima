@@ -1,4 +1,4 @@
-﻿# Ensure paths are correct
+# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -27,14 +27,17 @@ if ($null -ne $config.Target) {
     $targetOwner = $config.Target.'Account Owner'
     $targetAccount = $config.Target.Account
     if ($null -ne $targetOwner -and $null -ne $targetAccount) {
-        $body = @{
+        $bodyJson = @{
             owner = $targetOwner
             accountOwner = $targetOwner
             account = $targetAccount
         } | ConvertTo-Json -Depth 2
         
+        # GitHub Actions (windows-latest) 환경에서 한글 깨짐을 방지하기 위해 UTF-8 바이트 배열로 변환
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($bodyJson)
+        
         try {
-            $fimaRes = Invoke-RestMethod -Uri "https://fima.lim.kr/api/portfolio" -Method POST -Body $body -ContentType "application/json"
+            $fimaRes = Invoke-RestMethod -Uri "https://fima.lim.kr/api/portfolio" -Method POST -Body $bodyBytes -ContentType "application/json; charset=utf-8"
             if ($fimaRes.success -eq $true) {
                 $cash = $fimaRes.totalCashKRW
                 
