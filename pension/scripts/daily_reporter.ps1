@@ -1,4 +1,4 @@
-# Ensure paths are correct
+﻿# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
