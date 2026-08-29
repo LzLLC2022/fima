@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; font-size: 1.8em; }
+        h2 { color: #34495e; margin-top: 30px; font-size: 1.3em; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background-color: #f8f9fa; text-align: center; font-weight: bold; }
+        td:nth-child(1), td:nth-child(2) { text-align: left; }
+        .red { color: red; font-weight: bold; }
+        .blue { color: blue; font-weight: bold; }
+        .highlight { background-color: #fff9e6; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin-top: 30px; }
+        blockquote { border-left: 4px solid #3498db; margin: 1.5em 0; padding: 0.5em 15px; color: #555; background-color: #f1f8ff; }
+        p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>📅 IRP 일일 포트폴리오 마감 리포트</h1>
+    
+    <blockquote>
+        <strong>보고 일자:</strong> {{REPORT_DATE}} (KRX 장 마감 기준)<br>
+        <strong>투자 원금:</strong> {{TOTAL_INVESTMENT}} 원
+    </blockquote>
+
+    <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 5px; margin-bottom: 25px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; color: #34495e; text-align: center; font-size: 1.2em;">👑 은퇴후 연금 황금 비율 가이드</h3>
+        <table style="width: 100%; border: none; font-size: 14px; text-align: center; margin-bottom: 0;">
+            <tr>
+                <td style="border: none; width: 50%; padding: 0 5px;">
+                    <div style="background-color: #fff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <table style="width: 100%; border: none; text-align: left; margin: 0;">
+                            <tr>
+                                <td style="width: 40%; text-align: center; vertical-align: middle; padding-right: 10px; border-right: 1px dashed #ddd;">
+                                    <strong style="color:#2c3e50; font-size:13px;">[1단계] 대분류 자산 배분</strong><br>
+                                    <span style="font-size: 11px; color: #7f8c8d;">현금 : 인컴 : 성장</span><br>
+                                    <strong style="font-size: 1.6em; color: #e74c3c;">1 : 7 : 2</strong>
+                                </td>
+                                <td style="width: 60%; font-size: 12px; color: #555; padding: 5px 5px 5px 10px; line-height: 1.4; text-align: left;">
+                                    <span style="color:#e74c3c; font-weight:bold;">현금자산</span>: 하락장 방어 및 기회 창출용 대기 자금<br>
+                                    <span style="color:#e74c3c; font-weight:bold;">인컴자산</span>: 정기적 배당으로 현금흐름을 만드는 핵심 엔진<br>
+                                    <span style="color:#e74c3c; font-weight:bold;">성장자산</span>: 장기 자본 차익으로 자산 가치를 펌핑
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+                <td style="border: none; width: 50%; padding: 0 5px;">
+                    <div style="background-color: #fff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <table style="width: 100%; border: none; text-align: left; margin: 0;">
+                            <tr>
+                                <td style="width: 40%; text-align: center; vertical-align: middle; padding-right: 10px; border-right: 1px dashed #ddd;">
+                                    <strong style="color:#2c3e50; font-size:13px;">[2단계] 인컴자산 세부</strong><br>
+                                    <span style="font-size: 11px; color: #7f8c8d;">확정 : 변동 : 파생</span><br>
+                                    <strong style="font-size: 1.6em; color: #2980b9;">4 : 4 : 2</strong>
+                                </td>
+                                <td style="width: 60%; font-size: 12px; color: #555; padding: 5px 5px 5px 10px; line-height: 1.4; text-align: left;">
+                                    <span style="color:#2980b9; font-weight:bold;">확정인컴</span>: 인프라/채권 등 든든하게 변동성을 낮추는 닻<br>
+                                    <span style="color:#2980b9; font-weight:bold;">변동인컴</span>: 배당/주가가 동반 상승해 인플레를 방어<br>
+                                    <span style="color:#2980b9; font-weight:bold;">파생인컴</span>: 커버드콜 프리미엄으로 전체 배당률을 극대화
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>📊 1. 포트폴리오 자산 구성 및 가치 요약</h2>
+    <p style="font-size: 12px; color: #7f8c8d;">*(전체 자산을 현금과 개별 주식(ETF)으로 나누어 현재 비중과 평가액을 상세히 요약합니다.)*</p>
+    <table>
+        <tr>
+            <th>자산 구분</th>
+            <th>종목명 (세부 항목)</th>
+            <th>금일 종가</th>
+            <th>전일 대비<br>({{LAST_TRADING_DATE}} 기준)</th>
+            <th>매입금액</th>
+            <th>현재 평가액</th>
+            <th>계좌 내 비중</th>
+            <th>손익금액(누적수익률)</th>
+        </tr>
+        <!-- 치환 태그: {{ASSET_ROWS}} -->
+        {{ASSET_ROWS}}
+        {{ASSET_TOTAL_ROW}}
+    </table>
+
+    <h2>⚖️ 2. 리밸런싱 목표 vs 현재 진행률 비교</h2>
+    <p style="font-size: 12px; color: #7f8c8d;">*(최종 황금비율 목표와 현재 매수된 자산을 비교하여 분할 매수 진행도를 체크합니다.)*</p>
+    <table>
+        <tr>
+            <th>자산 구분</th>
+            <th>종목명</th>
+            <th>목표 비중(%)</th>
+            <th>목표 금액</th>
+            <th>현재 비중(%)</th>
+            <th>현재매입금액</th>
+            <th>현재 평가액</th>
+            <th>달성률</th>
+            <th>금일 종가</th>
+            <th>연간예상배당률</th>
+            <th>추가 매수/매도 필요금액</th>
+            <th>52W 차트</th>
+        </tr>
+        <!-- 치환 태그: {{REBALANCING_ROWS}} -->
+        {{REBALANCING_ROWS}}
+        {{REBALANCING_TOTAL_ROW}}
+    </table>
+
+    <div style="background: linear-gradient(135deg, #1a6b3a, #27ae60); border-radius: 8px; padding: 16px 20px; margin: 15px 0 20px 0; color: white;">
+        <h3 style="margin: 0 0 10px 0; font-size: 14px;">💰 리밸런싱 완료 시 예상 배당 수입</h3>
+        <p style="font-size: 12px; opacity: 0.85; margin: 0 0 12px 0;">목표 비중 달성 후, 각 종목의 현재 배당률을 기준으로 산출한 예상 수입입니다.</p>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.3);">
+                <td style="padding: 8px 0; font-size: 12px; opacity: 0.8;">가중평균 예상 배당률</td>
+                <td style="padding: 8px 0; text-align: right; font-size: 16px; font-weight: bold;">연 {{PROJECTED_AVG_YIELD}}%</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.3);">
+                <td style="padding: 8px 0; font-size: 12px; opacity: 0.8;">연간 예상 배당금 (세전)</td>
+                <td style="padding: 8px 0; text-align: right; font-size: 16px; font-weight: bold;">{{PROJECTED_ANNUAL_DIV}} 원</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 0; font-size: 12px; opacity: 0.8;">월간 예상 배당금 (세전)</td>
+                <td style="padding: 8px 0; text-align: right; font-size: 18px; font-weight: bold;">{{PROJECTED_MONTHLY_DIV}} 원</td>
+            </tr>
+        </table>
+        <p style="font-size: 10px; opacity: 0.65; margin: 10px 0 0 0;">※ 현재 각 종목의 TTM 배당률 기반 추정치이며, 실제 배당금은 시장 상황에 따라 변동될 수 있습니다.</p>
+    </div>
+
+    <div class="highlight" style="background-color: #fff; border: 1px solid #2c3e50; padding: 0; margin-bottom: 30px;">
+        <h2 style="margin-top: 0; background-color: #2c3e50; color: white; padding: 10px 15px;">2-1. 4단계 분할 매매 실행 가이드 (Action Plan)</h2>
+        <div style="padding: 15px;">
+            <p style="background-color: #fff3cd; color: #856404; padding: 10px; border-left: 4px solid #ffeeba; margin-top: 0;">
+                ⚠️ <strong>매매 원칙:</strong> 매도는 한 번에 빠르게 진행하여 리스크를 차단하되, 매수는 시장의 급등락 리스크를 피하기 위해 3~4개월에 걸쳐 나누어 매수(분할 매수)하는 것을 강력히 권장합니다.
+            </p>
+
+            <h3 style="color: #c0392b; margin-top: 20px;">[1단계] 과도한 리스크 종목 전량 매도 (즉시 실행)</h3>
+            <ul>
+                {{ACTION_PLAN_STEP1}}
+            </ul>
+
+            <h3 style="color: #2980b9; margin-top: 20px;">[2단계] 즉시 일괄 매수해도 좋은 안전자산 (즉시 실행)</h3>
+            <ul>
+                {{ACTION_PLAN_STEP2}}
+            </ul>
+
+            <h3 style="color: #27ae60; margin-top: 20px;">[3단계] 성장 및 배당 종목 4분할 매수 (3~4개월간 진행)</h3>
+            <p style="font-size: 12px; color: #555;">주식형 자산은 RP(또는 파킹 ETF)에 넣어둔 돈을 매월 조금씩 빼서 매월 일정 금액만큼 기계적으로 사모읍니다.</p>
+            <table>
+                <tr>
+                    <th style="background-color:#2c3e50; color:white;">매수 대상 종목</th>
+                    <th style="background-color:#2c3e50; color:white;">총 필요 목표액</th>
+                    <th style="background-color:#2c3e50; color:white;">1회 매수 시 권장 금액 (월 1회)</th>
+                </tr>
+                {{ACTION_PLAN_STEP3}}
+            </table>
+
+            <h3 style="color: #8e44ad; margin-top: 20px;">[4단계] 파생인컴 비중 조정 (즉시 또는 분할)</h3>
+            <ul>
+                {{ACTION_PLAN_STEP4}}
+            </ul>
+        </div>
+    </div>
+
+    <h2>💰 3. 예상 배당(분배금) 현황 업데이트</h2>
+    <p style="font-size: 13px;">현재 주가와 최신 분배금 지급 내역을 바탕으로 계산된 1년/1개월 예상 수입입니다.</p>
+    <ul>
+        <li><strong>가중 평균 배당률:</strong> <strong>연 {{AVG_DIVIDEND_YIELD}}%</strong></li>
+        <li><strong>연간 예상 총 분배금:</strong> 약 {{ANNUAL_DIVIDEND}} 원 (세전)</li>
+        <li><strong>월간 예상 분배금:</strong> <strong style="font-size: 1.1em; color: #27ae60;">약 {{MONTHLY_DIVIDEND}} 원 (세전)</strong></li>
+    </ul>
+
+    <table>
+        <tr>
+            <th>종목명</th>
+            <th>주당예상배당금</th>
+            <th>보유수량</th>
+            <th>연간예상배당율</th>
+            <th>연간예상배당금</th>
+            <th>월간예상배당금</th>
+        </tr>
+        <!-- 치환 태그: {{DIVIDEND_ROWS}} -->
+        {{DIVIDEND_ROWS}}
+    </table>
+
+    <p style="font-size: 11px; color: #bdc3c7; text-align: center; margin-top: 40px;">
+        ※ 이 리포트는 Antigravity Skill에 의해 자동 생성 및 발송되었습니다.
+    </p>
+</body>
+</html>
