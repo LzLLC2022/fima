@@ -4,6 +4,11 @@
         "receiver_address": "bootaik@lim.or.kr",
         "app_password": "ENV_GMAIL_APP_PASSWORD"
     },
+    "Target": {
+        "Account Owner": "Forest",
+        "Account": "연금",
+        "Region": "Korea"
+    },
     "portfolio": {
         "total_investment": 414448248,
         "cash_balance": 614585,

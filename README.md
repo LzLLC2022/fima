@@ -272,6 +272,27 @@ npm run dev
 
 ---
 
+## ⚠️ Git Commit 및 Vercel 배포 지침
+
+현재 프로젝트가 Vercel에 연동되어 자동 배포될 때, **특정 이메일(`company@lim.kr`)로 커밋된 내역**만 Vercel 배포 트리거로 인식되도록 설정되어 있을 수 있습니다.
+
+향후 수정 사항을 푸시할 때 Vercel에서 인지하고 정상적으로 빌드 및 배포를 진행할 수 있도록, 로컬 환경의 Git 계정 이메일을 반드시 해당 주소로 설정한 후 커밋을 진행해야 합니다.
+
+### 설정 방법
+
+현재 저장소 디렉토리에서 아래 명령어를 실행하여 이메일을 강제 설정합니다.
+```bash
+git config user.email "company@lim.kr"
+```
+
+설정이 잘 되었는지 확인하려면 다음 명령어를 실행합니다.
+```bash
+git config user.email
+```
+(`company@lim.kr`이 출력되어야 정상입니다.)
+
+---
+
 ## 거래 유형(Trade) 설명
 
 | Trade 값 | 설명 | 필수 컬럼 |

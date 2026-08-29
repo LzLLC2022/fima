@@ -1,4 +1,4 @@
-﻿# Ensure paths are correct
+# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -21,6 +21,62 @@ if ($password -eq "YOUR_APP_PASSWORD_HERE" -or [string]::IsNullOrWhiteSpace($pas
 
 $totalInvest = $config.portfolio.total_investment
 $cash = $config.portfolio.cash_balance
+
+# Fetch from FiMa API to dynamically update portfolio holdings and cash
+if ($null -ne $config.Target) {
+    $targetOwner = $config.Target.'Account Owner'
+    $targetAccount = $config.Target.Account
+    if ($null -ne $targetOwner -and $null -ne $targetAccount) {
+        $body = @{
+            owner = $targetOwner
+            accountOwner = $targetOwner
+            account = $targetAccount
+        } | ConvertTo-Json -Depth 2
+        
+        try {
+            $fimaRes = Invoke-RestMethod -Uri "https://fima.lim.kr/api/portfolio" -Method POST -Body $body -ContentType "application/json"
+            if ($fimaRes.success -eq $true) {
+                $cash = $fimaRes.totalCashKRW
+                
+                $fimaHoldings = @{}
+                if ($null -ne $fimaRes.stocks) { foreach ($s in $fimaRes.stocks) { $fimaHoldings[$s.ticker] = $s } }
+                if ($null -ne $fimaRes.funds)  { foreach ($f in $fimaRes.funds)  { $fimaHoldings[$f.ticker] = $f } }
+                
+                $newHoldings = @()
+                foreach ($item in $config.portfolio.holdings) {
+                    if ($fimaHoldings.ContainsKey($item.ticker)) {
+                        $fi = $fimaHoldings[$item.ticker]
+                        $item.shares = $fi.quantity
+                        $item.avg_price = $fi.avgPrice
+                        $fimaHoldings.Remove($item.ticker)
+                    } else {
+                        $item.shares = 0
+                        $item.avg_price = 0
+                    }
+                    $newHoldings += $item
+                }
+                
+                foreach ($fi in $fimaHoldings.Values) {
+                    if ($fi.quantity -gt 0) {
+                        $newItem = [PSCustomObject]@{
+                            ticker = $fi.ticker
+                            name = $fi.name
+                            category = "기타"
+                            target_weight = 0.0
+                            shares = $fi.quantity
+                            avg_price = $fi.avgPrice
+                        }
+                        $newHoldings += $newItem
+                    }
+                }
+                $config.portfolio.holdings = $newHoldings
+            }
+        } catch {
+            Write-Host "Failed to fetch from FiMa API: $_"
+        }
+    }
+}
+
 $totalEval = $cash
 $totalChange = 0
 $totalPurchase = $cash
