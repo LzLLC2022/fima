@@ -10,10 +10,9 @@ When editing or creating PowerShell scripts (`.ps1`) in this repository, you **M
 The GitHub Actions workflows in this project run on `windows-latest` using Windows PowerShell 5.1 (`powershell`). If a script contains non-ASCII characters (such as Korean text, e.g., "변동인컴", "현금자산") and is saved as UTF-8 *without* a BOM, Windows PowerShell will read it using a legacy encoding (like Windows-1252 or EUC-KR). This corrupts the string literals and causes syntax parsing errors like `UnexpectedToken` or `ParserError` during execution.
 
 ## Rules for Agents
-1. **Preserve BOM**: When using file editing tools (e.g., `replace_file_content`), be aware that the tool might strip the BOM. Always verify that the BOM is preserved.
-2. **Restore BOM if missing**: If you modify a `.ps1` file that contains Korean characters, proactively run a script to re-apply the UTF-8 BOM after your edits. 
-   
-   Example PowerShell command to add BOM:
+1. **DANGER - AI Text Tools Strip BOM**: Standard AI code editing tools (like `replace_file_content` or `multi_replace_file_content`) read and write files as standard UTF-8 without BOM. **If you use these tools to edit a `.ps1` file, the BOM WILL BE STRIPPED and the file WILL CORRUPT in GitHub Actions.**
+2. **Mandatory BOM Restoration**: If you MUST edit a `.ps1` file using your text editing tools, you **MUST IMMEDIATELY** run the following PowerShell script to restore the BOM before committing or finishing your task. Do NOT wait for an error to happen.
+
    ```powershell
    $bytes = [System.IO.File]::ReadAllBytes("path/to/script.ps1")
    $utf8bom = [byte[]]@(0xEF,0xBB,0xBF)
