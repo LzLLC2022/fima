@@ -1,4 +1,4 @@
-﻿﻿# Ensure paths are correct
+﻿﻿﻿# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -314,6 +314,10 @@ elseif ($cashNeedAmt -lt 0) { $totalSellAmt += [math]::Abs($cashNeedAmt) }
 
 $template = $template -replace '\{\{REPORT_TITLE\}\}', 'IRP 주간 포트폴리오 마감 리포트'
 $template = $template -replace '\{\{COMPARE_LABEL\}\}', '전주'
+$compDate = (Get-Date).AddDays(-7)
+while ($compDate.DayOfWeek -ne 'Friday') { $compDate = $compDate.AddDays(-1) }
+$compDateStr = $compDate.ToString("MM월 dd일")
+$template = $template -replace '\{\{COMPARE_DATE\}\}', $compDateStr
 $template = $template -replace '\{\{ASSET_ROWS\}\}', $assetRows
 $template = $template -replace '\{\{ASSET_TOTAL_ROW\}\}', $assetTotalRow
 $template = $template -replace '\{\{REBALANCING_ROWS\}\}', $rebalancingRows

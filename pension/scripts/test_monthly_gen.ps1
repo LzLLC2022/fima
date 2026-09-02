@@ -1,4 +1,4 @@
-﻿﻿# Ensure paths are correct
+﻿# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -156,77 +156,10 @@ foreach ($item in $config.portfolio.holdings) {
 
 $config.portfolio.holdings = $config.portfolio.holdings | Sort-Object Rank
 
-$logHoldings = @{}
-$logPrices = @{}
-
 foreach ($item in $config.portfolio.holdings) {
     if ($item.ticker -eq "-" -or $item.ticker -eq "") { continue }
 
     try {
-        # Fetch Price from Naver Polling API (Supports ETN/Fund codes like 0018C0)
-        $url = "https://polling.finance.naver.com/api/realtime/domestic/stock/$($item.ticker)"
-        $response = Invoke-RestMethod -Uri $url -Headers @{ "User-Agent" = "Mozilla/5.0" } -ErrorAction SilentlyContinue
-        
-        $close = 0
-        $compare = 0
-        $fetchSuccess = $false
-        if ($null -ne $response -and $null -ne $response.datas -and $response.datas.Count -gt 0) {
-            $data = $response.datas[0]
-            $close = [int]($data.closePriceRaw)
-            $compare = [int]($data.compareToPreviousClosePriceRaw)
-            $fetchSuccess = $true
-            $tDate = $data.localTradedAt
-            if ($null -ne $tDate -and [string]::IsNullOrEmpty($lastTradingDateStr) -and $tDate.Length -ge 10) {
-                $lastTradingDateStr = $tDate.Substring(5, 2) + "월 " + $tDate.Substring(8, 2) + "일"
-            }
-        } else {
-            # Fallback if Naver fails
-            $close = 0
-            $compare = 0
-        }
-        
-        $logPrice = $close
-        $logHoldings[$item.ticker] = @{ shares = $item.shares; avg_price = $item.avg_price }
-        $logPrices[$item.ticker] = $logPrice
-        
-        # Fetch Dividends from Yahoo Finance (TTM)
-        $ttmDiv = 0
-        try {
-            $divUrl = "https://query1.finance.yahoo.com/v8/finance/chart/$($item.ticker).KS?interval=1d&range=2y&events=dividends"
-            $divResponse = Invoke-RestMethod -Uri $divUrl -Headers @{ "User-Agent" = "Mozilla/5.0" } -ErrorAction Stop
-            if ($null -ne $divResponse -and $null -ne $divResponse.chart -and $null -ne $divResponse.chart.result -and $divResponse.chart.result.Count -gt 0 -and $null -ne $divResponse.chart.result[0].events -and $null -ne $divResponse.chart.result[0].events.dividends) {
-                $divEvents = $divResponse.chart.result[0].events.dividends
-                foreach ($key in $divEvents.PSObject.Properties.Name) {
-                    $divData = $divEvents.$key
-                    if ($divData.date -ge $oneYearAgo) {
-                        $ttmDiv += $divData.amount
-                    }
-                }
-            }
-        } catch {
-            Write-Host "Yahoo Div fetch failed for $($item.ticker), using 0"
-        }
-        $ttmDiv = [math]::Round($ttmDiv, 2)
-        $ttmDivDict[$item.ticker] = $ttmDiv
-        
-        # Calculations
-        $evalVal = $close * $item.shares
-        $evalChange = $compare * $item.shares
-        $purchaseVal = $item.avg_price * $item.shares
-        $pnl = $evalVal - $purchaseVal
-        $pnlRatio = 0
-        if ($purchaseVal -gt 0) { $pnlRatio = [math]::Round(($pnl / $purchaseVal) * 100, 2) }
-        
-        $totalEval += $evalVal
-        $totalChange += $evalChange
-        $totalPurchase += $purchaseVal
-        
-        $annualDiv = $ttmDiv * $item.shares
-        $monthlyDiv = $annualDiv / 12
-        $divYield = 0
-        if ($close -gt 0) { $divYield = [math]::Round(($ttmDiv / $close) * 100, 2) }
-        $totalAnnualDiv += $annualDiv
-        
         $prevClose = $close - $compare
         $changeRatioStr = "-"
         if ($prevClose -gt 0) {
@@ -311,12 +244,8 @@ $totalSellAmt = 0
 if ($cashNeedAmt -gt 0) { $totalBuyAmt += $cashNeedAmt }
 elseif ($cashNeedAmt -lt 0) { $totalSellAmt += [math]::Abs($cashNeedAmt) }
 
-$template = $template -replace '\{\{REPORT_TITLE\}\}', 'IRP 일일 포트폴리오 마감 리포트'
-$template = $template -replace '\{\{COMPARE_LABEL\}\}', '전일'
-$compDate = (Get-Date).AddDays(-1)
-while ($compDate.DayOfWeek -eq 'Saturday' -or $compDate.DayOfWeek -eq 'Sunday') { $compDate = $compDate.AddDays(-1) }
-$compDateStr = $compDate.ToString("MM월 dd일")
-$template = $template -replace '\{\{COMPARE_DATE\}\}', $compDateStr
+$template = $template -replace '\{\{REPORT_TITLE\}\}', 'IRP 월간 포트폴리오 마감 리포트'
+$template = $template -replace '\{\{COMPARE_LABEL\}\}', '전월'
 $template = $template -replace '\{\{ASSET_ROWS\}\}', $assetRows
 $template = $template -replace '\{\{ASSET_TOTAL_ROW\}\}', $assetTotalRow
 $template = $template -replace '\{\{REBALANCING_ROWS\}\}', $rebalancingRows
@@ -339,7 +268,7 @@ foreach ($item in $config.portfolio.holdings) {
     if ($null -ne $response -and $null -ne $response.datas -and $response.datas.Count -gt 0) {
         $close = [int]($response.datas[0].closePriceRaw)
     } else {
-        $close = 0
+        $close = $item.avg_price
     }
     
     $evalVal = $close * $item.shares
@@ -393,7 +322,7 @@ if ($totalChange -gt 0) { $signHTMLTotal = "&#9650;"; $colorTotal = "red" }
 elseif ($totalChange -lt 0) { $signHTMLTotal = "&#9660;"; $colorTotal = "blue" }
 $fTotalChange = "{0:N0}" -f [math]::Abs($totalChange)
 
-$marketSum = "오늘($lastTradingDateStr)의 전체 포트폴리오 자산은 전일 대비 <strong style='color:$colorTotal;'>$signHTMLTotal $fTotalChange 원</strong> 변동되었습니다."
+$marketSum = "오늘($lastTradingDateStr)의 전체 포트폴리오 자산은 전월 대비 <strong style='color:$colorTotal;'>$signHTMLTotal $fTotalChange 원</strong> 변동되었습니다."
 $template = $template -replace '\{\{MARKET_SUMMARY\}\}', $marketSum
 
 # Replace Action Plan steps
@@ -432,47 +361,13 @@ $previewPath = Join-Path $scriptDir "..\resources\preview.html"
 $enc = New-Object System.Text.UTF8Encoding $true
 [System.IO.File]::WriteAllText($previewPath, $template, $enc)
 
-# Save daily portfolio status to JSON Lines history file
-$historyPath = Join-Path $scriptDir "..\portfolio_daily_log.jsonl"
-$historyDate = (Get-Date).ToString("yyyy-MM-dd")
-$logRecord = @{
-    date = $historyDate
-    summary = @{
-        total_invest = $totalInvest
-        total_eval = $totalEval
-        cash_balance = $cash
-    }
-    holdings = $logHoldings
-    prices = $logPrices
-}
-$logJson = $logRecord | ConvertTo-Json -Depth 5 -Compress
-
-$updatedLines = @()
-$dateFound = $false
-if (Test-Path $historyPath) {
-    $existingLines = [System.IO.File]::ReadAllLines($historyPath, $enc)
-    foreach ($line in $existingLines) {
-        if ([string]::IsNullOrWhiteSpace($line)) { continue }
-        if ($line -match "`"date`":`"$historyDate`"") {
-            $updatedLines += $logJson
-            $dateFound = $true
-        } else {
-            $updatedLines += $line
-        }
-    }
-}
-if (-not $dateFound) {
-    $updatedLines += $logJson
-}
-[System.IO.File]::WriteAllLines($historyPath, $updatedLines, $enc)
-
 $smtp = New-Object System.Net.Mail.SmtpClient("smtp.gmail.com", 587)
 $smtp.EnableSsl = $true
 $smtp.Credentials = New-Object System.Net.NetworkCredential($sender, $password)
 
 $msg = New-Object System.Net.Mail.MailMessage($sender, $receiver)
 $dateStr = (Get-Date).ToString("yyyy-MM-dd")
-    $msg.Subject = "[자동보고] IRP 포트폴리오 일일 마감 리포트 ($dateStr)"
+    $msg.Subject = "[자동보고] IRP 포트폴리오 월간 마감 리포트 ($dateStr)"
 $msg.IsBodyHtml = $true
 $msg.Body = $template
 
@@ -482,4 +377,3 @@ try {
 } catch {
     Write-Host "ERROR: $($_.Exception.Message)"
 }
-
