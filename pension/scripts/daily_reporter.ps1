@@ -1,4 +1,4 @@
-﻿﻿﻿# Ensure paths are correct
+﻿﻿﻿﻿# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -39,7 +39,6 @@ if ($null -ne $config.Target) {
         
         $rebalJson = @{
             owner = $targetOwner
-            region = $targetRegion
         } | ConvertTo-Json -Depth 2
         $rebalBytes = [System.Text.Encoding]::UTF8.GetBytes($rebalJson)
         
