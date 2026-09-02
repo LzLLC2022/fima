@@ -75,19 +75,19 @@ if ($null -ne $config.Target) {
                 $newHoldings = @()
                 foreach ($item in $config.portfolio.holdings) {
                     if ($rebalMap.ContainsKey($item.ticker)) {
-                        $item.target_weight = $rebalMap[$item.ticker]
+                        $item | Add-Member -NotePropertyName "target_weight" -NotePropertyValue $rebalMap[$item.ticker] -Force
                     } else {
-                        $item.target_weight = 0.0
+                        $item | Add-Member -NotePropertyName "target_weight" -NotePropertyValue 0.0 -Force
                     }
 
                     if ($fimaHoldings.ContainsKey($item.ticker)) {
                         $fi = $fimaHoldings[$item.ticker]
-                        $item.shares = $fi.quantity
-                        $item.avg_price = $fi.avgPrice
+                        $item | Add-Member -NotePropertyName "shares" -NotePropertyValue $fi.quantity -Force
+                        $item | Add-Member -NotePropertyName "avg_price" -NotePropertyValue $fi.avgPrice -Force
                         $fimaHoldings.Remove($item.ticker)
                     } else {
-                        $item.shares = 0
-                        $item.avg_price = 0
+                        $item | Add-Member -NotePropertyName "shares" -NotePropertyValue 0 -Force
+                        $item | Add-Member -NotePropertyName "avg_price" -NotePropertyValue 0 -Force
                     }
                     $newHoldings += $item
                 }
