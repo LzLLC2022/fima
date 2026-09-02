@@ -318,7 +318,6 @@ $template = $template -replace '\{\{ASSET_TOTAL_ROW\}\}', $assetTotalRow
 $template = $template -replace '\{\{REBALANCING_ROWS\}\}', $rebalancingRows
 $template = $template -replace '\{\{REBALANCING_TOTAL_ROW\}\}', $rebalancingTotalRow
 $template = $template -replace '\{\{DIVIDEND_ROWS\}\}', $dividendRows
-$template = $template -replace '\{\{LAST_TRADING_DATE\}\}', $lastTradingDateStr
 
 $cashWeight = 0; if ($totalEval -gt 0) { $cashWeight = [math]::Round(($cash / $totalEval) * 100, 1) }
 $template = $template -replace '\{\{WEIGHT_CASH\}\}', "$cashWeight%"
