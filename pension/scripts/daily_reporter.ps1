@@ -312,6 +312,7 @@ if ($cashNeedAmt -gt 0) { $totalBuyAmt += $cashNeedAmt }
 elseif ($cashNeedAmt -lt 0) { $totalSellAmt += [math]::Abs($cashNeedAmt) }
 
 $template = $template -replace '\{\{REPORT_TITLE\}\}', 'IRP 일일 포트폴리오 마감 리포트'
+$template = $template -replace '\{\{COMPARE_LABEL\}\}', '전일'
 $template = $template -replace '\{\{ASSET_ROWS\}\}', $assetRows
 $template = $template -replace '\{\{ASSET_TOTAL_ROW\}\}', $assetTotalRow
 $template = $template -replace '\{\{REBALANCING_ROWS\}\}', $rebalancingRows
