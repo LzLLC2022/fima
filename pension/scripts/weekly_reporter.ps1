@@ -160,23 +160,31 @@ foreach ($item in $config.portfolio.holdings) {
     if ($item.ticker -eq "-" -or $item.ticker -eq "") { continue }
 
     try {
-        # Fetch Price from Naver Polling API (Supports ETN/Fund codes like 0018C0)
-        $url = "https://polling.finance.naver.com/api/realtime/domestic/stock/$($item.ticker)"
-        $response = Invoke-RestMethod -Uri $url -Headers @{ "User-Agent" = "Mozilla/5.0" } -ErrorAction SilentlyContinue
+        $baseDate = (Get-Date)
+        while ($baseDate.DayOfWeek -ne 'Friday') { $baseDate = $baseDate.AddDays(-1) }
+        $compDate = $baseDate.AddDays(-7)
         
-        $close = 0
-        $compare = 0
-        if ($null -ne $response -and $null -ne $response.datas -and $response.datas.Count -gt 0) {
-            $data = $response.datas[0]
-            $close = [int]($data.closePriceRaw)
-            $compare = [int]($data.compareToPreviousClosePriceRaw)
-            $tDate = $data.localTradedAt
-            if ($null -ne $tDate -and [string]::IsNullOrEmpty($lastTradingDateStr) -and $tDate.Length -ge 10) {
-                $lastTradingDateStr = $tDate.Substring(5, 2) + "월 " + $tDate.Substring(8, 2) + "일"
+        $baseStart = $baseDate.AddDays(-3).ToString('yyyyMMdd')
+        $baseEnd = $baseDate.ToString('yyyyMMdd')
+        $compStart = $compDate.AddDays(-3).ToString('yyyyMMdd')
+        $compEnd = $compDate.ToString('yyyyMMdd')
+        
+        try {
+            $closeStr = python (Join-Path $scriptDir "fetch_latest_close.py") $($item.ticker) $baseStart $baseEnd
+            $lastCloseStr = python (Join-Path $scriptDir "fetch_latest_close.py") $($item.ticker) $compStart $compEnd
+            if ($closeStr -is [array]) { $closeStr = $closeStr[-1] }
+            if ($lastCloseStr -is [array]) { $lastCloseStr = $lastCloseStr[-1] }
+            $close = [int]$closeStr
+            $lastClose = [int]$lastCloseStr
+            if ($close -lt 0) { $close = 0 }
+            if ($close -gt 0 -and $lastClose -gt 0) {
+                $compare = $close - $lastClose
+            } else {
+                $compare = 0
             }
-        } else {
-            # Fallback if Naver fails
-            $close = $item.avg_price
+        } catch {
+            $close = 0
+            if ($null -ne $item.avg_price) { $close = $item.avg_price }
             $compare = 0
         }
         
@@ -219,15 +227,7 @@ foreach ($item in $config.portfolio.holdings) {
         $totalAnnualDiv += $annualDiv
         
         $prevClose = $close - $compare
-        $startTime = (Get-Date).AddDays(-8).ToString('yyyyMMdd')
-        $endTime = (Get-Date).ToString('yyyyMMdd')
-        try {
-            $pyScriptPath = Join-Path $scriptDir "fetch_hist.py"
-            $lastClose = python $pyScriptPath $($item.ticker) $startTime $endTime
-            $lastClose = [int]$lastClose
-            if ($lastClose -gt 0) { $compare = $close - $lastClose }
-            else { $compare = 0 }
-        } catch { $compare = 0 }
+
         $prevClose = $close - $compare
         $changeRatioStr = "-"
         if ($prevClose -gt 0) {
