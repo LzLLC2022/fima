@@ -1,4 +1,4 @@
-﻿# Ensure paths are correct
+﻿﻿# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -160,6 +160,84 @@ foreach ($item in $config.portfolio.holdings) {
     if ($item.ticker -eq "-" -or $item.ticker -eq "") { continue }
 
     try {
+        $prevMonthStr = (Get-Date).AddMonths(-1).ToString('yyyyMM')
+        $prevPrevMonthStr = (Get-Date).AddMonths(-2).ToString('yyyyMM')
+        try {
+            $closeStr = python (Join-Path $scriptDir "fetch_month_end.py") $($item.ticker) $prevMonthStr
+            $lastCloseStr = python (Join-Path $scriptDir "fetch_month_end.py") $($item.ticker) $prevPrevMonthStr
+            if ($closeStr -is [array]) { $closeStr = $closeStr[-1] }
+            if ($lastCloseStr -is [array]) { $lastCloseStr = $lastCloseStr[-1] }
+            $close = [int]$closeStr
+            $lastClose = [int]$lastCloseStr
+            if ($close -lt 0) { $close = 0 }
+            if ($close -gt 0 -and $lastClose -gt 0) {
+                $compare = $close - $lastClose
+            } else {
+                $compare = 0
+            }
+        } catch {
+            $close = 0
+            if ($null -ne $item.avg_price) { $close = $item.avg_price }
+            $compare = 0
+        }
+        
+        # Fetch Dividends from Yahoo Finance (TTM)
+        $ttmDiv = 0
+        try {
+            $divUrl = "https://query1.finance.yahoo.com/v8/finance/chart/$($item.ticker).KS?interval=1d&range=2y&events=dividends"
+            $divResponse = Invoke-RestMethod -Uri $divUrl -Headers @{ "User-Agent" = "Mozilla/5.0" } -ErrorAction Stop
+            if ($null -ne $divResponse -and $null -ne $divResponse.chart -and $null -ne $divResponse.chart.result -and $divResponse.chart.result.Count -gt 0 -and $null -ne $divResponse.chart.result[0].events -and $null -ne $divResponse.chart.result[0].events.dividends) {
+                $divEvents = $divResponse.chart.result[0].events.dividends
+                foreach ($key in $divEvents.PSObject.Properties.Name) {
+                    $divData = $divEvents.$key
+                    if ($divData.date -ge $oneYearAgo) {
+                        $ttmDiv += $divData.amount
+                    }
+                }
+            }
+        } catch {
+            Write-Host "Yahoo Div fetch failed for $($item.ticker), using 0"
+        }
+        $ttmDiv = [math]::Round($ttmDiv, 2)
+        $ttmDivDict[$item.ticker] = $ttmDiv
+        
+        # Calculations
+        $evalVal = $close * $item.shares
+        $evalChange = $compare * $item.shares
+        $purchaseVal = $item.avg_price * $item.shares
+        $pnl = $evalVal - $purchaseVal
+        $pnlRatio = 0
+        if ($purchaseVal -gt 0) { $pnlRatio = [math]::Round(($pnl / $purchaseVal) * 100, 2) }
+        
+        $totalEval += $evalVal
+        $totalChange += $evalChange
+        $totalPurchase += $purchaseVal
+        
+        $annualDiv = $ttmDiv * $item.shares
+        $monthlyDiv = $annualDiv / 12
+        $divYield = 0
+        if ($close -gt 0) { $divYield = [math]::Round(($ttmDiv / $close) * 100, 2) }
+        $totalAnnualDiv += $annualDiv
+        
+        $prevClose = $close - $compare
+        $prevMonthStr = (Get-Date).AddMonths(-1).ToString('yyyyMM')
+        $prevPrevMonthStr = (Get-Date).AddMonths(-2).ToString('yyyyMM')
+        try {
+            $prevMonthClose = python (Join-Path $scriptDir "fetch_month_end.py") $($item.ticker) $prevMonthStr
+            $prevPrevMonthClose = python (Join-Path $scriptDir "fetch_month_end.py") $($item.ticker) $prevPrevMonthStr
+            
+            $prevMonthClose = [int]$prevMonthClose
+            $prevPrevMonthClose = [int]$prevPrevMonthClose
+            
+            if ($prevMonthClose -gt 0) {
+                $close = $prevMonthClose
+                if ($prevPrevMonthClose -gt 0) {
+                    $compare = $close - $prevPrevMonthClose
+                } else {
+                    $compare = 0
+                }
+            }
+        } catch {}
         $prevClose = $close - $compare
         $changeRatioStr = "-"
         if ($prevClose -gt 0) {
