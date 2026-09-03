@@ -2,8 +2,8 @@ name: IRP Daily Reporter
 
 on:
   schedule:
-    # 매일 UTC 07:00 (KST 16:00)에 실행 (월~금)
-    - cron: '0 7 * * 1-5'
+    # 매일 UTC 07:05 (KST 16:05)에 실행 (월~금) - GitHub Actions 정각 누락 방지
+    - cron: '5 7 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -36,6 +36,6 @@ jobs:
         shell: bash
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "company@lim.kr"
           git add pension/portfolio_daily_log.jsonl
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update daily portfolio log" && git push)
