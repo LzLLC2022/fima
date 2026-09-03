@@ -32,17 +32,13 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
     // For demonstration, we return a mock value based on the provider.
     // Replace these blocks with actual `fetch()` calls to the provider APIs.
     if (etfInfo.provider === 'SOL') {
-       // Mock API call to SOL ETF backend
-       // ex) const res = await fetch(`https://api.soletf.com/dividend?ticker=${cleanTicker}`);
-       // ... parse response and match by exDate
-       return 100; 
+       return 0; 
     } else if (etfInfo.provider === 'KODEX') {
-       // Mock API call to Samsung Fund backend
-       return 50;
+       return 0;
     } else if (etfInfo.provider === 'PLUS') {
        return 0;
     } else if (etfInfo.provider === 'TIGER') {
-       return 25;
+       return 0;
     }
   } catch (error) {
     console.error(`Failed to fetch tax base for ${cleanTicker}:`, error);
