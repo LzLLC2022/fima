@@ -63,7 +63,8 @@ async function scrapeTaxBase() {
   for (const year of years) {
     // 공공데이터포털(한국예탁결제원) 배당 정보 조회 (엔드포인트는 실제 API 스펙에 맞게 조정 필요)
     // 예시로 getDividendRankN1 (또는 실제 과세표준액 엔드포인트) 사용
-    const url = `https://apis.data.go.kr/B552481/StockSvc/getDividendRankN1?serviceKey=${encodeURIComponent(API_KEY)}&year=${year}&numOfRows=10000&pageNo=1`;
+    const encodedKey = API_KEY.includes('%') ? API_KEY : encodeURIComponent(API_KEY);
+    const url = `https://apis.data.go.kr/B552481/StockSvc/getDividendRankN1?serviceKey=${encodedKey}&year=${year}&numOfRows=10000&pageNo=1`;
     
     try {
       const xml = await fetchApi(url);
