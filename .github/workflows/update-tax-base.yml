@@ -24,12 +24,11 @@ jobs:
           cache: 'npm'
           
       - name: Install dependencies
-        run: |
-          npm ci
-          # We need puppeteer specifically for the script
-          npm install puppeteer
-          
-      - name: Run Scraper
+        run: npm install
+
+      - name: Run KSD API tax base extraction script
+        env:
+          KSD_API_KEY: ${{ secrets.KSD_API_KEY }}
         run: node scripts/scrape_tax_base.js
         
       - name: Commit and Push changes
