@@ -1,0 +1,40 @@
+name: Update Tax Base Data
+
+on:
+  schedule:
+    # Run at 21:00 UTC (06:00 KST) every day
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          # We need puppeteer specifically for the script
+          npm install puppeteer
+          
+      - name: Run Scraper
+        run: node scripts/scrape_tax_base.js
+        
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "company@lim.kr"
+          git add public/data/tax_base.json
+          
+          # Only commit if there are changes
+          git diff --staged --quiet || (git commit -m "chore(data): auto-update etf tax base data" && git push)

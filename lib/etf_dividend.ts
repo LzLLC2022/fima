@@ -30,9 +30,32 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
   if (!etfInfo) return null;
 
   try {
-    // In a full implementation, you would write provider-specific API fetchers here.
-    // For demonstration, we return a mock value based on the provider.
-    // Replace these blocks with actual `fetch()` calls to the provider APIs.
+    // 1. GitHub Actions에서 매일 크롤링하여 저장하는 정적 JSON 파일을 호출 (Vercel 배포 시 public 폴더로 서빙됨)
+    // 2. 만약 fima.lim.kr에서 가져오지 못할 경우를 대비해 GitHub Raw 데이터 폴백
+    let taxBaseData: Record<string, Record<string, number>> = {};
+    try {
+      const res = await fetch('https://fima.lim.kr/data/tax_base.json', { next: { revalidate: 3600 } });
+      if (res.ok) {
+        taxBaseData = await res.json();
+      } else {
+        // Fallback to GitHub raw if local fetch fails
+        const fallback = await fetch('https://raw.githubusercontent.com/LzLLC2022/fima/main/public/data/tax_base.json');
+        if (fallback.ok) taxBaseData = await fallback.json();
+      }
+    } catch (e) {
+      console.error('Failed to load tax_base.json:', e);
+    }
+
+    // JSON 데이터에 해당 종목이 있는지 확인
+    const tickerData = taxBaseData[cleanTicker];
+    if (tickerData) {
+      const targetMonth = exDate.substring(0, 7).replace('-', '');
+      if (tickerData[targetMonth] !== undefined) {
+        return tickerData[targetMonth];
+      }
+    }
+
+    // SOL ETF의 경우 실시간 API 호출 병행 유지 (선택 사항)
     if (etfInfo.provider === 'SOL') {
       try {
         if (etfInfo.fundCd) {
@@ -41,7 +64,6 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
           if (res.ok) {
             const data = await res.json();
             if (data && data.items && Array.isArray(data.items)) {
-              // Match by YYYYMM (Year-Month) since exDate (배당락일) and WORK_DT (지급기준일) differ by a few days.
               const targetMonth = exDate.substring(0, 7).replace('-', '');
               const item = data.items.find((i: any) => i.WORK_DT && i.WORK_DT.startsWith(targetMonth));
               if (item) return Number(item.WEEK_PRI) || 0;
@@ -51,19 +73,10 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
       } catch (err) {
         console.error(`SOL API fetch error for ${cleanTicker}:`, err);
       }
-      return 0; 
-    } else if (etfInfo.provider === 'KODEX') {
-       // KODEX (Samsung Fund) is protected by Cloudflare bot protection.
-       // Direct fetch() fails. Requires Puppeteer or manual proxy.
-       return 0;
-    } else if (etfInfo.provider === 'PLUS') {
-       return 0;
-    } else if (etfInfo.provider === 'TIGER') {
-       return 0;
     }
   } catch (error) {
     console.error(`Failed to fetch tax base for ${cleanTicker}:`, error);
   }
   
-  return null;
+  return 0;
 }
