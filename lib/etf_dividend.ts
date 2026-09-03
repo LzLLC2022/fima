@@ -33,21 +33,31 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
     // Replace these blocks with actual `fetch()` calls to the provider APIs.
     if (etfInfo.provider === 'SOL') {
       try {
-        const url = `https://www.soletf.com/api/etf/pds/dividend/${cleanTicker}`;
-        const res = await fetch(url, {
+        // Step 1: Find the internal FUND_CD using the standard ticker code
+        const searchRes = await fetch('https://www.soletf.com/api/common/searchByEtfNameOrFilter', {
+          method: 'POST',
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
-          }
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0'
+          },
+          body: JSON.stringify({ keyword: cleanTicker })
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.items && Array.isArray(data.items)) {
-            // Find the item matching exDate (e.g., '2026-08-31' -> '20260831')
-            const targetDt = exDate.replace(/-/g, '');
-            const item = data.items.find((i: any) => i.WORK_DT === targetDt);
-            if (item) {
-              // SOL API uses WEEK_PRI for tax base amount
-              return Number(item.WEEK_PRI) || 0;
+        
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          // Match standard code (ETF_CD6)
+          const found = (searchData.items || []).find((i: any) => i.ETF_CD6 === cleanTicker);
+          if (found && found.FUND_CD) {
+            // Step 2: Fetch dividend info using FUND_CD
+            const url = `https://www.soletf.com/api/etf/pds/dividend/${found.FUND_CD}`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.items && Array.isArray(data.items)) {
+                const targetDt = exDate.replace(/-/g, '');
+                const item = data.items.find((i: any) => i.WORK_DT === targetDt);
+                if (item) return Number(item.WEEK_PRI) || 0;
+              }
             }
           }
         }
