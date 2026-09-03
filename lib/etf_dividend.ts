@@ -41,8 +41,9 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
           if (res.ok) {
             const data = await res.json();
             if (data && data.items && Array.isArray(data.items)) {
-              const targetDt = exDate.replace(/-/g, '');
-              const item = data.items.find((i: any) => i.WORK_DT === targetDt);
+              // Match by YYYYMM (Year-Month) since exDate (배당락일) and WORK_DT (지급기준일) differ by a few days.
+              const targetMonth = exDate.substring(0, 7).replace('-', '');
+              const item = data.items.find((i: any) => i.WORK_DT && i.WORK_DT.startsWith(targetMonth));
               if (item) return Number(item.WEEK_PRI) || 0;
             }
           }
