@@ -8688,10 +8688,18 @@
             : '') +
         '</div>';
 
+      var hasTaxBase = dv.history.some(function(h) { return typeof h.taxBase !== 'undefined' && h.taxBase !== null; });
       var histRows = dv.history.map(function(h) {
+        var taxBaseHtml = '';
+        if (hasTaxBase) {
+           taxBaseHtml = h.taxBase !== null && typeof h.taxBase !== 'undefined'
+             ? '<td style="padding:4px 8px;text-align:right;font-weight:500;color:#2d2747;">' + fmtA(h.taxBase) + ' ' + cur + '</td>'
+             : '<td style="padding:4px 8px;text-align:right;color:#a0aec0;">-</td>';
+        }
         return '<tr style="border-bottom:1px solid #f9f7ff;">' +
           '<td style="padding:4px 8px;color:#4a5568;white-space:nowrap;">' + h.exDate + '</td>' +
           '<td style="padding:4px 8px;text-align:right;font-weight:600;color:#2d2747;">' + fmtA(h.amount) + ' ' + cur + '</td>' +
+          taxBaseHtml +
         '</tr>';
       }).join('');
 
@@ -8701,6 +8709,7 @@
               '<thead><tr style="background:#f5f3ff;border-bottom:2px solid #e5e1f5;">' +
                 '<th style="padding:5px 8px;text-align:left;color:#4a5568;font-weight:600;">배당락일</th>' +
                 '<th style="padding:5px 8px;text-align:right;color:#4a5568;font-weight:600;">배당금액</th>' +
+                (hasTaxBase ? '<th style="padding:5px 8px;text-align:right;color:#4a5568;font-weight:600;">과세표준액</th>' : '') +
               '</tr></thead>' +
               '<tbody>' + histRows + '</tbody>' +
             '</table>' +
