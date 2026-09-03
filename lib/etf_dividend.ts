@@ -2,10 +2,12 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
   const cleanTicker = ticker.split('.')[0].toUpperCase();
   
   // Example mapping for known ETFs to their provider IDs
-  const etfMap: Record<string, { provider: string, url: string }> = {
+  const etfMap: Record<string, { provider: string, url: string, fundCd?: string }> = {
     // SOL 팔란티어커버드콜OTM채권혼합
-    '0040Y0': { provider: 'SOL', url: 'https://www.soletf.com/ko/fund/etf/211088' },
-    '486170': { provider: 'SOL', url: 'https://www.soletf.com/ko/fund/etf/211088' },
+    '0040Y0': { provider: 'SOL', url: 'https://www.soletf.com/ko/fund/etf/211088', fundCd: '211088' },
+    '486170': { provider: 'SOL', url: 'https://www.soletf.com/ko/fund/etf/211088', fundCd: '211088' },
+    // SOL 팔란티어미국채커버드콜혼합
+    '0040X0': { provider: 'SOL', url: 'https://www.soletf.com/ko/fund/etf/211089', fundCd: '211089' },
     // KODEX 미국나스닥100데일리커버드콜OTM
     '480460': { provider: 'KODEX', url: 'https://www.samsungfund.com/etf/product/view.do?id=2ETFO6' },
     // KODEX 테슬라커버드콜채권혼합액티브
@@ -33,31 +35,15 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
     // Replace these blocks with actual `fetch()` calls to the provider APIs.
     if (etfInfo.provider === 'SOL') {
       try {
-        // Step 1: Find the internal FUND_CD using the standard ticker code
-        const searchRes = await fetch('https://www.soletf.com/api/common/searchByEtfNameOrFilter', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0'
-          },
-          body: JSON.stringify({ keyword: cleanTicker })
-        });
-        
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
-          // Match standard code (ETF_CD6)
-          const found = (searchData.items || []).find((i: any) => i.ETF_CD6 === cleanTicker);
-          if (found && found.FUND_CD) {
-            // Step 2: Fetch dividend info using FUND_CD
-            const url = `https://www.soletf.com/api/etf/pds/dividend/${found.FUND_CD}`;
-            const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.items && Array.isArray(data.items)) {
-                const targetDt = exDate.replace(/-/g, '');
-                const item = data.items.find((i: any) => i.WORK_DT === targetDt);
-                if (item) return Number(item.WEEK_PRI) || 0;
-              }
+        if (etfInfo.fundCd) {
+          const url = `https://www.soletf.com/api/etf/pds/dividend/${etfInfo.fundCd}`;
+          const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.items && Array.isArray(data.items)) {
+              const targetDt = exDate.replace(/-/g, '');
+              const item = data.items.find((i: any) => i.WORK_DT === targetDt);
+              if (item) return Number(item.WEEK_PRI) || 0;
             }
           }
         }
