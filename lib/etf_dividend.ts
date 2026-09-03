@@ -32,8 +32,32 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
     // For demonstration, we return a mock value based on the provider.
     // Replace these blocks with actual `fetch()` calls to the provider APIs.
     if (etfInfo.provider === 'SOL') {
-       return 0; 
+      try {
+        const url = `https://www.soletf.com/api/etf/pds/dividend/${cleanTicker}`;
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.items && Array.isArray(data.items)) {
+            // Find the item matching exDate (e.g., '2026-08-31' -> '20260831')
+            const targetDt = exDate.replace(/-/g, '');
+            const item = data.items.find((i: any) => i.WORK_DT === targetDt);
+            if (item) {
+              // SOL API uses WEEK_PRI for tax base amount
+              return Number(item.WEEK_PRI) || 0;
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`SOL API fetch error for ${cleanTicker}:`, err);
+      }
+      return 0; 
     } else if (etfInfo.provider === 'KODEX') {
+       // KODEX (Samsung Fund) is protected by Cloudflare bot protection.
+       // Direct fetch() fails. Requires Puppeteer or manual proxy.
        return 0;
     } else if (etfInfo.provider === 'PLUS') {
        return 0;
