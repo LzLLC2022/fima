@@ -80,14 +80,18 @@ async function scrapeTaxBase() {
       
       for (const item of items) {
         // 단축코드(stkCd), 지급기준일(divBaseDt), 과세표준액(taxBaseAmt / divAmt 등 실제 필드명에 맞게 변경)
-        const ticker = item.stkCd || item.isinCd?.substring(item.isinCd.length - 6) || item.shotnIsin; // 유추
+        const ticker = item.stkCd || item.shotnIsin || (item.isinCd ? item.isinCd.substring(3, 9) : null);
         
-        if (etfMap[ticker]) {
+        if (ticker && etfMap[ticker]) {
           if (!finalData[ticker]) finalData[ticker] = {};
           
-          const yyyymm = (item.divBaseDt || item.recordDate || item.basDt || "").substring(0, 6);
+          let yyyymm = (item.divBaseDt || item.recordDate || item.basDt || "").substring(0, 6);
+          if (!yyyymm && (item.setaccMmdd || item.setaccMm)) {
+            const mm = (item.setaccMmdd || item.setaccMm).substring(0, 2);
+            yyyymm = `${year}${mm}`;
+          }
           // 실제 과세표준액을 제공하는 필드가 없다면 배당금(divAmt) 필드값 사용
-          const taxBaseStr = item.taxBaseAmt || item.divAmt || item.cashDivAmt || "0"; 
+          const taxBaseStr = item.taxBaseAmt || item.divAmt || item.cashDivAmt || item.divAmtPerStk || "0"; 
           const taxBase = parseInt(taxBaseStr, 10);
           
           if (yyyymm && !isNaN(taxBase)) {
