@@ -1,4 +1,4 @@
-export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<number | null> {
+export async function getTaxBaseInfo(ticker: string, exDate: string): Promise<{ dividend: number, taxBase: number } | null> {
   const cleanTicker = ticker.split('.')[0].toUpperCase();
   
   // Example mapping for known ETFs to their provider IDs
@@ -30,15 +30,12 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
   if (!etfInfo) return null;
 
   try {
-    // 1. GitHub Actions에서 매일 크롤링하여 저장하는 정적 JSON 파일을 호출 (Vercel 배포 시 public 폴더로 서빙됨)
-    // 2. 만약 fima.lim.kr에서 가져오지 못할 경우를 대비해 GitHub Raw 데이터 폴백
-    let taxBaseData: Record<string, Record<string, number>> = {};
+    let taxBaseData: any = {};
     try {
-      const res = await fetch('https://fima.lim.kr/data/tax_base.json', { next: { revalidate: 3600 } });
+      const res = await fetch('https://fima.lim.kr/data/tax_base.json', { next: { revalidate: 3600 } } as any);
       if (res.ok) {
         taxBaseData = await res.json();
       } else {
-        // Fallback to GitHub raw if local fetch fails
         const fallback = await fetch('https://raw.githubusercontent.com/LzLLC2022/fima/main/public/data/tax_base.json');
         if (fallback.ok) taxBaseData = await fallback.json();
       }
@@ -46,16 +43,22 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
       console.error('Failed to load tax_base.json:', e);
     }
 
-    // JSON 데이터에 해당 종목이 있는지 확인
+    // JSON 데이터에 해당 종목이 있는지 확인 (새로운 { name, data: {...} } 구조 대응)
     const tickerData = taxBaseData[cleanTicker];
-    if (tickerData) {
+    if (tickerData && tickerData.data) {
       const targetMonth = exDate.substring(0, 7).replace('-', '');
-      if (tickerData[targetMonth] !== undefined) {
-        return tickerData[targetMonth];
+      if (tickerData.data[targetMonth] !== undefined) {
+        return tickerData.data[targetMonth]; // { dividend, taxBase }
+      }
+    } else if (tickerData) {
+      // 구버전 구조 호환성 유지 (선택)
+      const targetMonth = exDate.substring(0, 7).replace('-', '');
+      if (typeof tickerData[targetMonth] === 'number') {
+        return { dividend: 0, taxBase: tickerData[targetMonth] };
       }
     }
 
-    // SOL ETF의 경우 실시간 API 호출 병행 유지 (선택 사항)
+    // SOL ETF 실시간 API 폴백
     if (etfInfo.provider === 'SOL') {
       try {
         if (etfInfo.fundCd) {
@@ -66,7 +69,12 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
             if (data && data.items && Array.isArray(data.items)) {
               const targetMonth = exDate.substring(0, 7).replace('-', '');
               const item = data.items.find((i: any) => i.WORK_DT && i.WORK_DT.startsWith(targetMonth));
-              if (item) return Number(item.WEEK_PRI) || 0;
+              if (item) {
+                return { 
+                  dividend: Number(item.DIVI_AMT) || 0, 
+                  taxBase: Number(item.STND_TAX_STND_AMT) || 0 
+                };
+              }
             }
           }
         }
@@ -74,9 +82,10 @@ export async function getTaxBaseAmount(ticker: string, exDate: string): Promise<
         console.error(`SOL API fetch error for ${cleanTicker}:`, err);
       }
     }
+
   } catch (error) {
     console.error(`Failed to fetch tax base for ${cleanTicker}:`, error);
   }
   
-  return 0;
+  return null;
 }

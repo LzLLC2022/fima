@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStockInfo } from '@/lib/stock';
-import { getTaxBaseAmount } from '@/lib/etf_dividend';
+import { getTaxBaseInfo } from '@/lib/etf_dividend';
 
 function isKoreanCode(code: string): boolean {
   const c = code.toString().trim().toUpperCase().split('.')[0];
@@ -286,16 +286,24 @@ export async function POST(req: NextRequest) {
     const history = await Promise.all(ttmDivs.map(async d => {
       const formattedExDate = fmtDate(d.date);
       let taxBase: number | null = null;
+      let finalAmount = Math.round(d.amount * 100000) / 100000;
       
-      // Attempt to fetch tax base amount for this specific ex-dividend date
+      // Attempt to fetch tax base info for this specific ex-dividend date
       if (isKoreanCode(clean)) {
-        taxBase = await getTaxBaseAmount(usedTicker, formattedExDate);
+        const tbInfo = await getTaxBaseInfo(usedTicker, formattedExDate);
+        if (tbInfo) {
+          taxBase = tbInfo.taxBase;
+          // 스크래핑한 배당금이 0보다 크면 그 값을 사용 (혹은 그대로 덮어쓰기)
+          if (tbInfo.dividend > 0) {
+            finalAmount = tbInfo.dividend;
+          }
+        }
       }
 
       return {
         exDate:  formattedExDate,
         payDate: '-',
-        amount:  Math.round(d.amount * 100000) / 100000,
+        amount:  finalAmount,
         taxBase: taxBase,
       };
     }));
