@@ -27,7 +27,6 @@ export async function getTaxBaseInfo(ticker: string, exDate: string): Promise<{ 
   };
 
   const etfInfo = etfMap[cleanTicker];
-  if (!etfInfo) return null;
 
   try {
     let taxBaseData: any = {};
@@ -59,7 +58,7 @@ export async function getTaxBaseInfo(ticker: string, exDate: string): Promise<{ 
     }
 
     // SOL ETF 실시간 API 폴백
-    if (etfInfo.provider === 'SOL') {
+    if (etfInfo && etfInfo.provider === 'SOL') {
       try {
         if (etfInfo.fundCd) {
           const url = `https://www.soletf.com/api/etf/pds/dividend/${etfInfo.fundCd}`;
