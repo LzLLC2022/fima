@@ -172,61 +172,79 @@ async function scrapeProvider(page, ticker, info) {
 }
 
 async function scrapeTaxBase() {
-  console.log("Starting ETF tax base scraper with Puppeteer...");
-  const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  const page = await browser.newPage();
-  
-  const finalData = {};
-  
-  for (const [ticker, info] of Object.entries(etfMap)) {
-    console.log(`Scraping ${info.provider} ETF: ${ticker}...`);
-    const data = await scrapeProvider(page, ticker, info);
-    if (Object.keys(data).length > 0) {
-      finalData[ticker] = data;
-    }
-  }
-  
-  await browser.close();
-
-  // 데이터 병합 및 저장
   const publicDataDir = path.join(__dirname, '../public/data');
   if (!fs.existsSync(publicDataDir)) fs.mkdirSync(publicDataDir, { recursive: true });
-  
-  const outputPath = path.join(publicDataDir, 'tax_base.json');
-  let existingData = {};
-  if (fs.existsSync(outputPath)) {
-    try { existingData = JSON.parse(fs.readFileSync(outputPath, 'utf8')); } catch(e) {}
-  }
-  
-  for (const ticker of Object.keys(etfMap)) {
-    if (finalData[ticker]) {
-      if (!existingData[ticker] || !existingData[ticker].name) {
-        existingData[ticker] = { name: etfMap[ticker].name, data: {} };
+  const logPath = path.join(publicDataDir, 'tax_base.log');
+  const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+  let logMessage = `[${now}] Scrape started.\n`;
+
+  try {
+    console.log("Starting ETF tax base scraper with Puppeteer...");
+    const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    
+    const finalData = {};
+    let errorCount = 0;
+    
+    for (const [ticker, info] of Object.entries(etfMap)) {
+      console.log(`Scraping ${info.provider} ETF: ${ticker}...`);
+      const data = await scrapeProvider(page, ticker, info);
+      if (Object.keys(data).length > 0) {
+        finalData[ticker] = data;
+      } else {
+        errorCount++;
       }
-      existingData[ticker].name = etfMap[ticker].name; // 항상 최신 이름으로 업데이트
-      Object.assign(existingData[ticker].data, finalData[ticker]);
-      console.log(`Updated data for ${ticker} (${existingData[ticker].name})`);
     }
+    
+    await browser.close();
+
+    const outputPath = path.join(publicDataDir, 'tax_base.json');
+    let existingData = {};
+    if (fs.existsSync(outputPath)) {
+      try { existingData = JSON.parse(fs.readFileSync(outputPath, 'utf8')); } catch(e) {}
+    }
+    
+    let updatedCount = 0;
+    for (const ticker of Object.keys(etfMap)) {
+      if (finalData[ticker]) {
+        if (!existingData[ticker] || !existingData[ticker].name) {
+          existingData[ticker] = { name: etfMap[ticker].name, data: {} };
+        }
+        existingData[ticker].name = etfMap[ticker].name; // 항상 최신 이름으로 업데이트
+        Object.assign(existingData[ticker].data, finalData[ticker]);
+        updatedCount++;
+        console.log(`Updated data for ${ticker} (${existingData[ticker].name})`);
+      }
+    }
+
+    fs.writeFileSync(outputPath, JSON.stringify(existingData, null, 2));
+    console.log(`\nSuccessfully saved data to ${outputPath}`);
+    
+    logMessage += `[${now}] Scrape finished. Updated: ${updatedCount}, Errors/Empty: ${errorCount}.\n`;
+  } catch (err) {
+    console.error('Scraper failed:', err);
+    logMessage += `[${now}] Scrape failed with error: ${err.message}\n`;
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(existingData, null, 2));
-  console.log(`\nSuccessfully saved data to ${outputPath}`);
-    
+  // 로그 파일에 기록 (누적)
+  fs.appendFileSync(logPath, logMessage);
+
   // GitHub 자동 푸시
   try {
-    console.log('\nCommitting and pushing tax_base.json to GitHub...');
+    console.log('\nCommitting and pushing files to GitHub...');
     const { execSync } = require('child_process');
     
-    execSync('git add public/data/tax_base.json', { stdio: 'inherit' });
+    // json과 log 파일 모두 추가
+    execSync('git add public/data/tax_base.json public/data/tax_base.log', { stdio: 'inherit' });
     
-    const status = execSync('git status --porcelain public/data/tax_base.json').toString();
+    const status = execSync('git status --porcelain public/data/tax_base.json public/data/tax_base.log').toString();
     if (status.trim() !== '') {
       const dateStr = new Date().toISOString().split('T')[0];
-      execSync(`git commit -m "Update tax_base.json data (${dateStr})"`, { stdio: 'inherit' });
+      execSync(`git commit -m "Update tax_base data and log (${dateStr})"`, { stdio: 'inherit' });
       execSync('git push origin main', { stdio: 'inherit' });
       console.log('Successfully pushed to GitHub!');
     } else {
-      console.log('No new changes in tax_base.json to push.');
+      console.log('No new changes in data or log to push.');
     }
   } catch (err) {
     console.error('Failed to push to GitHub:', err.message);

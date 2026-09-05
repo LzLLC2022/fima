@@ -35,7 +35,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "company@lim.kr"
-          git add public/data/tax_base.json
+          git add public/data/tax_base.json public/data/tax_base.log
           
           # Only commit if there are changes
-          git diff --staged --quiet || (git commit -m "chore(data): auto-update etf tax base data" && git push)
+          git diff --staged --quiet || (git commit -m "chore(data): auto-update etf tax base data and log" && git push)
