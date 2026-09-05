@@ -31,11 +31,11 @@ export async function getTaxBaseInfo(ticker: string, exDate: string): Promise<{ 
   try {
     let taxBaseData: any = {};
     try {
-      const res = await fetch('https://fima.lim.kr/data/tax_base.json', { next: { revalidate: 3600 } } as any);
+      const res = await fetch('https://fima.lim.kr/data/tax_base.json?v=2', { next: { revalidate: 3600 } } as any);
       if (res.ok) {
         taxBaseData = await res.json();
       } else {
-        const fallback = await fetch('https://raw.githubusercontent.com/LzLLC2022/fima/main/public/data/tax_base.json');
+        const fallback = await fetch('https://raw.githubusercontent.com/LzLLC2022/fima/main/public/data/tax_base.json?v=2');
         if (fallback.ok) taxBaseData = await fallback.json();
       }
     } catch (e) {
