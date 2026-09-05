@@ -106,44 +106,44 @@
     "name": "TIGER 은행고배당플러스TOP10",
     "data": {
       "202511": {
-        "dividend": 80,
-        "taxBase": 0
+        "dividend": 72,
+        "taxBase": 72
       },
       "202512": {
-        "dividend": 77,
-        "taxBase": 0
+        "dividend": 72,
+        "taxBase": 72
       },
       "202601": {
-        "dividend": 77,
-        "taxBase": 0
+        "dividend": 73,
+        "taxBase": 73
       },
       "202602": {
-        "dividend": 77,
-        "taxBase": 0
+        "dividend": 87,
+        "taxBase": 61
       },
       "202603": {
-        "dividend": 75,
-        "taxBase": 0
+        "dividend": 87,
+        "taxBase": 87
       },
       "202604": {
-        "dividend": 74,
-        "taxBase": 0
+        "dividend": 87,
+        "taxBase": 87
       },
       "202605": {
-        "dividend": 72,
-        "taxBase": 0
+        "dividend": 87,
+        "taxBase": 87
       },
       "202606": {
-        "dividend": 73,
-        "taxBase": 0
+        "dividend": 87,
+        "taxBase": 87
       },
       "202607": {
-        "dividend": 70,
-        "taxBase": 0
+        "dividend": 100,
+        "taxBase": 100
       },
       "202608": {
-        "dividend": 69,
-        "taxBase": 0
+        "dividend": 100,
+        "taxBase": 100
       }
     }
   },
