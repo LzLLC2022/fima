@@ -707,7 +707,7 @@
     }
   },
   "0040Y0": {
-    "name": "SOL 미국나스닥100커버드콜(합성)",
+    "name": "SOL 팔란티어커버드콜OTM채권혼합",
     "data": {
       "202505": {
         "dividend": 230,
@@ -772,6 +772,75 @@
       "202608": {
         "dividend": 164,
         "taxBase": 0
+      }
+    }
+  },
+  "0040X0": {
+    "name": "SOL 팔란티어미국채커버드콜혼합",
+    "data": {
+      "202505": {
+        "dividend": 150,
+        "taxBase": 150
+      },
+      "202506": {
+        "dividend": 150,
+        "taxBase": 150
+      },
+      "202507": {
+        "dividend": 150,
+        "taxBase": 150
+      },
+      "202508": {
+        "dividend": 150,
+        "taxBase": 150
+      },
+      "202509": {
+        "dividend": 150,
+        "taxBase": 150
+      },
+      "202510": {
+        "dividend": 250,
+        "taxBase": 250
+      },
+      "202511": {
+        "dividend": 250,
+        "taxBase": 250
+      },
+      "202512": {
+        "dividend": 250,
+        "taxBase": 250
+      },
+      "202601": {
+        "dividend": 225,
+        "taxBase": 225
+      },
+      "202602": {
+        "dividend": 205,
+        "taxBase": 32
+      },
+      "202603": {
+        "dividend": 210,
+        "taxBase": 210
+      },
+      "202604": {
+        "dividend": 175,
+        "taxBase": 175
+      },
+      "202605": {
+        "dividend": 150,
+        "taxBase": 150
+      },
+      "202606": {
+        "dividend": 147,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 141,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 143,
+        "taxBase": 100
       }
     }
   }
