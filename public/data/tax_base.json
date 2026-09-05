@@ -105,6 +105,86 @@
   "466940": {
     "name": "TIGER 은행고배당플러스TOP10",
     "data": {
+      "202403": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202404": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202405": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202406": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202407": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202408": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202409": {
+        "dividend": 61,
+        "taxBase": 61
+      },
+      "202410": {
+        "dividend": 73,
+        "taxBase": 73
+      },
+      "202411": {
+        "dividend": 73,
+        "taxBase": 73
+      },
+      "202412": {
+        "dividend": 73,
+        "taxBase": 61
+      },
+      "202501": {
+        "dividend": 73,
+        "taxBase": 0
+      },
+      "202502": {
+        "dividend": 73,
+        "taxBase": 16
+      },
+      "202503": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202504": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202505": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202506": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202507": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202508": {
+        "dividend": 70,
+        "taxBase": 70
+      },
+      "202509": {
+        "dividend": 72,
+        "taxBase": 72
+      },
+      "202510": {
+        "dividend": 72,
+        "taxBase": 72
+      },
       "202511": {
         "dividend": 72,
         "taxBase": 72
@@ -324,6 +404,86 @@
   "476550": {
     "name": "TIGER 미국30년국채커버드콜액티브(H)",
     "data": {
+      "202403": {
+        "dividend": 112,
+        "taxBase": 0
+      },
+      "202404": {
+        "dividend": 100,
+        "taxBase": 0
+      },
+      "202405": {
+        "dividend": 99,
+        "taxBase": 0
+      },
+      "202406": {
+        "dividend": 100,
+        "taxBase": 50
+      },
+      "202407": {
+        "dividend": 100,
+        "taxBase": 0
+      },
+      "202408": {
+        "dividend": 100,
+        "taxBase": 100
+      },
+      "202409": {
+        "dividend": 100,
+        "taxBase": 100
+      },
+      "202410": {
+        "dividend": 94,
+        "taxBase": 0
+      },
+      "202411": {
+        "dividend": 92,
+        "taxBase": 0
+      },
+      "202412": {
+        "dividend": 85,
+        "taxBase": 0
+      },
+      "202501": {
+        "dividend": 86,
+        "taxBase": 0
+      },
+      "202502": {
+        "dividend": 86,
+        "taxBase": 0
+      },
+      "202503": {
+        "dividend": 85,
+        "taxBase": 0
+      },
+      "202504": {
+        "dividend": 82,
+        "taxBase": 0
+      },
+      "202505": {
+        "dividend": 81,
+        "taxBase": 0
+      },
+      "202506": {
+        "dividend": 81,
+        "taxBase": 0
+      },
+      "202507": {
+        "dividend": 79,
+        "taxBase": 0
+      },
+      "202508": {
+        "dividend": 79,
+        "taxBase": 0
+      },
+      "202509": {
+        "dividend": 80,
+        "taxBase": 0
+      },
+      "202510": {
+        "dividend": 82,
+        "taxBase": 0
+      },
       "202511": {
         "dividend": 80,
         "taxBase": 0
