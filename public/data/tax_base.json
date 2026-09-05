@@ -1,1 +1,778 @@
-{}
+{
+  "379800": {
+    "name": "KODEX 미국S&P500TR",
+    "data": {
+      "202504": {
+        "dividend": 56,
+        "taxBase": 56
+      },
+      "202507": {
+        "dividend": 104,
+        "taxBase": 104
+      },
+      "202510": {
+        "dividend": 110,
+        "taxBase": 110
+      },
+      "202601": {
+        "dividend": 119,
+        "taxBase": 119
+      },
+      "202604": {
+        "dividend": 118,
+        "taxBase": 118
+      },
+      "202607": {
+        "dividend": 132,
+        "taxBase": 132
+      }
+    }
+  },
+  "379810": {
+    "name": "KODEX 미국나스닥100TR",
+    "data": {
+      "202504": {
+        "dividend": 33,
+        "taxBase": 33
+      },
+      "202507": {
+        "dividend": 59,
+        "taxBase": 59
+      },
+      "202510": {
+        "dividend": 63,
+        "taxBase": 63
+      },
+      "202601": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202604": {
+        "dividend": 68,
+        "taxBase": 68
+      },
+      "202607": {
+        "dividend": 83,
+        "taxBase": 83
+      }
+    }
+  },
+  "402970": {
+    "name": "ACE 미국배당다우존스",
+    "data": {
+      "202511": {
+        "dividend": 21,
+        "taxBase": 21
+      },
+      "202512": {
+        "dividend": 53,
+        "taxBase": 53
+      },
+      "202601": {
+        "dividend": 39,
+        "taxBase": 39
+      },
+      "202602": {
+        "dividend": 24,
+        "taxBase": 24
+      },
+      "202603": {
+        "dividend": 46,
+        "taxBase": 46
+      },
+      "202604": {
+        "dividend": 44,
+        "taxBase": 44
+      },
+      "202605": {
+        "dividend": 27,
+        "taxBase": 27
+      },
+      "202606": {
+        "dividend": 40,
+        "taxBase": 40
+      },
+      "202607": {
+        "dividend": 50,
+        "taxBase": 50
+      },
+      "202608": {
+        "dividend": 25,
+        "taxBase": 25
+      }
+    }
+  },
+  "466940": {
+    "name": "TIGER 은행고배당플러스TOP10",
+    "data": {
+      "202511": {
+        "dividend": 80,
+        "taxBase": 0
+      },
+      "202512": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202601": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202602": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202603": {
+        "dividend": 75,
+        "taxBase": 0
+      },
+      "202604": {
+        "dividend": 74,
+        "taxBase": 0
+      },
+      "202605": {
+        "dividend": 72,
+        "taxBase": 0
+      },
+      "202606": {
+        "dividend": 73,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 70,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 69,
+        "taxBase": 0
+      }
+    }
+  },
+  "475080": {
+    "name": "KODEX 테슬라커버드콜채권혼합액티브",
+    "data": {
+      "202402": {
+        "dividend": 132,
+        "taxBase": 0
+      },
+      "202403": {
+        "dividend": 122,
+        "taxBase": 0
+      },
+      "202404": {
+        "dividend": 119,
+        "taxBase": 0
+      },
+      "202405": {
+        "dividend": 119,
+        "taxBase": 0
+      },
+      "202406": {
+        "dividend": 120,
+        "taxBase": 120
+      },
+      "202407": {
+        "dividend": 120,
+        "taxBase": 63
+      },
+      "202408": {
+        "dividend": 117,
+        "taxBase": 0
+      },
+      "202409": {
+        "dividend": 118,
+        "taxBase": 118
+      },
+      "202410": {
+        "dividend": 119,
+        "taxBase": 119
+      },
+      "202411": {
+        "dividend": 122,
+        "taxBase": 122
+      },
+      "202412": {
+        "dividend": 123,
+        "taxBase": 123
+      },
+      "202501": {
+        "dividend": 124,
+        "taxBase": 124
+      },
+      "202502": {
+        "dividend": 112,
+        "taxBase": 0
+      },
+      "202503": {
+        "dividend": 110,
+        "taxBase": 0
+      },
+      "202504": {
+        "dividend": 109,
+        "taxBase": 0
+      },
+      "202505": {
+        "dividend": 110,
+        "taxBase": 0
+      },
+      "202506": {
+        "dividend": 109,
+        "taxBase": 0
+      },
+      "202507": {
+        "dividend": 109,
+        "taxBase": 20
+      },
+      "202508": {
+        "dividend": 108,
+        "taxBase": 108
+      },
+      "202509": {
+        "dividend": 113,
+        "taxBase": 113
+      },
+      "202510": {
+        "dividend": 116,
+        "taxBase": 116
+      },
+      "202511": {
+        "dividend": 114,
+        "taxBase": 114
+      },
+      "202512": {
+        "dividend": 116,
+        "taxBase": 116
+      },
+      "202601": {
+        "dividend": 112,
+        "taxBase": 112
+      },
+      "202602": {
+        "dividend": 108,
+        "taxBase": 17
+      },
+      "202603": {
+        "dividend": 108,
+        "taxBase": 0
+      },
+      "202604": {
+        "dividend": 107,
+        "taxBase": 1
+      },
+      "202605": {
+        "dividend": 109,
+        "taxBase": 109
+      },
+      "202606": {
+        "dividend": 105,
+        "taxBase": 43
+      },
+      "202607": {
+        "dividend": 79,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 99,
+        "taxBase": 0
+      }
+    }
+  },
+  "476060": {
+    "name": "TIGER 배당프리미엄",
+    "data": {
+      "202511": {
+        "dividend": 80,
+        "taxBase": 0
+      },
+      "202512": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202601": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202602": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202603": {
+        "dividend": 75,
+        "taxBase": 0
+      },
+      "202604": {
+        "dividend": 74,
+        "taxBase": 0
+      },
+      "202605": {
+        "dividend": 72,
+        "taxBase": 0
+      },
+      "202606": {
+        "dividend": 73,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 70,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 69,
+        "taxBase": 0
+      }
+    }
+  },
+  "476550": {
+    "name": "TIGER 미국30년국채커버드콜액티브(H)",
+    "data": {
+      "202511": {
+        "dividend": 80,
+        "taxBase": 0
+      },
+      "202512": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202601": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202602": {
+        "dividend": 77,
+        "taxBase": 0
+      },
+      "202603": {
+        "dividend": 75,
+        "taxBase": 0
+      },
+      "202604": {
+        "dividend": 74,
+        "taxBase": 0
+      },
+      "202605": {
+        "dividend": 72,
+        "taxBase": 0
+      },
+      "202606": {
+        "dividend": 73,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 70,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 69,
+        "taxBase": 0
+      }
+    }
+  },
+  "494300": {
+    "name": "KODEX 미국나스닥100데일리커버드콜OTM",
+    "data": {
+      "202411": {
+        "dividend": 259,
+        "taxBase": 259
+      },
+      "202412": {
+        "dividend": 181,
+        "taxBase": 181
+      },
+      "202501": {
+        "dividend": 165,
+        "taxBase": 165
+      },
+      "202502": {
+        "dividend": 155,
+        "taxBase": 123
+      },
+      "202503": {
+        "dividend": 166,
+        "taxBase": 0
+      },
+      "202504": {
+        "dividend": 143,
+        "taxBase": 0
+      },
+      "202505": {
+        "dividend": 149,
+        "taxBase": 0
+      },
+      "202506": {
+        "dividend": 153,
+        "taxBase": 0
+      },
+      "202507": {
+        "dividend": 159,
+        "taxBase": 159
+      },
+      "202508": {
+        "dividend": 159,
+        "taxBase": 159
+      },
+      "202509": {
+        "dividend": 165,
+        "taxBase": 165
+      },
+      "202510": {
+        "dividend": 170,
+        "taxBase": 170
+      },
+      "202511": {
+        "dividend": 167,
+        "taxBase": 167
+      },
+      "202512": {
+        "dividend": 172,
+        "taxBase": 172
+      },
+      "202601": {
+        "dividend": 167,
+        "taxBase": 167
+      },
+      "202602": {
+        "dividend": 161,
+        "taxBase": 161
+      },
+      "202603": {
+        "dividend": 164,
+        "taxBase": 164
+      },
+      "202604": {
+        "dividend": 169,
+        "taxBase": 169
+      },
+      "202605": {
+        "dividend": 182,
+        "taxBase": 182
+      },
+      "202606": {
+        "dividend": 185,
+        "taxBase": 185
+      },
+      "202607": {
+        "dividend": 166,
+        "taxBase": 35
+      },
+      "202608": {
+        "dividend": 152,
+        "taxBase": 0
+      }
+    }
+  },
+  "498400": {
+    "name": "KODEX 200타겟위클리커버드콜",
+    "data": {
+      "202501": {
+        "dividend": 202,
+        "taxBase": 36
+      },
+      "202502": {
+        "dividend": 142,
+        "taxBase": 0
+      },
+      "202503": {
+        "dividend": 140,
+        "taxBase": 42
+      },
+      "202504": {
+        "dividend": 132,
+        "taxBase": 58
+      },
+      "202505": {
+        "dividend": 139,
+        "taxBase": 5
+      },
+      "202506": {
+        "dividend": 150,
+        "taxBase": 4
+      },
+      "202507": {
+        "dividend": 161,
+        "taxBase": 10
+      },
+      "202508": {
+        "dividend": 163,
+        "taxBase": 8
+      },
+      "202509": {
+        "dividend": 161,
+        "taxBase": 6
+      },
+      "202510": {
+        "dividend": 172,
+        "taxBase": 8
+      },
+      "202511": {
+        "dividend": 196,
+        "taxBase": 0
+      },
+      "202512": {
+        "dividend": 196,
+        "taxBase": 3
+      },
+      "202601": {
+        "dividend": 213,
+        "taxBase": 26
+      },
+      "202602": {
+        "dividend": 244,
+        "taxBase": 1
+      },
+      "202603": {
+        "dividend": 252,
+        "taxBase": 33
+      },
+      "202604": {
+        "dividend": 262,
+        "taxBase": 43
+      },
+      "202605": {
+        "dividend": 348,
+        "taxBase": 0
+      },
+      "202606": {
+        "dividend": 350,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 323,
+        "taxBase": 1
+      },
+      "202608": {
+        "dividend": 270,
+        "taxBase": 3
+      }
+    }
+  },
+  "498410": {
+    "name": "KODEX 금융고배당TOP10타겟위클리커버드콜",
+    "data": {
+      "202501": {
+        "dividend": 185,
+        "taxBase": 16
+      },
+      "202502": {
+        "dividend": 123,
+        "taxBase": 13
+      },
+      "202503": {
+        "dividend": 123,
+        "taxBase": 123
+      },
+      "202504": {
+        "dividend": 122,
+        "taxBase": 122
+      },
+      "202505": {
+        "dividend": 137,
+        "taxBase": 131
+      },
+      "202506": {
+        "dividend": 149,
+        "taxBase": 0
+      },
+      "202507": {
+        "dividend": 163,
+        "taxBase": 0
+      },
+      "202508": {
+        "dividend": 154,
+        "taxBase": 58
+      },
+      "202509": {
+        "dividend": 158,
+        "taxBase": 0
+      },
+      "202510": {
+        "dividend": 154,
+        "taxBase": 0
+      },
+      "202511": {
+        "dividend": 154,
+        "taxBase": 50
+      },
+      "202512": {
+        "dividend": 152,
+        "taxBase": 0
+      },
+      "202601": {
+        "dividend": 155,
+        "taxBase": 29
+      },
+      "202602": {
+        "dividend": 189,
+        "taxBase": 13
+      },
+      "202603": {
+        "dividend": 162,
+        "taxBase": 115
+      },
+      "202604": {
+        "dividend": 165,
+        "taxBase": 85
+      },
+      "202605": {
+        "dividend": 155,
+        "taxBase": 47
+      },
+      "202606": {
+        "dividend": 140,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 154,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 144,
+        "taxBase": 35
+      }
+    }
+  },
+  "0018C0": {
+    "name": "PLUS 고배당주위클리고정커버드콜",
+    "data": {
+      "202503": {
+        "dividend": 45,
+        "taxBase": 0
+      },
+      "202504": {
+        "dividend": 114,
+        "taxBase": 114
+      },
+      "202505": {
+        "dividend": 128,
+        "taxBase": 128
+      },
+      "202506": {
+        "dividend": 145,
+        "taxBase": 46
+      },
+      "202507": {
+        "dividend": 155,
+        "taxBase": 0
+      },
+      "202508": {
+        "dividend": 150,
+        "taxBase": 21
+      },
+      "202509": {
+        "dividend": 145,
+        "taxBase": 29
+      },
+      "202510": {
+        "dividend": 140,
+        "taxBase": 0
+      },
+      "202511": {
+        "dividend": 150,
+        "taxBase": 11
+      },
+      "202512": {
+        "dividend": 150,
+        "taxBase": 14
+      },
+      "202601": {
+        "dividend": 145,
+        "taxBase": 57
+      },
+      "202602": {
+        "dividend": 173,
+        "taxBase": 0
+      },
+      "202603": {
+        "dividend": 159,
+        "taxBase": 115
+      },
+      "202604": {
+        "dividend": 163,
+        "taxBase": 163
+      },
+      "202605": {
+        "dividend": 159,
+        "taxBase": 44
+      },
+      "202606": {
+        "dividend": 139,
+        "taxBase": 17
+      },
+      "202607": {
+        "dividend": 138,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 136,
+        "taxBase": 29
+      }
+    }
+  },
+  "0040Y0": {
+    "name": "SOL 미국나스닥100커버드콜(합성)",
+    "data": {
+      "202505": {
+        "dividend": 230,
+        "taxBase": 230
+      },
+      "202506": {
+        "dividend": 230,
+        "taxBase": 230
+      },
+      "202507": {
+        "dividend": 240,
+        "taxBase": 240
+      },
+      "202508": {
+        "dividend": 210,
+        "taxBase": 210
+      },
+      "202509": {
+        "dividend": 210,
+        "taxBase": 210
+      },
+      "202510": {
+        "dividend": 210,
+        "taxBase": 210
+      },
+      "202511": {
+        "dividend": 200,
+        "taxBase": 0
+      },
+      "202512": {
+        "dividend": 206,
+        "taxBase": 206
+      },
+      "202601": {
+        "dividend": 194,
+        "taxBase": 0
+      },
+      "202602": {
+        "dividend": 185,
+        "taxBase": 0
+      },
+      "202603": {
+        "dividend": 190,
+        "taxBase": 0
+      },
+      "202604": {
+        "dividend": 177,
+        "taxBase": 0
+      },
+      "202605": {
+        "dividend": 175,
+        "taxBase": 0
+      },
+      "202606": {
+        "dividend": 162,
+        "taxBase": 0
+      },
+      "202607": {
+        "dividend": 162,
+        "taxBase": 0
+      },
+      "202608": {
+        "dividend": 164,
+        "taxBase": 0
+      }
+    }
+  }
+}
