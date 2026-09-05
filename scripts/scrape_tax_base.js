@@ -19,9 +19,9 @@ const etfMap = {
   // PLUS
   '0018C0': { provider: 'PLUS', id: '006382', name: 'PLUS 고배당주위클리고정커버드콜' },
   // TIGER
-  '476060': { provider: 'TIGER', isin: 'KR7476550009', name: 'TIGER 배당프리미엄' }, // 임시 ISIN
+  '139260': { provider: 'TIGER', isin: 'KR7139260000', name: 'TIGER 배당프리미엄' }, // 임시 ISIN (확인 필요)
   '476550': { provider: 'TIGER', isin: 'KR7476550009', name: 'TIGER 미국30년국채커버드콜액티브(H)' },
-  '466940': { provider: 'TIGER', isin: 'KR7476550009', name: 'TIGER 은행고배당플러스TOP10' }, // 임시 ISIN
+  '466940': { provider: 'TIGER', isin: 'KR7466940004', name: 'TIGER 은행고배당플러스TOP10' },
   // SOL
   '0040Y0': { provider: 'SOL', id: '211088', name: 'SOL 팔란티어커버드콜OTM채권혼합' },
   '0040X0': { provider: 'SOL', id: '211089', name: 'SOL 팔란티어미국채커버드콜혼합' },
@@ -83,26 +83,34 @@ async function scrapeProvider(page, ticker, info) {
       
     } else if (info.provider === 'TIGER') {
       console.log(`[${ticker}] Fetching TIGER API...`);
-      const apiUrl = `https://investments.miraeasset.com/tigeretf/ko/product/search/detail/refDivAjax.ajax?ksdFund=${info.isin}`;
+      const apiUrl = `https://investments.miraeasset.com/tigeretf/ko/product/search/detail/refDivAjax.ajax`;
       try {
-        const response = await fetch(apiUrl);
-        const html = await response.text();
-        const trs = html.split(/<\/tr>/i);
-        trs.forEach(tr => {
-          const tds = tr.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
-          if (tds && tds.length >= 4) {
-            const dateRaw = tds[0].replace(/<[^>]+>/g, '').trim();
-            const dividendStr = tds[2].replace(/<[^>]+>/g, '').replace(/,/g, '').trim();
-            const taxBaseStr = tds[3].replace(/<[^>]+>/g, '').replace(/,/g, '').trim();
-            const date = dateRaw.replace(/[\.\-]/g, '').substring(0, 6);
-            
-            const dividend = parseInt(dividendStr, 10);
-            const taxBase = parseInt(taxBaseStr, 10);
-            if (date && !isNaN(taxBase) && !isNaN(dividend)) {
-              result[date] = { dividend, taxBase };
+        for (let pageIdx = 1; pageIdx <= 3; pageIdx++) {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `ksdFund=${info.isin}&pageIndex=${pageIdx}`
+          });
+          const html = await response.text();
+          if (!html || !html.includes('<tr')) break; // No more data
+          
+          const trs = html.split(/<\/tr>/i);
+          trs.forEach(tr => {
+            const tds = tr.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+            if (tds && tds.length >= 4) {
+              const dateRaw = tds[0].replace(/<[^>]+>/g, '').trim();
+              const dividendStr = tds[2].replace(/<[^>]+>/g, '').replace(/,/g, '').trim();
+              const taxBaseStr = tds[3].replace(/<[^>]+>/g, '').replace(/,/g, '').trim();
+              const date = dateRaw.replace(/[\.\-]/g, '').substring(0, 6);
+              
+              const dividend = parseInt(dividendStr, 10);
+              const taxBase = parseInt(taxBaseStr, 10);
+              if (date && !isNaN(taxBase) && !isNaN(dividend)) {
+                result[date] = { dividend, taxBase };
+              }
             }
-          }
-        });
+          });
+        }
       } catch (err) {
         console.error(`[${ticker}] TIGER API Error:`, err.message);
       }
@@ -165,7 +173,7 @@ async function scrapeProvider(page, ticker, info) {
 
 async function scrapeTaxBase() {
   console.log("Starting ETF tax base scraper with Puppeteer...");
-  const browser = await puppeteer.launch({ headless: "new" });
+  const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   const page = await browser.newPage();
   
   const finalData = {};
