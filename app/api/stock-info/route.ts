@@ -266,8 +266,8 @@ export async function POST(req: NextRequest) {
     // TTM
     const oneYearAgo = Date.now() / 1000 - 365 * 24 * 3600;
     const ttmDivs   = divList.filter(d => d.date >= oneYearAgo);
-    const ttmAmount = Math.round(ttmDivs.reduce((s, d) => s + d.amount, 0) * 10000) / 10000;
-    const ttmYield  = price > 0 ? Math.round(ttmAmount / price * 10000) / 100 : 0;
+    let ttmAmount = Math.round(ttmDivs.reduce((s, d) => s + d.amount, 0) * 10000) / 10000;
+    let ttmYield  = price > 0 ? Math.round(ttmAmount / price * 10000) / 100 : 0;
 
     // FWD (summaryDetail 우선, 없으면 최근 배당×연간빈도 추정)
     let fwdAmount = 0, fwdYield = 0;
@@ -307,6 +307,19 @@ export async function POST(req: NextRequest) {
         taxBase: taxBase,
       };
     }));
+
+    // 한국 종목은 스크래핑한 정확한 배당금(history)을 기준으로 TTM, FWD 재계산
+    if (isKoreanCode(clean) && history.length > 0) {
+      ttmAmount = Math.round(history.reduce((s, h) => s + h.amount, 0) * 10000) / 10000;
+      ttmYield  = price > 0 ? Math.round(ttmAmount / price * 10000) / 100 : 0;
+      
+      // FWD: summaryDetail 우선 로직은 놔두고, 자체 추정일 때만 재계산 (한국 종목은 summaryDetail이 거의 없음)
+      if (summary?.dividendRate?.raw == null) {
+        const freq = Math.max(history.length, 1);
+        fwdAmount = Math.round(history[0].amount * freq * 10000) / 10000;
+        fwdYield  = price > 0 ? Math.round(fwdAmount / price * 10000) / 100 : 0;
+      }
+    }
 
     return NextResponse.json({
       ticker:    usedTicker,
