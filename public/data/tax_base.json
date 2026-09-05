@@ -356,51 +356,6 @@
       }
     }
   },
-  "476060": {
-    "name": "TIGER 배당프리미엄",
-    "data": {
-      "202511": {
-        "dividend": 80,
-        "taxBase": 0
-      },
-      "202512": {
-        "dividend": 77,
-        "taxBase": 0
-      },
-      "202601": {
-        "dividend": 77,
-        "taxBase": 0
-      },
-      "202602": {
-        "dividend": 77,
-        "taxBase": 0
-      },
-      "202603": {
-        "dividend": 75,
-        "taxBase": 0
-      },
-      "202604": {
-        "dividend": 74,
-        "taxBase": 0
-      },
-      "202605": {
-        "dividend": 72,
-        "taxBase": 0
-      },
-      "202606": {
-        "dividend": 73,
-        "taxBase": 0
-      },
-      "202607": {
-        "dividend": 70,
-        "taxBase": 0
-      },
-      "202608": {
-        "dividend": 69,
-        "taxBase": 0
-      }
-    }
-  },
   "476550": {
     "name": "TIGER 미국30년국채커버드콜액티브(H)",
     "data": {
