@@ -77,7 +77,7 @@ async function scrapeProvider(page, ticker, info) {
           });
         }
       } catch (err) {
-        console.error(`[${ticker}] KODEX API Error:`, err.message);
+        throw new Error(`KODEX API Error: ${err.message}`);
       }
       console.log(`[${ticker}] Extracted data:`, result);
       
@@ -112,7 +112,7 @@ async function scrapeProvider(page, ticker, info) {
           });
         }
       } catch (err) {
-        console.error(`[${ticker}] TIGER API Error:`, err.message);
+        throw new Error(`TIGER API Error: ${err.message}`);
       }
       console.log(`[${ticker}] Extracted data:`, result);
 
@@ -136,7 +136,7 @@ async function scrapeProvider(page, ticker, info) {
           });
         }
       } catch (err) {
-        console.error(`[${ticker}] SOL API Error:`, err.message);
+        throw new Error(`SOL API Error: ${err.message}`);
       }
       console.log(`[${ticker}] Extracted data:`, result);
 
@@ -159,15 +159,13 @@ async function scrapeProvider(page, ticker, info) {
           });
         }
       } catch (err) {
-        console.error(`[${ticker}] ACE API Error:`, err.message);
+        throw new Error(`ACE API Error: ${err.message}`);
       }
       console.log(`[${ticker}] Extracted data:`, result);
     }
     return result;
-    return result;
   } catch (err) {
-    console.error(`[${ticker}] Error:`, err.message);
-    return {};
+    throw err;
   }
 }
 
@@ -184,15 +182,20 @@ async function scrapeTaxBase() {
     const page = await browser.newPage();
     
     const finalData = {};
-    let errorCount = 0;
+    let emptyTickers = [];
+    let errorDetails = [];
     
     for (const [ticker, info] of Object.entries(etfMap)) {
       console.log(`Scraping ${info.provider} ETF: ${ticker}...`);
-      const data = await scrapeProvider(page, ticker, info);
-      if (Object.keys(data).length > 0) {
-        finalData[ticker] = data;
-      } else {
-        errorCount++;
+      try {
+        const data = await scrapeProvider(page, ticker, info);
+        if (Object.keys(data).length > 0) {
+          finalData[ticker] = data;
+        } else {
+          emptyTickers.push(`${info.name}(${ticker})`);
+        }
+      } catch (err) {
+        errorDetails.push(`[${info.name}(${ticker})] ${err.message}`);
       }
     }
     
@@ -204,6 +207,8 @@ async function scrapeTaxBase() {
       try { existingData = JSON.parse(fs.readFileSync(outputPath, 'utf8')); } catch(e) {}
     }
     
+    const originalDataStr = JSON.stringify(existingData);
+    
     let updatedCount = 0;
     for (const ticker of Object.keys(etfMap)) {
       if (finalData[ticker]) {
@@ -213,14 +218,22 @@ async function scrapeTaxBase() {
         existingData[ticker].name = etfMap[ticker].name; // 항상 최신 이름으로 업데이트
         Object.assign(existingData[ticker].data, finalData[ticker]);
         updatedCount++;
-        console.log(`Updated data for ${ticker} (${existingData[ticker].name})`);
+        console.log(`Fetched data for ${ticker} (${existingData[ticker].name})`);
       }
     }
 
+    const isDataChanged = originalDataStr !== JSON.stringify(existingData);
+
     fs.writeFileSync(outputPath, JSON.stringify(existingData, null, 2));
-    console.log(`\nSuccessfully saved data to ${outputPath}`);
+    console.log(`\nSuccessfully saved data to ${outputPath} (Changed: ${isDataChanged})`);
     
-    logMessage += `[${now}] Scrape finished. Updated: ${updatedCount}, Errors/Empty: ${errorCount}.\n`;
+    logMessage += `[${now}] Scrape finished. Fetched: ${updatedCount}, Empty: ${emptyTickers.length}, Errors: ${errorDetails.length}. Data changed: ${isDataChanged ? 'Yes' : 'No'}\n`;
+    if (emptyTickers.length > 0) {
+      logMessage += `  - Empty: ${emptyTickers.join(', ')}\n`;
+    }
+    if (errorDetails.length > 0) {
+      logMessage += `  - Errors:\n    ${errorDetails.join('\n    ')}\n`;
+    }
   } catch (err) {
     console.error('Scraper failed:', err);
     logMessage += `[${now}] Scrape failed with error: ${err.message}\n`;
