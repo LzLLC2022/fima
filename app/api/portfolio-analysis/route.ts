@@ -228,13 +228,13 @@ export async function POST(req: NextRequest) {
       //   (배당금은 0이어도 세금이 있는 거래, 또는 환율 누락으로 divKRW=0인 거래 포함)
       const yr = String(date.getUTCFullYear());
       const mo = String(date.getUTCMonth() + 1).padStart(2, '0');
-      if (tax2 > 0 && ticker2) {
+      if ((tax2 > 0 || divFX > 0) && ticker2) {
         const taxCurrency = currencyMap[region2] || 'KRW';
         if (taxCurrency !== 'KRW') {
           // 배당 발생 당시 기록된 환율(rate2) 우선, 없으면 최근 캐시 사용
           const taxRate = rate2 > 0 ? rate2 : (divRateCache[region2] || 1);
           // 배당 발생 당시 환율로 KRW 환산, 소수점 이하 버림 (다른 KRW 환산과 동일 방식)
-          const taxKRW = Math.floor(tax2 * taxRate);
+          const taxKRW = tax2 > 0 ? Math.floor(tax2 * taxRate) : 0;
           const name2  = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
           if (!foreignTaxMap[yr]) foreignTaxMap[yr] = {};
           if (!foreignTaxMap[yr][ticker2]) {
@@ -299,8 +299,8 @@ export async function POST(req: NextRequest) {
         .map(([yr, tickers]) => {
           const byTicker = Object.entries(tickers)
             .map(([ticker, v]) => ({ ticker, ...v }))
-            .filter(v => v.taxKRW > 0)
-            .sort((a, b) => b.taxKRW - a.taxKRW);
+            .filter(v => v.taxKRW > 0 || v.divKRW > 0)
+            .sort((a, b) => b.taxKRW !== a.taxKRW ? b.taxKRW - a.taxKRW : b.divKRW - a.divKRW);
           const total = byTicker.reduce((s, v) => s + v.taxKRW, 0);
           return [yr, { total, byTicker }];
         })
