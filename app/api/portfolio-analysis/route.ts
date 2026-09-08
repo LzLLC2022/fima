@@ -184,8 +184,8 @@ export async function POST(req: NextRequest) {
     const runQtyMap: Record<string, number> = {};  // 배당 시점 수량 추적
 
     // ── 해외주식 배당소득세 집계 (연도×종목) ──────────────────────────
-    // [year][ticker] = { name, taxFX, taxKRW, currency }
-    type TaxEntry = { name: string; taxFX: number; taxKRW: number; currency: string };
+    // [year][ticker] = { name, taxFX, taxKRW, currency, divFX, divKRW }
+    type TaxEntry = { name: string; taxFX: number; taxKRW: number; currency: string; divFX: number; divKRW: number };
     const foreignTaxMap: Record<string, Record<string, TaxEntry>> = {};
 
     sorted.forEach(({ row, date }) => {
@@ -238,10 +238,12 @@ export async function POST(req: NextRequest) {
           const name2  = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
           if (!foreignTaxMap[yr]) foreignTaxMap[yr] = {};
           if (!foreignTaxMap[yr][ticker2]) {
-            foreignTaxMap[yr][ticker2] = { name: name2, taxFX: 0, taxKRW: 0, currency: taxCurrency };
+            foreignTaxMap[yr][ticker2] = { name: name2, taxFX: 0, taxKRW: 0, currency: taxCurrency, divFX: 0, divKRW: 0 };
           }
           foreignTaxMap[yr][ticker2].taxFX  += tax2;
           foreignTaxMap[yr][ticker2].taxKRW += taxKRW;
+          foreignTaxMap[yr][ticker2].divFX  += divFX;
+          foreignTaxMap[yr][ticker2].divKRW += divKRW;
           if (!foreignTaxMap[yr][ticker2].name && name2) {
             foreignTaxMap[yr][ticker2].name = name2;
           }

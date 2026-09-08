@@ -5780,6 +5780,8 @@
         + '<thead><tr style="background:#faf7ff;">'
         + '<th style="' + thStyle + 'text-align:left;">종목명</th>'
         + '<th style="' + thStyle + 'text-align:left;">Ticker</th>'
+        + '<th style="' + thStyle + 'text-align:right;">배당금수익 (현지통화)</th>'
+        + '<th style="' + thStyle + 'text-align:right;">배당금수익 (KRW 환산)</th>'
         + '<th style="' + thStyle + 'text-align:right;">세금 (현지통화)</th>'
         + '<th style="' + thStyle + 'text-align:right;">세금 (KRW 환산)</th>'
         + '</tr></thead><tbody>';
@@ -5802,15 +5804,21 @@
             html += '<tr>'
               + '<td style="' + tdStyle + '">' + (v.name || '-') + '</td>'
               + '<td style="' + tdStyle + 'font-family:monospace;color:#7c6ce0;">' + v.ticker + '</td>'
+              + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.divFX, v.currency) + '</td>'
+              + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.divKRW) + '</td>'
               + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.taxFX, v.currency) + '</td>'
               + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.taxKRW) + '</td>'
               + '</tr>';
           });
           // 통화별 소계
+          var subDivFX  = items.reduce(function(s, v) { return s + (v.divFX || 0); }, 0);
+          var subDivKRW = items.reduce(function(s, v) { return s + (v.divKRW || 0); }, 0);
           var subFX  = items.reduce(function(s, v) { return s + v.taxFX; }, 0);
           var subKRW = items.reduce(function(s, v) { return s + v.taxKRW; }, 0);
           html += '<tr style="background:#fff8f1;">'
             + '<td style="' + tdStyle + 'font-weight:700;font-size:0.79rem;color:#a05a00;" colspan="2">' + cur + ' 소계</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtFX(subDivFX, cur) + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtKRW(subDivKRW) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtFX(subFX, cur) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtKRW(subKRW) + '</td>'
             + '</tr>';
@@ -5821,6 +5829,8 @@
           html += '<tr>'
             + '<td style="' + tdStyle + '">' + (v.name || '-') + '</td>'
             + '<td style="' + tdStyle + 'font-family:monospace;color:#7c6ce0;">' + v.ticker + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.divFX || 0, v.currency) + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.divKRW || 0) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.taxFX, v.currency) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.taxKRW) + '</td>'
             + '</tr>';
@@ -5829,16 +5839,25 @@
 
       // 합계 행
       var grandFXByCur = {};
+      var grandDivFXByCur = {};
+      var grandDivKRW = 0;
       ydata.byTicker.forEach(function(v) {
         grandFXByCur[v.currency] = (grandFXByCur[v.currency] || 0) + v.taxFX;
+        grandDivFXByCur[v.currency] = (grandDivFXByCur[v.currency] || 0) + (v.divFX || 0);
+        grandDivKRW += (v.divKRW || 0);
       });
       var fxSumStr = Object.entries(grandFXByCur).sort().map(function(kv) {
+        return fmtFX(kv[1], kv[0]);
+      }).join(' + ');
+      var divFxSumStr = Object.entries(grandDivFXByCur).sort().map(function(kv) {
         return fmtFX(kv[1], kv[0]);
       }).join(' + ');
       var grandKRW = ydata.total || 0;
 
       html += '<tr style="background:#faf7ff;border-top:2px solid #ddd8ff;">'
         + '<td style="padding:10px 12px;font-weight:700;" colspan="2">합계 (' + yr + '년)</td>'
+        + '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#553c9a;">' + divFxSumStr + '</td>'
+        + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:0.95rem;color:#c05621;">' + fmtKRW(grandDivKRW) + '</td>'
         + '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#553c9a;">' + fxSumStr + '</td>'
         + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:0.95rem;color:#c05621;">'
         + fmtKRW(grandKRW) + '</td>'
@@ -7202,6 +7221,8 @@
         + '<thead><tr style="background:#faf7ff;">'
         + '<th style="' + thStyle + 'text-align:left;">종목명</th>'
         + '<th style="' + thStyle + 'text-align:left;">Ticker</th>'
+        + '<th style="' + thStyle + 'text-align:right;">배당금수익 (현지통화)</th>'
+        + '<th style="' + thStyle + 'text-align:right;">배당금수익 (KRW 환산)</th>'
         + '<th style="' + thStyle + 'text-align:right;">세금 (현지통화)</th>'
         + '<th style="' + thStyle + 'text-align:right;">세금 (KRW 환산)</th>'
         + '</tr></thead><tbody>';
@@ -7224,15 +7245,21 @@
             html += '<tr>'
               + '<td style="' + tdStyle + '">' + (v.name || '-') + '</td>'
               + '<td style="' + tdStyle + 'font-family:monospace;color:#7c6ce0;">' + v.ticker + '</td>'
+              + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.divFX, v.currency) + '</td>'
+              + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.divKRW) + '</td>'
               + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.taxFX, v.currency) + '</td>'
               + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.taxKRW) + '</td>'
               + '</tr>';
           });
           // 통화별 소계
+          var subDivFX  = items.reduce(function(s, v) { return s + (v.divFX || 0); }, 0);
+          var subDivKRW = items.reduce(function(s, v) { return s + (v.divKRW || 0); }, 0);
           var subFX  = items.reduce(function(s, v) { return s + v.taxFX; }, 0);
           var subKRW = items.reduce(function(s, v) { return s + v.taxKRW; }, 0);
           html += '<tr style="background:#fff8f1;">'
             + '<td style="' + tdStyle + 'font-weight:700;font-size:0.79rem;color:#a05a00;" colspan="2">' + cur + ' 소계</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtFX(subDivFX, cur) + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtKRW(subDivKRW) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtFX(subFX, cur) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;font-weight:700;color:#a05a00;">' + fmtKRW(subKRW) + '</td>'
             + '</tr>';
@@ -7243,6 +7270,8 @@
           html += '<tr>'
             + '<td style="' + tdStyle + '">' + (v.name || '-') + '</td>'
             + '<td style="' + tdStyle + 'font-family:monospace;color:#7c6ce0;">' + v.ticker + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.divFX || 0, v.currency) + '</td>'
+            + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.divKRW || 0) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;">' + fmtFX(v.taxFX, v.currency) + '</td>'
             + '<td style="' + tdStyle + 'text-align:right;font-weight:600;color:#c05621;">' + fmtKRW(v.taxKRW) + '</td>'
             + '</tr>';
@@ -7251,16 +7280,25 @@
 
       // 합계 행
       var grandFXByCur = {};
+      var grandDivFXByCur = {};
+      var grandDivKRW = 0;
       ydata.byTicker.forEach(function(v) {
         grandFXByCur[v.currency] = (grandFXByCur[v.currency] || 0) + v.taxFX;
+        grandDivFXByCur[v.currency] = (grandDivFXByCur[v.currency] || 0) + (v.divFX || 0);
+        grandDivKRW += (v.divKRW || 0);
       });
       var fxSumStr = Object.entries(grandFXByCur).sort().map(function(kv) {
+        return fmtFX(kv[1], kv[0]);
+      }).join(' + ');
+      var divFxSumStr = Object.entries(grandDivFXByCur).sort().map(function(kv) {
         return fmtFX(kv[1], kv[0]);
       }).join(' + ');
       var grandKRW = ydata.total || 0;
 
       html += '<tr style="background:#faf7ff;border-top:2px solid #ddd8ff;">'
         + '<td style="padding:10px 12px;font-weight:700;" colspan="2">합계 (' + yr + '년)</td>'
+        + '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#553c9a;">' + divFxSumStr + '</td>'
+        + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:0.95rem;color:#c05621;">' + fmtKRW(grandDivKRW) + '</td>'
         + '<td style="padding:10px 12px;text-align:right;font-weight:700;color:#553c9a;">' + fxSumStr + '</td>'
         + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:0.95rem;color:#c05621;">'
         + fmtKRW(grandKRW) + '</td>'
