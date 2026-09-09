@@ -1746,10 +1746,123 @@
 
     <!-- ===================== 실험실 탭 ===================== -->
     <div id="tab-lab" class="tab-content">
-      <!-- 대시보드 준비중 -->
-      <div class="empty-state" style="margin-top: 40px; text-align: center; color: #4a5568;">
-        <div class="icon" style="font-size: 3rem; margin-bottom: 16px;">🚧</div>
-        <div style="font-size: 1.1rem; font-weight: 600;">대시보드를 구성할 준비가 되었습니다.</div>
+      <!-- 시장 지수 섹션 -->
+      <div class="market-index-section" style="background: #f8f9fb; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="background: #eef2ff; color: #5c6ac4; padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+            </div>
+            <h3 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #4a5568;">시장 지수</h3>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button onclick="document.getElementById('marketIndexContainer').scrollBy({left: -220, behavior: 'smooth'})" style="border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #718096; font-size: 14px;">&lt;</button>
+            <button onclick="document.getElementById('marketIndexContainer').scrollBy({left: 220, behavior: 'smooth'})" style="border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #718096; font-size: 14px;">&gt;</button>
+          </div>
+        </div>
+        
+        <style>
+          .market-index-container::-webkit-scrollbar { display: none; }
+          .market-index-container { -ms-overflow-style: none; scrollbar-width: none; }
+          .index-card {
+            min-width: 210px; background: #fff; border: 1px solid #edf2f7; border-radius: 10px; padding: 14px; flex-shrink: 0; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+          }
+          .index-name { font-weight: 700; color: #0078d4; font-size: 0.8rem; margin-bottom: 8px; }
+          .index-val-wrap { display: flex; justify-content: space-between; align-items: flex-end; }
+          .index-val { font-size: 1.15rem; font-weight: 700; color: #1a202c; font-family: monospace; letter-spacing: -0.5px; margin-bottom: 2px; }
+          .index-change.positive { font-size: 0.7rem; font-weight: 600; color: #00a86b; font-family: monospace; }
+          .index-change.negative { font-size: 0.7rem; font-weight: 600; color: #e53e3e; font-family: monospace; }
+          .sparkline-wrap { width: 64px; height: 32px; position: relative; }
+          .sparkline-wrap svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+          .sparkline-base { width: 100%; border-bottom: 1px dashed #cbd5e0; position: absolute; bottom: 8px; left: 0; }
+        </style>
+
+        <div class="market-index-container" id="marketIndexContainer" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scroll-behavior: smooth;">
+          <!-- KOSPI -->
+          <div class="index-card">
+            <div class="index-name">KOSPI</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">2,680.50</div>
+                <div class="index-change positive">+24.12 (+0.91%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,24 10,20 20,12 30,16 40,14 50,18 64,8" fill="none" stroke="#00a86b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="8" r="2" fill="#00a86b"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- KOSDAQ -->
+          <div class="index-card">
+            <div class="index-name">KOSDAQ</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">840.12</div>
+                <div class="index-change positive">+15.30 (+1.85%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,28 12,18 24,14 36,18 48,16 64,10" fill="none" stroke="#00a86b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="10" r="2" fill="#00a86b"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- S&P 500 -->
+          <div class="index-card">
+            <div class="index-name">S&P 500</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">5,250.34</div>
+                <div class="index-change negative">-12.50 (-0.24%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,8 15,12 30,10 45,22 64,26" fill="none" stroke="#e53e3e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="26" r="2" fill="#e53e3e"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- Nasdaq 100 -->
+          <div class="index-card">
+            <div class="index-name">Nasdaq 100</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">18,340.55</div>
+                <div class="index-change negative">-45.20 (-0.25%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,10 12,14 24,8 36,24 48,18 64,28" fill="none" stroke="#e53e3e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="28" r="2" fill="#e53e3e"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- Dow 30 -->
+          <div class="index-card">
+            <div class="index-name">Dow 30</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">39,500.12</div>
+                <div class="index-change negative">-150.30 (-0.38%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,6 20,8 40,24 50,22 64,26" fill="none" stroke="#e53e3e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="26" r="2" fill="#e53e3e"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- Russell 2000 -->
+          <div class="index-card">
+            <div class="index-name">Russell 2000</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">2,100.80</div>
+                <div class="index-change positive">+10.20 (+0.49%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,22 16,14 32,18 48,8 64,6" fill="none" stroke="#00a86b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="6" r="2" fill="#00a86b"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
