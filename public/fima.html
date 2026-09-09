@@ -1746,6 +1746,89 @@
 
     <!-- ===================== 실험실 탭 ===================== -->
     <div id="tab-lab" class="tab-content">
+      
+      <!-- 자산 현황 통합 섹션 -->
+      <div class="lab-asset-section" style="background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #edf2f7; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid #edf2f7; padding-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6ac4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #2d3748;">⚖️ 자산 현황</h3>
+          </div>
+          <button onclick="openAssetModal()" style="padding: 7px 16px; border: none; background: #ebf4ff; color: #3182ce; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+            자산 및 부채 정보 추가
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+            <div style="font-size: 0.8rem; color: #718096; font-weight: 600; margin-bottom: 8px;">순자산</div>
+            <div id="labNetAsset" style="font-size: 1.4rem; font-weight: 800; color: #1a202c; font-family: monospace;">-</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+            <div style="font-size: 0.8rem; color: #718096; font-weight: 600; margin-bottom: 8px;">총자산</div>
+            <div id="labTotalAsset" style="font-size: 1.4rem; font-weight: 800; color: #00a86b; font-family: monospace;">-</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px;">
+            <div style="font-size: 0.8rem; color: #718096; font-weight: 600; margin-bottom: 8px;">총부채</div>
+            <div id="labTotalLiab" style="font-size: 1.4rem; font-weight: 800; color: #e53e3e; font-family: monospace;">-</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- 자산 구성 -->
+          <div>
+            <h4 style="font-size: 0.85rem; font-weight: 700; color: #4a5568; margin-bottom: 12px;">자산 구성</h4>
+            <div style="height: 12px; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 12px; background: #edf2f7;">
+              <div id="barAssetRealEstate" style="width:0%; background:#4299e1; transition:width 0.4s;"></div>
+              <div id="barAssetFima" style="width:0%; background:#48bb78; transition:width 0.4s;"></div>
+              <div id="barAssetFin" style="width:0%; background:#ed8936; transition:width 0.4s;"></div>
+              <div id="barAssetOther" style="width:0%; background:#9f7aea; transition:width 0.4s;"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#4299e1;"></div>부동산</div>
+                <div id="txtAssetRealEstate" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#48bb78;"></div>금융투자자산</div>
+                <div id="txtAssetFima" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#ed8936;"></div>금융자산</div>
+                <div id="txtAssetFin" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#9f7aea;"></div>기타자산</div>
+                <div id="txtAssetOther" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+            </div>
+          </div>
+          <!-- 부채 구성 -->
+          <div>
+            <h4 style="font-size: 0.85rem; font-weight: 700; color: #4a5568; margin-bottom: 12px;">부채 구성</h4>
+            <div style="height: 12px; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 12px; background: #edf2f7;">
+              <div id="barLiabMort" style="width:0%; background:#e53e3e; transition:width 0.4s;"></div>
+              <div id="barLiabCred" style="width:0%; background:#f56565; transition:width 0.4s;"></div>
+              <div id="barLiabOther" style="width:0%; background:#fc8181; transition:width 0.4s;"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#e53e3e;"></div>담보대출</div>
+                <div id="txtLiabMort" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#f56565;"></div>신용대출</div>
+                <div id="txtLiabCred" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#fc8181;"></div>기타대출</div>
+                <div id="txtLiabOther" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- 시장 지수 섹션 -->
       <div class="market-index-section" style="background: #f8f9fb; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
@@ -8978,5 +9061,37 @@
     XLSX.writeFile(wb, '리밸런싱_' + account + '_' + region + '_' + dateStr + '.xlsx');
   }
 </script>
+
+<!-- ===================== 자산/부채 입력 모달 ===================== -->
+<div id="assetModalBackdrop" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.45); align-items:center; justify-content:center;" onclick="if(event.target===this)closeAssetModal()">
+  <div style="background:#fff; border-radius:14px; padding:24px; width:440px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.22);">
+    <h3 style="font-size:1.05rem; font-weight:700; color:#3d2f7f; margin-bottom:20px; border-bottom:1px solid #e5e1f5; padding-bottom:10px;">📋 자산 및 부채 정보 입력</h3>
+    
+    <div style="margin-bottom: 20px;">
+      <h4 style="font-size:0.85rem; font-weight:700; color:#4a5568; margin-bottom:12px;">자산 구성 (단위: 원)</h4>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">부동산 (투자원금)</label><input type="number" id="inpAssetRealEstateInv" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">부동산 (현재 시가평가액)</label><input type="number" id="inpAssetRealEstateMkt" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">금융자산 (예금/적금 등)</label><input type="number" id="inpAssetFin" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">기타자산</label><input type="number" id="inpAssetOther" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+      </div>
+      <div style="font-size:0.7rem; color:#a0aec0; margin-top:8px;">* 금융투자자산은 Fima 리포트 탭의 데이터를 자동으로 연동합니다.</div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <h4 style="font-size:0.85rem; font-weight:700; color:#4a5568; margin-bottom:12px;">부채 구성 (단위: 원)</h4>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">담보대출</label><input type="number" id="inpLiabMort" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">신용대출</label><input type="number" id="inpLiabCred" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">기타대출</label><input type="number" id="inpLiabOther" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #e5e1f5; padding-top:16px;">
+      <button onclick="closeAssetModal()" style="padding:8px 16px; border:1px solid #e2e8f0; background:#fff; border-radius:6px; font-weight:600; color:#4a5568; cursor:pointer;">취소</button>
+      <button onclick="saveAssetModal()" style="padding:8px 16px; border:none; background:#5c6ac4; border-radius:6px; font-weight:600; color:#fff; cursor:pointer;">저장</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
