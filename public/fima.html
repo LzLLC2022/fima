@@ -9231,7 +9231,16 @@
 
 
 <script>
+
   // --- CNN Fear & Greed Logic ---
+  function getRatingFromScore(score) {
+    if (score < 25) return 'extreme fear';
+    if (score < 45) return 'fear';
+    if (score < 55) return 'neutral';
+    if (score < 75) return 'greed';
+    return 'extreme greed';
+  }
+
   function getFgKorean(rating) {
     if (!rating) return { text: '-', class: 'badge-neutral' };
     const r = rating.toLowerCase();
@@ -9243,10 +9252,11 @@
     return { text: rating, class: 'badge-neutral' };
   }
 
-  function updateFearGreedRow(periodId, dataObj) {
-    if (!dataObj) return;
-    const info = getFgKorean(dataObj.rating);
-    const val = Math.round(dataObj.score);
+  function updateFearGreedRow(periodId, score) {
+    if (typeof score !== 'number' || isNaN(score)) return;
+    const rating = getRatingFromScore(score);
+    const info = getFgKorean(rating);
+    const val = Math.round(score);
     const stEl = document.getElementById(periodId + '-status');
     const bdEl = document.getElementById(periodId + '-badge');
     if (stEl) stEl.textContent = info.text;
@@ -9277,9 +9287,9 @@
         
         // Update History
         updateFearGreedRow('fg-hist-prev', fg.previous_close);
-        updateFearGreedRow('fg-hist-1w', fg.one_week_ago);
-        updateFearGreedRow('fg-hist-1m', fg.one_month_ago);
-        updateFearGreedRow('fg-hist-1y', fg.one_year_ago);
+        updateFearGreedRow('fg-hist-1w', fg.previous_1_week);
+        updateFearGreedRow('fg-hist-1m', fg.previous_1_month);
+        updateFearGreedRow('fg-hist-1y', fg.previous_1_year);
         
         // Update Chart
         const histData = data.fear_and_greed_historical?.data;
