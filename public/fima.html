@@ -9258,8 +9258,8 @@
     const rating = getRatingFromScore(score);
     const info = getFgKorean(rating);
     const val = Math.round(score);
-    const stEl = document.getElementById(periodId + '-status');
-    const bdEl = document.getElementById(periodId + '-badge');
+    const stEl = document.getElementById(periodId + '-text');
+    const bdEl = document.getElementById(periodId);
     if (stEl) stEl.textContent = info.text;
     if (bdEl) {
       bdEl.textContent = val;
