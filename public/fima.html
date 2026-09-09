@@ -1932,13 +1932,13 @@
               <text x="182" y="102" font-size="7" fill="#718096" text-anchor="middle">100</text>
               
               <!-- Needle (pointing at 65) -->
-              <g transform="translate(100, 90) rotate(27)">
+              <g id="fg-needle" transform="translate(100, 90) rotate(27)">
                 <polygon points="-3,0 3,0 0,-60" fill="#2d3748" />
                 <circle cx="0" cy="0" r="5" fill="#2d3748" />
               </g>
             </svg>
             <div class="gauge-text">
-              <div class="gauge-val">65</div>
+              <div class="gauge-val" id="fg-gauge-val">65</div>
             </div>
           </div>
           
@@ -1998,11 +1998,11 @@
             
             <!-- SVG line chart placeholder -->
             <svg width="100%" height="100%" viewBox="0 0 1000 250" preserveAspectRatio="none" style="position: absolute; top: 0; left: 0; z-index: 1;">
-              <polyline points="0.0,112.5 8.8,93.8 17.5,75.0 26.3,76.7 35.1,78.3 43.9,80.0 52.6,76.7 61.4,73.3 70.2,70.0 78.9,70.0 87.7,70.0 96.5,97.5 105.3,125.0 114.0,125.0 122.8,125.0 131.6,127.5 140.4,130.0 149.1,180.0 157.9,187.5 166.7,175.0 175.4,162.5 184.2,150.0 193.0,137.5 201.8,150.0 210.5,162.5 219.3,187.5 228.1,200.0 236.8,206.3 245.6,212.5 254.4,200.0 263.2,187.5 271.9,187.5 280.7,187.5 289.5,168.8 298.2,150.0 307.0,143.8 315.8,137.5 324.6,150.0 333.3,133.3 342.1,116.7 350.9,100.0 359.6,112.5 368.4,125.0 377.2,129.2 386.0,133.3 394.7,137.5 403.5,131.3 412.3,125.0 421.1,112.5 429.8,100.0 438.6,87.5 447.4,100.0 456.1,112.5 464.9,101.7 473.7,90.8 482.5,80.0 491.2,102.5 500.0,125.0 508.8,150.0 517.5,137.5 526.3,125.0 535.1,143.8 543.9,162.5 552.6,162.5 561.4,150.0 570.2,137.5 578.9,156.3 587.7,175.0 596.5,200.0 605.3,212.5 614.0,187.5 622.8,212.5 631.6,220.0 640.4,187.5 649.1,187.5 657.9,168.8 666.7,150.0 675.4,145.0 684.2,75.0 693.0,62.5 701.8,66.3 710.5,70.0 719.3,70.0 728.1,65.0 736.8,60.0 745.6,65.0 754.4,70.0 763.2,70.0 771.9,70.0 780.7,75.0 789.5,80.0 798.2,87.5 807.0,100.0 815.8,95.0 824.6,100.0 833.3,137.5 842.1,175.0 850.9,150.0 859.6,187.5 868.4,187.5 877.2,162.5 886.0,150.0 894.7,137.5 903.5,146.3 912.3,155.0 921.1,150.0 929.8,145.0 938.6,153.8 947.4,162.5 956.1,143.8 964.9,125.0 973.7,100.0 982.5,75.0 991.2,80.0 1000.0,70.0" fill="none" stroke="#3182ce" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
+              <polyline id="fg-chart-line" points="0.0,112.5 8.8,93.8 17.5,75.0 26.3,76.7 35.1,78.3 43.9,80.0 52.6,76.7 61.4,73.3 70.2,70.0 78.9,70.0 87.7,70.0 96.5,97.5 105.3,125.0 114.0,125.0 122.8,125.0 131.6,127.5 140.4,130.0 149.1,180.0 157.9,187.5 166.7,175.0 175.4,162.5 184.2,150.0 193.0,137.5 201.8,150.0 210.5,162.5 219.3,187.5 228.1,200.0 236.8,206.3 245.6,212.5 254.4,200.0 263.2,187.5 271.9,187.5 280.7,187.5 289.5,168.8 298.2,150.0 307.0,143.8 315.8,137.5 324.6,150.0 333.3,133.3 342.1,116.7 350.9,100.0 359.6,112.5 368.4,125.0 377.2,129.2 386.0,133.3 394.7,137.5 403.5,131.3 412.3,125.0 421.1,112.5 429.8,100.0 438.6,87.5 447.4,100.0 456.1,112.5 464.9,101.7 473.7,90.8 482.5,80.0 491.2,102.5 500.0,125.0 508.8,150.0 517.5,137.5 526.3,125.0 535.1,143.8 543.9,162.5 552.6,162.5 561.4,150.0 570.2,137.5 578.9,156.3 587.7,175.0 596.5,200.0 605.3,212.5 614.0,187.5 622.8,212.5 631.6,220.0 640.4,187.5 649.1,187.5 657.9,168.8 666.7,150.0 675.4,145.0 684.2,75.0 693.0,62.5 701.8,66.3 710.5,70.0 719.3,70.0 728.1,65.0 736.8,60.0 745.6,65.0 754.4,70.0 763.2,70.0 771.9,70.0 780.7,75.0 789.5,80.0 798.2,87.5 807.0,100.0 815.8,95.0 824.6,100.0 833.3,137.5 842.1,175.0 850.9,150.0 859.6,187.5 868.4,187.5 877.2,162.5 886.0,150.0 894.7,137.5 903.5,146.3 912.3,155.0 921.1,150.0 929.8,145.0 938.6,153.8 947.4,162.5 956.1,143.8 964.9,125.0 973.7,100.0 982.5,75.0 991.2,80.0 1000.0,70.0" fill="none" stroke="#3182ce" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" />
             </svg>
             
             <!-- X-axis labels -->
-            <div style="position: absolute; bottom: -24px; left: 0; right: 0; display: flex; justify-content: space-between; font-size: 0.75rem; color: #718096; padding: 0 10px;">
+            <div id="fg-chart-labels" style="position: absolute; bottom: -24px; left: 0; right: 0; display: flex; justify-content: space-between; font-size: 0.75rem; color: #718096; padding: 0 10px;">
               <span>Nov 2025</span>
               <span>Feb 2026</span>
               <span>May 2026</span>
@@ -9224,6 +9224,107 @@
       if (window.origSwitchTabLab) window.origSwitchTabLab(tab);
       if (tab === 'lab') {
         updateLabAssets();
+      }
+    };
+  }
+</script>
+
+
+  // --- CNN Fear & Greed Logic ---
+  function getFgKorean(rating) {
+    if (!rating) return { text: '-', class: 'badge-neutral' };
+    const r = rating.toLowerCase();
+    if (r === 'extreme fear') return { text: '극단적 공포', class: 'badge-extreme-fear' };
+    if (r === 'fear') return { text: '공포', class: 'badge-fear' };
+    if (r === 'neutral') return { text: '중립', class: 'badge-neutral' };
+    if (r === 'greed') return { text: '탐욕', class: 'badge-greed' };
+    if (r === 'extreme greed') return { text: '극단적 탐욕', class: 'badge-extreme-greed' };
+    return { text: rating, class: 'badge-neutral' };
+  }
+
+  function updateFearGreedRow(periodId, dataObj) {
+    if (!dataObj) return;
+    const info = getFgKorean(dataObj.rating);
+    const val = Math.round(dataObj.score);
+    const stEl = document.getElementById(periodId + '-status');
+    const bdEl = document.getElementById(periodId + '-badge');
+    if (stEl) stEl.textContent = info.text;
+    if (bdEl) {
+      bdEl.textContent = val;
+      bdEl.className = 'fg-hist-badge ' + info.class;
+    }
+  }
+
+  function loadFearGreedData() {
+    fetch('/api/fear-and-greed')
+      .then(res => res.json())
+      .then(data => {
+        if (!data || !data.fear_and_greed) return;
+        
+        const fg = data.fear_and_greed;
+        const currentVal = Math.round(fg.score);
+        
+        // Update Gauge
+        if (document.getElementById('fg-gauge-val')) {
+          document.getElementById('fg-gauge-val').textContent = currentVal;
+        }
+        if (document.getElementById('fg-needle')) {
+          // 0 is -90deg, 100 is +90deg, 50 is 0deg
+          const angle = (currentVal - 50) * 1.8;
+          document.getElementById('fg-needle').setAttribute('transform', `translate(100, 90) rotate(${angle})`);
+        }
+        
+        // Update History
+        updateFearGreedRow('fg-hist-prev', fg.previous_close);
+        updateFearGreedRow('fg-hist-1w', fg.one_week_ago);
+        updateFearGreedRow('fg-hist-1m', fg.one_month_ago);
+        updateFearGreedRow('fg-hist-1y', fg.one_year_ago);
+        
+        // Update Chart
+        const histData = data.fear_and_greed_historical?.data;
+        if (histData && histData.length > 0) {
+          const minX = histData[0].x;
+          const maxX = histData[histData.length - 1].x;
+          const dx = maxX - minX;
+          
+          let points = [];
+          histData.forEach(pt => {
+            const px = dx === 0 ? 0 : ((pt.x - minX) / dx) * 1000;
+            // score is y, max=100 min=0, SVG height=250. so 0 score is y=250, 100 score is y=0
+            const py = 250 - (pt.y / 100 * 250);
+            points.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+          });
+          
+          if (document.getElementById('fg-chart-line')) {
+            document.getElementById('fg-chart-line').setAttribute('points', points.join(' '));
+          }
+          
+          // Labels (Quarterly roughly)
+          const lbls = [];
+          const numLabels = 4;
+          for (let i = 0; i < numLabels; i++) {
+            const t = minX + dx * (i / (numLabels - 1));
+            const d = new Date(t);
+            const mStr = d.toLocaleString('en-US', { month: 'short' });
+            lbls.push(`<span>${mStr} ${d.getFullYear()}</span>`);
+          }
+          if (document.getElementById('fg-chart-labels')) {
+            document.getElementById('fg-chart-labels').innerHTML = lbls.join('');
+          }
+        }
+      })
+      .catch(err => console.error('Failed to load F&G:', err));
+  }
+
+  // Hook into switchTab
+  if (typeof window.origSwitchTabLab2 === 'undefined') {
+    window.origSwitchTabLab2 = window.switchTab;
+    let fgLoaded = false;
+    window.switchTab = function(tab) {
+      if (window.origSwitchTabLab2) window.origSwitchTabLab2(tab);
+      if (tab === 'lab' && !fgLoaded) {
+        fgLoaded = true;
+        loadFearGreedData();
       }
     };
   }
