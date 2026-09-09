@@ -1,5 +1,6 @@
----
+﻿---
 description: Git Commit & Push Guidelines for Vercel Deployment
+trigger: always_on
 ---
 
 # Git Commit and Push Guidelines
@@ -20,3 +21,4 @@ git config user.email "company@lim.kr"
 
 ## Rule: Push upon completion
 Always execute a `git commit` and `git push` automatically after all code modifications for a task are completed and verified. Do not wait for the user to explicitly ask you to push.
+
