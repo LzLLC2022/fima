@@ -1872,10 +1872,6 @@
             <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #2d3748;">시장 공포·탐욕 지수</h3>
             <svg onclick="window.open('https://edition.cnn.com/markets/fear-and-greed', '_blank')" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a0aec0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer;" title="CNN Fear & Greed Index 원본 보기"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
           </div>
-          <div style="display: flex; background: #f7fafc; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <button class="fg-tab active" onclick="switchFgTab('summary')" style="padding: 6px 16px; border: none; background: #fff; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #5c6ac4; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;">요약</button>
-            <button class="fg-tab" onclick="switchFgTab('chart')" style="padding: 6px 16px; border: none; background: transparent; border-radius: 6px; font-size: 0.85rem; font-weight: 600; color: #718096; cursor: pointer;">52W Chart</button>
-          </div>
         </div>
 
         <style>
@@ -1897,9 +1893,9 @@
           .badge-neutral { background: #e2e8f0; color: #4a5568; }
         </style>
 
-        <div id="fg-summary-view" style="display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: center;">
+        <div id="fg-summary-view" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; justify-content: space-between;">
           <!-- Gauge -->
-          <div style="flex: 1; min-width: 300px; display: flex; justify-content: center; position: relative;">
+          <div style="flex: 0 0 calc(25% - 20px); min-width: 250px; display: flex; justify-content: center; align-items: center; position: relative;">
             <svg width="340" height="190" viewBox="0 0 200 110">
               <!-- Background arcs -->
               <path d="M 20 90 A 70 70 0 0 1 180 90" fill="none" stroke="#f7fafc" stroke-width="24" stroke-linecap="round" />
@@ -1943,7 +1939,7 @@
           </div>
           
           <!-- History -->
-          <div style="flex: 1; min-width: 250px; max-width: 320px;">
+          <div style="flex: 0 0 calc(25% - 20px); min-width: 250px; max-width: 320px; display: flex; flex-direction: column; justify-content: center;">
             <div class="fg-hist-row">
               <div>
                 <div class="fg-hist-label">Previous close</div>
@@ -1973,10 +1969,10 @@
               <div class="fg-hist-badge badge-greed" id="fg-hist-1y">63</div>
             </div>
           </div>
-        </div>
 
-        <div id="fg-chart-view" style="display: block; padding: 20px 0;">
-          <div style="height: 250px; position: relative;">
+
+          <div id="fg-chart-view" style="flex: 0 0 calc(50% - 20px); min-width: 400px; padding: 20px 0; display: flex; align-items: center;">
+            <div style="height: 250px; width: 100%; position: relative;">
             <!-- Grid lines -->
             <div style="position: absolute; top: 0; left: 0; right: 0; border-top: 1px dashed #e2e8f0; height: 25%;">
               <span style="position: absolute; right: 0; top: -8px; font-size: 0.7rem; color: #a0aec0; background: #fff; padding-left: 4px;">100</span>
@@ -2011,21 +2007,22 @@
           </div>
         </div>
         
-        <script>
-          function switchFgTab(tab) {
-            if (tab === 'summary') {
-              document.getElementById('fg-summary-view').style.display = 'flex';
-              document.getElementById('fg-chart-view').style.display = 'none';
-              document.querySelectorAll('.fg-tab')[0].classList.add('active');
-              document.querySelectorAll('.fg-tab')[1].classList.remove('active');
-            } else {
-              document.getElementById('fg-summary-view').style.display = 'none';
-              document.getElementById('fg-chart-view').style.display = 'block';
-              document.querySelectorAll('.fg-tab')[0].classList.remove('active');
-              document.querySelectorAll('.fg-tab')[1].classList.add('active');
-            }
-          }
-        </script>
+        </div>
+        <!-- Script removed -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       </div>
     
       <!-- 자산 현황 통합 섹션 -->
