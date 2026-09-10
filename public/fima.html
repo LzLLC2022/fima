@@ -9251,6 +9251,12 @@
       if (owner) {
         if (window._isFetchingLabData) return;
         window._isFetchingLabData = true;
+        
+        // 로딩 표시
+        if(document.getElementById('labNetAsset')) document.getElementById('labNetAsset').textContent = '로딩 중...';
+        if(document.getElementById('labTotalAsset')) document.getElementById('labTotalAsset').textContent = '로딩 중...';
+        if(document.getElementById('txtAssetFima')) document.getElementById('txtAssetFima').textContent = '로딩 중...';
+        
         let reqBody = { owner: owner, accountOwner: '' };
         fetch('/api/portfolio-analysis', {
           method: 'POST',
