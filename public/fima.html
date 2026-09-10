@@ -9335,10 +9335,18 @@
     if(document.getElementById('labTotalAsset')) document.getElementById('labTotalAsset').textContent = totalAsset.toLocaleString() + '원';
     if(document.getElementById('labTotalLiab')) document.getElementById('labTotalLiab').textContent = totalLiab.toLocaleString() + '원';
 
-    if(document.getElementById('txtAssetRealEstate')) document.getElementById('txtAssetRealEstate').textContent = realEstateMkt.toLocaleString() + '원';
-    if(document.getElementById('txtAssetFima')) document.getElementById('txtAssetFima').textContent = fimaMktVal.toLocaleString() + '원';
-    if(document.getElementById('txtAssetFin')) document.getElementById('txtAssetFin').textContent = finAsset.toLocaleString() + '원';
-    if(document.getElementById('txtAssetOther')) document.getElementById('txtAssetOther').textContent = otherAsset.toLocaleString() + '원';
+    let formatAssetDiff = (inv, mkt) => {
+      let diff = mkt - inv;
+      if (diff === 0 || inv === 0) return '';
+      let sign = diff > 0 ? '+' : '';
+      let colorStr = diff > 0 ? '#e53e3e' : '#3182ce';
+      return ' <span style="font-size: 0.8rem; font-weight: 600; color: ' + colorStr + ';">(' + sign + diff.toLocaleString() + '원)</span>';
+    };
+
+    if(document.getElementById('txtAssetRealEstate')) document.getElementById('txtAssetRealEstate').innerHTML = realEstateMkt.toLocaleString() + '원' + formatAssetDiff(realEstateInv, realEstateMkt);
+    if(document.getElementById('txtAssetFima')) document.getElementById('txtAssetFima').innerHTML = fimaMktVal.toLocaleString() + '원' + formatAssetDiff(fimaNetInv, fimaMktVal);
+    if(document.getElementById('txtAssetFin')) document.getElementById('txtAssetFin').innerHTML = finAsset.toLocaleString() + '원';
+    if(document.getElementById('txtAssetOther')) document.getElementById('txtAssetOther').innerHTML = otherAsset.toLocaleString() + '원';
 
     if(document.getElementById('txtLiabMort')) document.getElementById('txtLiabMort').textContent = liabMort.toLocaleString() + '원';
     if(document.getElementById('txtLiabCred')) document.getElementById('txtLiabCred').textContent = liabCred.toLocaleString() + '원';
