@@ -9243,13 +9243,15 @@
     
         let fimaNetInv = 0;
     let fimaMktVal = 0;
-    if (window._labTotalPfData && window._labTotalPfData.summary) {
-      fimaNetInv = window._labTotalPfData.summary.netInvestmentKRW || 0;
-      fimaMktVal = window._labTotalPfData.summary.marketValueKRW || 0;
+    if (typeof window._labTotalPfData !== 'undefined') {
+      fimaNetInv = (window._labTotalPfData && window._labTotalPfData.summary) ? (window._labTotalPfData.summary.netInvestmentKRW || 0) : 0;
+      fimaMktVal = (window._labTotalPfData && window._labTotalPfData.summary) ? (window._labTotalPfData.summary.marketValueKRW || 0) : 0;
     } else {
       let owner = document.getElementById('navOwnerSelect') ? document.getElementById('navOwnerSelect').value : '';
       if (owner) {
-        let reqBody = { owner: owner, accountOwner: 'all' };
+        if (window._isFetchingLabData) return;
+        window._isFetchingLabData = true;
+        let reqBody = { owner: owner, accountOwner: '' };
         fetch('/api/portfolio-analysis', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -9257,9 +9259,15 @@
         })
         .then(res => res.json())
         .then(d => {
+           window._isFetchingLabData = false;
            window._labTotalPfData = d;
            updateLabAssets();
-        }).catch(e => console.log('Portfolio fetch error', e));
+        }).catch(e => {
+           console.log('Portfolio fetch error', e);
+           window._isFetchingLabData = false;
+           window._labTotalPfData = null;
+           updateLabAssets();
+        });
         return;
       }
     }
