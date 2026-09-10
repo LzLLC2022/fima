@@ -2062,11 +2062,11 @@
           <!-- 자산 구성 -->
           <div>
             <h4 style="font-size: 0.85rem; font-weight: 700; color: #4a5568; margin-bottom: 12px;">자산 구성</h4>
-            <div style="height: 12px; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 12px; background: #edf2f7;">
-              <div id="barAssetRealEstate" style="width:0%; background:#4299e1; transition:width 0.4s;"></div>
-              <div id="barAssetFima" style="width:0%; background:#48bb78; transition:width 0.4s;"></div>
-              <div id="barAssetFin" style="width:0%; background:#ed8936; transition:width 0.4s;"></div>
-              <div id="barAssetOther" style="width:0%; background:#9f7aea; transition:width 0.4s;"></div>
+            <div style="height: 20px; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 12px; background: #edf2f7;">
+              <div id="barAssetRealEstate" style="width:0%; background:#4299e1; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
+              <div id="barAssetFima" style="width:0%; background:#48bb78; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
+              <div id="barAssetFin" style="width:0%; background:#ed8936; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
+              <div id="barAssetOther" style="width:0%; background:#9f7aea; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div>
@@ -2090,10 +2090,10 @@
           <!-- 부채 구성 -->
           <div>
             <h4 style="font-size: 0.85rem; font-weight: 700; color: #4a5568; margin-bottom: 12px;">부채 구성</h4>
-            <div style="height: 12px; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 12px; background: #edf2f7;">
-              <div id="barLiabMort" style="width:0%; background:#e53e3e; transition:width 0.4s;"></div>
-              <div id="barLiabCred" style="width:0%; background:#f56565; transition:width 0.4s;"></div>
-              <div id="barLiabOther" style="width:0%; background:#fc8181; transition:width 0.4s;"></div>
+            <div style="height: 20px; border-radius: 6px; display: flex; overflow: hidden; margin-bottom: 12px; background: #edf2f7;">
+              <div id="barLiabMort" style="width:0%; background:#e53e3e; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
+              <div id="barLiabCred" style="width:0%; background:#f56565; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
+              <div id="barLiabOther" style="width:0%; background:#fc8181; transition:width 0.4s; display:flex; align-items:center; justify-content:center; color:white; font-size:0.7rem; font-weight:bold; overflow:hidden; white-space:nowrap;"></div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
               <div>
@@ -9314,16 +9314,51 @@
 
     let aTotal = realEstateMkt + fimaMktVal + finAsset + otherAsset;
     if (aTotal === 0) aTotal = 1;
-    if(document.getElementById('barAssetRealEstate')) document.getElementById('barAssetRealEstate').style.width = ((realEstateMkt / aTotal) * 100) + '%';
-    if(document.getElementById('barAssetFima')) document.getElementById('barAssetFima').style.width = ((fimaMktVal / aTotal) * 100) + '%';
-    if(document.getElementById('barAssetFin')) document.getElementById('barAssetFin').style.width = ((finAsset / aTotal) * 100) + '%';
-    if(document.getElementById('barAssetOther')) document.getElementById('barAssetOther').style.width = ((otherAsset / aTotal) * 100) + '%';
+    let pctRealEstate = (realEstateMkt / aTotal) * 100;
+    let pctFima = (fimaMktVal / aTotal) * 100;
+    let pctFin = (finAsset / aTotal) * 100;
+    let pctOther = (otherAsset / aTotal) * 100;
+    if(document.getElementById('barAssetRealEstate')) {
+      let el = document.getElementById('barAssetRealEstate');
+      el.style.width = pctRealEstate + '%';
+      el.textContent = pctRealEstate >= 5 ? pctRealEstate.toFixed(1) + '%' : '';
+    }
+    if(document.getElementById('barAssetFima')) {
+      let el = document.getElementById('barAssetFima');
+      el.style.width = pctFima + '%';
+      el.textContent = pctFima >= 5 ? pctFima.toFixed(1) + '%' : '';
+    }
+    if(document.getElementById('barAssetFin')) {
+      let el = document.getElementById('barAssetFin');
+      el.style.width = pctFin + '%';
+      el.textContent = pctFin >= 5 ? pctFin.toFixed(1) + '%' : '';
+    }
+    if(document.getElementById('barAssetOther')) {
+      let el = document.getElementById('barAssetOther');
+      el.style.width = pctOther + '%';
+      el.textContent = pctOther >= 5 ? pctOther.toFixed(1) + '%' : '';
+    }
 
     let lTotal = totalLiab;
     if (lTotal === 0) lTotal = 1;
-    if(document.getElementById('barLiabMort')) document.getElementById('barLiabMort').style.width = ((liabMort / lTotal) * 100) + '%';
-    if(document.getElementById('barLiabCred')) document.getElementById('barLiabCred').style.width = ((liabCred / lTotal) * 100) + '%';
-    if(document.getElementById('barLiabOther')) document.getElementById('barLiabOther').style.width = ((liabOther / lTotal) * 100) + '%';
+    let pctMort = (liabMort / lTotal) * 100;
+    let pctCred = (liabCred / lTotal) * 100;
+    let pctLiabOther = (liabOther / lTotal) * 100;
+    if(document.getElementById('barLiabMort')) {
+      let el = document.getElementById('barLiabMort');
+      el.style.width = pctMort + '%';
+      el.textContent = pctMort >= 5 ? pctMort.toFixed(1) + '%' : '';
+    }
+    if(document.getElementById('barLiabCred')) {
+      let el = document.getElementById('barLiabCred');
+      el.style.width = pctCred + '%';
+      el.textContent = pctCred >= 5 ? pctCred.toFixed(1) + '%' : '';
+    }
+    if(document.getElementById('barLiabOther')) {
+      let el = document.getElementById('barLiabOther');
+      el.style.width = pctLiabOther + '%';
+      el.textContent = pctLiabOther >= 5 ? pctLiabOther.toFixed(1) + '%' : '';
+    }
   }
 
   if (typeof window.origSwitchTabLab === 'undefined') {
