@@ -9081,8 +9081,8 @@
     <div style="margin-bottom: 20px;">
       <h4 style="font-size:0.85rem; font-weight:700; color:#4a5568; margin-bottom:12px;">기타 자산 (단위: 원)</h4>
       <div style="display:flex; flex-direction:column; gap:10px;">
-        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">금융자산 (예금/적금 등)</label><input type="number" id="inpAssetFin" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
-        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">기타자산</label><input type="number" id="inpAssetOther" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">금융자산 (예금/적금 등)</label><input type="text" id="inpAssetFin" oninput="formatNumberInput(this)" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">기타자산</label><input type="text" id="inpAssetOther" oninput="formatNumberInput(this)" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
       </div>
       <div style="font-size:0.7rem; color:#a0aec0; margin-top:8px;">* 금융투자자산은 Fima 리포트 탭의 데이터를 자동으로 연동합니다.</div>
     </div>
@@ -9090,9 +9090,9 @@
     <div style="margin-bottom: 20px;">
       <h4 style="font-size:0.85rem; font-weight:700; color:#4a5568; margin-bottom:12px;">부채 구성 (단위: 원)</h4>
       <div style="display:flex; flex-direction:column; gap:10px;">
-        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">담보대출</label><input type="number" id="inpLiabMort" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
-        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">신용대출</label><input type="number" id="inpLiabCred" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
-        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">기타대출</label><input type="number" id="inpLiabOther" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">담보대출</label><input type="text" id="inpLiabMort" oninput="formatNumberInput(this)" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">신용대출</label><input type="text" id="inpLiabCred" oninput="formatNumberInput(this)" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
+        <div><label style="font-size:0.75rem; color:#718096; margin-bottom:4px; display:block;">기타대출</label><input type="text" id="inpLiabOther" oninput="formatNumberInput(this)" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;" placeholder="0" /></div>
       </div>
     </div>
 
@@ -9105,6 +9105,19 @@
 
 <script>
   // --- Lab Asset Dashboard Logic ---
+  
+  function formatNumberInput(el) {
+    let val = el.value.replace(/[^0-9]/g, '');
+    if (val === '') {
+      el.value = '';
+    } else {
+      el.value = Number(val).toLocaleString();
+    }
+  }
+  function unformatNumber(str) {
+    return Number((str + '').replace(/,/g, '')) || 0;
+  }
+
   let tempRealEstates = [];
 
   function openAssetModal() {
@@ -9126,11 +9139,11 @@
     }
     tempRealEstates = JSON.parse(JSON.stringify(data.realEstates));
 
-    document.getElementById('inpAssetFin').value = data.finAsset || 0;
-    document.getElementById('inpAssetOther').value = data.otherAsset || 0;
-    document.getElementById('inpLiabMort').value = data.liabMort || 0;
-    document.getElementById('inpLiabCred').value = data.liabCred || 0;
-    document.getElementById('inpLiabOther').value = data.liabOther || 0;
+    document.getElementById('inpAssetFin').value = (data.finAsset || 0).toLocaleString();
+    document.getElementById('inpAssetOther').value = (data.otherAsset || 0).toLocaleString();
+    document.getElementById('inpLiabMort').value = (data.liabMort || 0).toLocaleString();
+    document.getElementById('inpLiabCred').value = (data.liabCred || 0).toLocaleString();
+    document.getElementById('inpLiabOther').value = (data.liabOther || 0).toLocaleString();
     
     renderRealEstateList();
     document.getElementById('assetModalBackdrop').style.display = 'flex';
@@ -9210,11 +9223,11 @@
     
     data.realEstates = tempRealEstates;
     
-    data.finAsset = Number(document.getElementById('inpAssetFin').value) || 0;
-    data.otherAsset = Number(document.getElementById('inpAssetOther').value) || 0;
-    data.liabMort = Number(document.getElementById('inpLiabMort').value) || 0;
-    data.liabCred = Number(document.getElementById('inpLiabCred').value) || 0;
-    data.liabOther = Number(document.getElementById('inpLiabOther').value) || 0;
+    data.finAsset = unformatNumber(document.getElementById('inpAssetFin').value);
+    data.otherAsset = unformatNumber(document.getElementById('inpAssetOther').value);
+    data.liabMort = unformatNumber(document.getElementById('inpLiabMort').value);
+    data.liabCred = unformatNumber(document.getElementById('inpLiabCred').value);
+    data.liabOther = unformatNumber(document.getElementById('inpLiabOther').value);
     
     localStorage.setItem('fimaLabAssets', JSON.stringify(data));
     closeAssetModal();
