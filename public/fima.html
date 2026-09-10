@@ -1865,6 +1865,34 @@
               </div>
             </div>
           </div>
+          <!-- 달러화 환율 -->
+          <div class="index-card">
+            <div class="index-name">USD/KRW</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">1,350.00</div>
+                <div class="index-change positive">+5.00 (+0.37%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,22 16,14 32,18 48,8 64,6" fill="none" stroke="#00a86b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="6" r="2" fill="#00a86b"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- 엔화 환율 -->
+          <div class="index-card">
+            <div class="index-name">JPY/KRW</div>
+            <div class="index-val-wrap">
+              <div>
+                <div class="index-val">900.50</div>
+                <div class="index-change negative">-2.10 (-0.23%)</div>
+              </div>
+              <div class="sparkline-wrap">
+                <div class="sparkline-base"></div>
+                <svg viewBox="0 0 64 32"><polyline points="0,8 16,12 32,10 48,22 64,26" fill="none" stroke="#e53e3e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="64" cy="26" r="2" fill="#e53e3e"/></svg>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -9610,7 +9638,9 @@
       'S&P 500': '^GSPC',
       'Nasdaq 100': '^IXIC',
       'Dow 30': '^DJI',
-      'Russell 2000': '^RUT'
+      'Russell 2000': '^RUT',
+      'USD/KRW': 'KRW=X',
+      'JPY/KRW': 'JPYKRW=X'
     };
     
     const ticker = tickerMap[name];
