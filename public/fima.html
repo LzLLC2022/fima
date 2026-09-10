@@ -9206,11 +9206,11 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <div>
             <label style="font-size:0.7rem; color:#718096; margin-bottom:4px; display:block;">매입가격 (투자원금)</label>
-            <input type="number" onchange="updateRealEstateItem(${item.id}, 'inv', Number(this.value))" value="${item.inv || 0}" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-size:0.75rem;" />
+            <input type="text" oninput="formatNumberInput(this)" onchange="updateRealEstateItem(${item.id}, 'inv', unformatNumber(this.value))" value="${(item.inv || 0).toLocaleString()}" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-size:0.75rem;" />
           </div>
           <div>
             <label style="font-size:0.7rem; color:#718096; margin-bottom:4px; display:block;">현재가격</label>
-            <input type="number" onchange="updateRealEstateItem(${item.id}, 'mkt', Number(this.value))" value="${item.mkt || 0}" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-size:0.75rem;" />
+            <input type="text" oninput="formatNumberInput(this)" onchange="updateRealEstateItem(${item.id}, 'mkt', unformatNumber(this.value))" value="${(item.mkt || 0).toLocaleString()}" style="width:100%; padding:6px; border:1px solid #e2e8f0; border-radius:4px; font-size:0.75rem;" />
           </div>
         </div>
       `;
