@@ -9552,7 +9552,7 @@
 
 <!-- 지수 상세 모달 -->
 <div id="indexDetailModal" class="detail-modal-backdrop hidden" style="z-index: 2000;">
-  <div class="detail-modal-box" style="max-width: 400px; margin: auto;">
+  <div class="detail-modal-box" style="max-width: 480px; margin: auto;">
     <div class="detail-modal-header">
       <h3 id="idxModalTitle">지수 상세정보</h3>
       <button class="modal-close" onclick="closeIndexDetailPopup()">&times;</button>
@@ -9561,37 +9561,127 @@
       <div id="idxModalName" style="font-size: 1.2rem; font-weight: 700; color: #0078d4; margin-bottom: 10px;"></div>
       <div id="idxModalVal" style="font-size: 2.2rem; font-weight: 800; color: #1a202c; font-family: monospace; letter-spacing: -0.5px; margin-bottom: 5px;"></div>
       <div id="idxModalChange" style="font-size: 1.1rem; font-weight: 600; font-family: monospace; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px;"></div>
-      <div id="idxModalChart" style="width: 100%; height: 100px; position: relative; margin: 0 auto;"></div>
-      <p style="font-size: 0.8rem; color: #718096; margin-top: 24px;">※ 추가 상세 데이터는 준비 중입니다.</p>
+      
+      <div id="idxModal52W" style="display: flex; justify-content: space-around; background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem;">
+        <div>
+          <div style="color: #718096; font-weight: 600; margin-bottom: 4px;">52주 최고</div>
+          <div id="idxModalHigh" style="font-weight: 700; color: #2d3748; font-family: monospace;">-</div>
+          <div id="idxModalHighPct" style="font-size: 0.75rem; color: #e53e3e; margin-top: 2px;">-</div>
+        </div>
+        <div style="width: 1px; background: #e2e8f0;"></div>
+        <div>
+          <div style="color: #718096; font-weight: 600; margin-bottom: 4px;">52주 최저</div>
+          <div id="idxModalLow" style="font-weight: 700; color: #2d3748; font-family: monospace;">-</div>
+          <div id="idxModalLowPct" style="font-size: 0.75rem; color: #00a86b; margin-top: 2px;">-</div>
+        </div>
+      </div>
+      
+      <div style="font-size: 0.8rem; font-weight: 700; color: #4a5568; margin-bottom: 8px; text-align: left;">52주 일별 추이</div>
+      <div id="idxModalChart" style="width: 100%; height: 120px; position: relative; margin: 0 auto; background: #fafafa; border: 1px solid #edf2f7; border-radius: 8px;"></div>
     </div>
   </div>
 </div>
 
 <script>
-  function showIndexDetailPopup(el) {
-    const name = el.querySelector('.index-name').innerText;
-    const val = el.querySelector('.index-val').innerText;
-    const changeEl = el.querySelector('.index-change');
-    const chartWrap = el.querySelector('.sparkline-wrap');
-    
-    document.getElementById('idxModalName').innerText = name;
-    document.getElementById('idxModalVal').innerText = val;
-    document.getElementById('idxModalChange').innerHTML = changeEl ? changeEl.outerHTML : '';
-    
-    const chartContainer = document.getElementById('idxModalChart');
-    chartContainer.innerHTML = chartWrap ? chartWrap.innerHTML : '';
-    
-    const svg = chartContainer.querySelector('svg');
-    if (svg) {
-      svg.style.width = '100%';
-      svg.style.height = '100%';
-    }
-    
-    document.getElementById('indexDetailModal').classList.remove('hidden');
-  }
-
   function closeIndexDetailPopup() {
     document.getElementById('indexDetailModal').classList.add('hidden');
+  }
+
+  async function showIndexDetailPopup(el) {
+    const name = el.querySelector('.index-name').innerText;
+    const fallbackVal = el.querySelector('.index-val').innerText;
+    const fallbackChange = el.querySelector('.index-change');
+    const fallbackChart = el.querySelector('.sparkline-wrap');
+    
+    document.getElementById('idxModalName').innerText = name;
+    document.getElementById('idxModalVal').innerText = '...';
+    document.getElementById('idxModalChange').innerHTML = '';
+    document.getElementById('idxModalHigh').innerText = '-';
+    document.getElementById('idxModalHighPct').innerText = '-';
+    document.getElementById('idxModalLow').innerText = '-';
+    document.getElementById('idxModalLowPct').innerText = '-';
+    document.getElementById('idxModalChart').innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#a0aec0; font-size:0.85rem;">데이터를 불러오는 중입니다...</div>';
+    
+    document.getElementById('indexDetailModal').classList.remove('hidden');
+
+    const tickerMap = {
+      'KOSPI': '^KS11',
+      'KOSDAQ': '^KQ11',
+      'S&P 500': '^GSPC',
+      'Nasdaq 100': '^IXIC',
+      'Dow 30': '^DJI',
+      'Russell 2000': '^RUT'
+    };
+    
+    const ticker = tickerMap[name];
+    if (!ticker) {
+      document.getElementById('idxModalVal').innerText = fallbackVal;
+      document.getElementById('idxModalChange').innerHTML = fallbackChange ? fallbackChange.outerHTML : '';
+      document.getElementById('idxModalChart').innerHTML = fallbackChart ? fallbackChart.innerHTML : '';
+      const svg = document.getElementById('idxModalChart').querySelector('svg');
+      if (svg) { svg.style.width = '100%'; svg.style.height = '100%'; }
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/market-index?ticker=' + encodeURIComponent(ticker));
+      const json = await res.json();
+      if (!json || !json.data || json.data.length === 0) throw new Error('No data');
+      
+      const cp = json.currentPrice;
+      const pc = json.previousClose;
+      const chg = json.change;
+      const chgPct = json.changePercent;
+      
+      document.getElementById('idxModalVal').innerText = cp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      const isPos = chg > 0;
+      const isNeg = chg < 0;
+      let chgHtml = '<div class="index-change ' + (isPos ? 'positive' : isNeg ? 'negative' : '') + '" style="font-size: 1.1rem;">';
+      chgHtml += (isPos ? '+' : '') + chg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      chgHtml += ' (' + (isPos ? '+' : '') + chgPct.toFixed(2) + '%)</div>';
+      document.getElementById('idxModalChange').innerHTML = chgHtml;
+      
+      const h52 = json.high52;
+      const l52 = json.low52;
+      document.getElementById('idxModalHigh').innerText = h52.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('idxModalLow').innerText = l52.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      const hpct = ((cp / h52) - 1) * 100;
+      const lpct = ((cp / l52) - 1) * 100;
+      document.getElementById('idxModalHighPct').innerText = (hpct > 0 ? '+' : '') + hpct.toFixed(2) + '%';
+      document.getElementById('idxModalHighPct').style.color = hpct >= 0 ? '#00a86b' : '#e53e3e';
+      
+      document.getElementById('idxModalLowPct').innerText = (lpct > 0 ? '+' : '') + lpct.toFixed(2) + '%';
+      document.getElementById('idxModalLowPct').style.color = lpct >= 0 ? '#00a86b' : '#e53e3e';
+      
+      let svgHtml = '<svg viewBox="0 0 400 120" preserveAspectRatio="none" style="width:100%; height:100%;"><polyline points="';
+      
+      const dx = 400 / Math.max(1, json.data.length - 1);
+      const dy = 100 / Math.max(0.0001, h52 - l52);
+      
+      let pointsStr = '';
+      json.data.forEach((d, i) => {
+        const x = i * dx;
+        const y = 110 - (d.close - l52) * dy;
+        pointsStr += x + ',' + y + ' ';
+      });
+      
+      svgHtml += pointsStr;
+      
+      const color = isPos ? '#00a86b' : isNeg ? '#e53e3e' : '#718096';
+      svgHtml += '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+      
+      const lastX = (json.data.length - 1) * dx;
+      const lastY = 110 - (cp - l52) * dy;
+      svgHtml += '<circle cx="' + lastX + '" cy="' + lastY + '" r="3" fill="' + color + '"/></svg>';
+      
+      document.getElementById('idxModalChart').innerHTML = svgHtml;
+      
+    } catch(e) {
+      console.error(e);
+      document.getElementById('idxModalChart').innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#e53e3e; font-size:0.85rem;">데이터를 불러오지 못했습니다.</div>';
+    }
   }
 
   // 초기화 시 클릭 이벤트 바인딩
