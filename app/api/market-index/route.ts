@@ -34,15 +34,18 @@ export async function GET(req: NextRequest) {
 
       if (data.length === 0) continue;
 
+      const multiplier = ticker === 'JPYKRW=X' ? 100 : 1;
+
       const meta = result.meta;
-      const currentPrice = meta.regularMarketPrice || data[data.length - 1].close;
-      const previousClose = meta.chartPreviousClose || (data.length > 1 ? data[data.length - 2].close : currentPrice);
+      const currentPrice = (meta.regularMarketPrice || data[data.length - 1].close) * multiplier;
+      const previousClose = (meta.chartPreviousClose || (data.length > 1 ? data[data.length - 2].close : currentPrice)) * multiplier;
       const change = currentPrice - previousClose;
       const changePercent = (change / previousClose) * 100;
       
       let high52 = -Infinity;
       let low52 = Infinity;
       data.forEach(d => {
+        d.close = d.close * multiplier;
         if (d.close > high52) high52 = d.close;
         if (d.close < low52) low52 = d.close;
       });
