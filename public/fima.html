@@ -2713,6 +2713,7 @@
     document.getElementById('ovStockSection').innerHTML = msg;
     document.getElementById('ovFundSection').innerHTML = msg;
     loadMasterData();
+    if (typeof updateLabAssets === 'function') updateLabAssets();
   }
 
   function setTodayDate() {
@@ -9160,7 +9161,8 @@
   let tempRealEstates = [];
 
   function openAssetModal() {
-    let data = JSON.parse(localStorage.getItem('fimaLabAssets') || '{}');
+    const ownerKey = document.getElementById('navOwnerSelect') ? document.getElementById('navOwnerSelect').value : (window.currentOwner || '');
+    let data = JSON.parse(localStorage.getItem('fimaLabAssets_' + ownerKey) || '{}');
     
     // 마이그레이션: 기존 단일 부동산 데이터를 배열로 변환
     if (!data.realEstates) {
@@ -9258,7 +9260,8 @@
   }
 
   function saveAssetModal() {
-    let data = JSON.parse(localStorage.getItem('fimaLabAssets') || '{}');
+    const ownerKey = document.getElementById('navOwnerSelect') ? document.getElementById('navOwnerSelect').value : (window.currentOwner || '');
+    let data = JSON.parse(localStorage.getItem('fimaLabAssets_' + ownerKey) || '{}');
     
     data.realEstates = tempRealEstates;
     
@@ -9267,14 +9270,14 @@
     data.liabMort = unformatNumber(document.getElementById('inpLiabMort').value);
     data.liabCred = unformatNumber(document.getElementById('inpLiabCred').value);
     data.liabOther = unformatNumber(document.getElementById('inpLiabOther').value);
-    
-    localStorage.setItem('fimaLabAssets', JSON.stringify(data));
+    localStorage.setItem('fimaLabAssets_' + ownerKey, JSON.stringify(data));
     closeAssetModal();
     updateLabAssets();
   }
 
   function updateLabAssets() {
-    let data = JSON.parse(localStorage.getItem('fimaLabAssets') || '{}');
+    const ownerKey = document.getElementById('navOwnerSelect') ? document.getElementById('navOwnerSelect').value : (window.currentOwner || '');
+    let data = JSON.parse(localStorage.getItem('fimaLabAssets_' + ownerKey) || '{}');
     
         let fimaNetInv = 0;
     let fimaMktVal = 0;
