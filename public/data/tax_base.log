@@ -20,3 +20,6 @@
 [2026. 9. 11. AM 7:59:37] Scrape started.
 [2026. 9. 11. AM 7:59:37] Scrape finished. Fetched: 10, Empty: 7, Errors: 0. Data changed: No
   - Empty: TIGER 배당프리미엄(139260), KODEX CD금리액티브(합성)(459580), TIGER 은행고배당플러스TOP10(466940), KODEX 200타겟위클리커버드콜(472170), KODEX 미국배당+10%프리미엄다우존스(475230), TIGER 미국30년국채커버드콜액티브(H)(476550), KODEX 미국S&P500타겟위클리커버드콜(합성 H)(480460)
+[2026. 9. 12. AM 8:04:21] Scrape started.
+[2026. 9. 12. AM 8:04:21] Scrape finished. Fetched: 10, Empty: 7, Errors: 0. Data changed: Yes
+  - Empty: TIGER 배당프리미엄(139260), KODEX CD금리액티브(합성)(459580), TIGER 은행고배당플러스TOP10(466940), KODEX 200타겟위클리커버드콜(472170), KODEX 미국배당+10%프리미엄다우존스(475230), TIGER 미국30년국채커버드콜액티브(H)(476550), KODEX 미국S&P500타겟위클리커버드콜(합성 H)(480460)
