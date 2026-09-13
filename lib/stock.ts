@@ -1,3 +1,5 @@
+import { getTaxBaseInfo } from './etf_dividend';
+
 /**
  * ============================================================
  * stock.ts — 금융 데이터 조회 함수 모음
@@ -604,15 +606,6 @@ export async function get52WeekHighLow(ticker: string): Promise<{ high: number; 
  *  - 2년치 일봉 데이터를 받아 최근 365일 이내 배당 이벤트만 합산
  *  - 분기 배당(연 4회)·반기 배당(연 2회) 모두 정확히 합산됩니다
  */
-/**
- * ============================================================
- * stock.ts — 금융 데이터 조회 함수 모음
- * ============================================================
- * /
-// (이전 주석 생략)
-
-import { getTaxBaseInfo } from './etf_dividend';
-
 export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAmount: number, taxBaseTtm: number, taxBaseRatio: number }> {
   if (!ticker) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
   ticker = ticker.toString().trim().toUpperCase();
@@ -679,6 +672,8 @@ export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAm
   }
   return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
 }
+
+
 
 export async function getAnnualDividendPerShare(ticker: string): Promise<number> {
   if (!ticker) return 0;
