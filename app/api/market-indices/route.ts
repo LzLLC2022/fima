@@ -14,15 +14,15 @@ export async function GET(request: Request) {
   const results: Record<string, any> = {};
 
   const fetchChart = async (ticker: string) => {
-    try {
-      // Use 1y range with 1d interval for daily data over 1 year
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1y`;
+    const fetchHost = async (host: string) => {
+      const url = `https://${host}/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1y`;
       const res = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
           'Accept': 'application/json',
           'Referer': 'https://finance.yahoo.com/'
-        }
+        },
+        next: { revalidate: 60 }
       });
 
       if (!res.ok) {
@@ -33,17 +33,55 @@ export async function GET(request: Request) {
       const result = json?.chart?.result?.[0];
       if (!result) throw new Error('No result');
 
+      return result;
+    };
+
+    try {
+      let result;
+      try {
+        result = await fetchHost('query2.finance.yahoo.com');
+      } catch (e1) {
+        result = await fetchHost('query1.finance.yahoo.com');
+      }
+
       const meta = result.meta;
       const quote = result.indicators?.quote?.[0];
       
       const price = meta.regularMarketPrice;
-      const previousClose = meta.chartPreviousClose || meta.previousClose;
       
+      // For TNX and CL=F, we should calculate change from the 1d range previous close, not 1y chart previous close.
+      // But Yahoo chart API with range=1y might not include previous close for today.
+      // Let's do a quick fetch for today's quote to get accurate change!
       let change = 0;
       let changePercent = 0;
-      if (price !== undefined && previousClose !== undefined && previousClose !== 0) {
-        change = price - previousClose;
-        changePercent = (change / previousClose) * 100;
+      
+      try {
+        const url1d = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+        const res1d = await fetch(url1d, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json'
+          }
+        });
+        if (res1d.ok) {
+          const j1d = await res1d.json();
+          const meta1d = j1d?.chart?.result?.[0]?.meta;
+          if (meta1d) {
+            const pClose = meta1d.previousClose || meta1d.chartPreviousClose;
+            const curPrice = meta1d.regularMarketPrice || price;
+            if (curPrice !== undefined && pClose !== undefined && pClose !== 0) {
+              change = curPrice - pClose;
+              changePercent = (change / pClose) * 100;
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback
+        const previousClose = meta.previousClose || meta.chartPreviousClose;
+        if (price !== undefined && previousClose !== undefined && previousClose !== 0) {
+          change = price - previousClose;
+          changePercent = (change / previousClose) * 100;
+        }
       }
 
       // Filter out nulls from the close prices array
