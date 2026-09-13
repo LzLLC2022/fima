@@ -604,6 +604,82 @@ export async function get52WeekHighLow(ticker: string): Promise<{ high: number; 
  *  - 2년치 일봉 데이터를 받아 최근 365일 이내 배당 이벤트만 합산
  *  - 분기 배당(연 4회)·반기 배당(연 2회) 모두 정확히 합산됩니다
  */
+/**
+ * ============================================================
+ * stock.ts — 금융 데이터 조회 함수 모음
+ * ============================================================
+ * /
+// (이전 주석 생략)
+
+import { getTaxBaseInfo } from './etf_dividend';
+
+export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAmount: number, taxBaseTtm: number, taxBaseRatio: number }> {
+  if (!ticker) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
+  ticker = ticker.toString().trim().toUpperCase();
+
+  if (isKoreanBondISIN(ticker)) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
+
+  const candidates: string[] = isKoreanCode(ticker)
+    ? [`${ticker.split('.')[0]}.KS`, `${ticker.split('.')[0]}.KQ`]
+    : [ticker];
+
+  const fetchDiv = async (yticker: string) => {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yticker)}?interval=1d&range=2y&events=dividends`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com/',
+      },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const events = json?.chart?.result?.[0]?.events?.dividends;
+    if (!events) return { ttmAmount: 0, taxBaseTtm: 0 };
+
+    const cutoff = Date.now() / 1000 - 365 * 24 * 3600;
+    
+    let ttmAmount = 0;
+    let taxBaseTtm = 0;
+
+    for (const [ts, d] of Object.entries(events as Record<string, { amount: number; date?: number }>)) {
+      const t = d.date ?? Number(ts);
+      if (t >= cutoff) {
+        ttmAmount += (d.amount || 0);
+        
+        const exDateObj = new Date(t * 1000);
+        const exDateStr = `${exDateObj.getFullYear()}-${String(exDateObj.getMonth()+1).padStart(2,'0')}-${String(exDateObj.getDate()).padStart(2,'0')}`;
+        
+        const tbInfo = await getTaxBaseInfo(ticker, exDateStr);
+        if (tbInfo && typeof tbInfo.taxBase === 'number') {
+            taxBaseTtm += tbInfo.taxBase;
+        } else {
+            taxBaseTtm += (d.amount || 0);
+        }
+      }
+    }
+    
+    return { ttmAmount, taxBaseTtm };
+  };
+
+  for (const yticker of candidates) {
+    try {
+      const val = await fetchDiv(yticker);
+      if (val && val.ttmAmount > 0) {
+        const ratio = (val.taxBaseTtm > 0) ? (val.taxBaseTtm / val.ttmAmount) * 100 : 0;
+        return {
+           ttmAmount: Math.round(val.ttmAmount * 10000) / 10000,
+           taxBaseTtm: Math.round(val.taxBaseTtm * 10000) / 10000,
+           taxBaseRatio: Math.round(ratio * 10) / 10
+        };
+      }
+    } catch {
+      // next
+    }
+  }
+  return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
+}
+
 export async function getAnnualDividendPerShare(ticker: string): Promise<number> {
   if (!ticker) return 0;
   ticker = ticker.toString().trim().toUpperCase();

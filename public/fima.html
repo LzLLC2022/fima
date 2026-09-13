@@ -8264,7 +8264,13 @@
       if (divPerShareAnnual > 0 && allocQty > 0) {
         var estDivTotal = divPerShareAnnual * allocQty;
         var estDivFmt   = rbIsUSD ? fmtU(estDivTotal, 2) : fmtK(Math.round(estDivTotal));
-        estDiv = estDivFmt + ' ' + divSrc + divSubLine;
+        
+        var tRatio = (item.taxBaseRatio !== undefined && item.taxBaseRatio > 0) ? item.taxBaseRatio : 100;
+        var tDivTotal = estDivTotal * (tRatio / 100);
+        var tDivFmt = divSrc === 'USD' ? fmtU(tDivTotal, 2) : fmtK(Math.round(tDivTotal));
+        var taxLine = '<div style="font-size:0.75em;color:#9b2c2c;margin-top:2px;">(과세배당액 ' + tDivFmt + ' ' + divSrc + ' / ' + tRatio.toFixed(1) + '%)</div>';
+
+        estDiv = estDivFmt + ' ' + divSrc + divSubLine + taxLine;
       } else {
         estDiv = (divSubLine ? '-' + divSubLine : '-');
       }
@@ -8334,6 +8340,7 @@
     var tgtClr = Math.abs(totalTgtPct - 100) < 0.05 ? '#276749' : '#c53030';
 
     // 예상 연배당 합계 (기준통화)
+    var totalTaxableDiv = 0;
     var totalEstDiv = items.reduce(function(s, it) {
       var pos = portMap[it.ticker] || { quantity:0, divKRW:0, divFX:0, currentPrice:0, rate:rbExRate||1, marketValueFX:0, marketValueKRW:0 };
       var lp = pos.currentPrice > 0 ? pos.currentPrice : (it.currentPrice || 0);
@@ -8343,13 +8350,19 @@
       var aq = lp > 0 ? (rbIsUSD ? Math.floor(tb/lp) : Math.floor(tb/(lp*lr))) : 0;
       var dpa = it.divPerShare > 0 ? it.divPerShare
               : (pos.quantity > 0 ? (rbIsUSD ? pos.divFX : pos.divKRW) / pos.quantity : 0);
-      return s + (dpa > 0 && aq > 0 ? dpa * aq : 0);
+      var ed = (dpa > 0 && aq > 0 ? dpa * aq : 0);
+      var tRatio = (it.taxBaseRatio !== undefined && it.taxBaseRatio > 0) ? it.taxBaseRatio : 100;
+      totalTaxableDiv += ed * (tRatio / 100);
+      return s + ed;
     }, 0);
 
     var totalEstDivFmt = totalEstDiv > 0
       ? (rbIsUSD ? fmtU(totalEstDiv,2) : fmtK(Math.round(totalEstDiv))) + ' ' + baseCur +
         (rbAmountBase > 0 ? '<div style="font-size:0.82em;color:#718096;font-weight:400;">' +
-          (totalEstDiv / rbAmountBase * 100).toFixed(2) + '%</div>' : '')
+          (totalEstDiv / rbAmountBase * 100).toFixed(2) + '%</div>' : '') +
+        '<div style="font-size:0.75em;color:#9b2c2c;font-weight:400;margin-top:2px;">(과세배당액 ' +
+          (rbIsUSD ? fmtU(totalTaxableDiv,2) : fmtK(Math.round(totalTaxableDiv))) + ' ' + baseCur + ' / ' +
+          (totalEstDiv > 0 ? (totalTaxableDiv / totalEstDiv * 100).toFixed(1) : 0) + '%)</div>'
       : '-';
 
     rows.push(
@@ -8568,8 +8581,13 @@
           rSubLine = '<div style="font-size:0.8em;color:#718096;">' + rDpaFmt + ' ' + rCur + '/주' + rYieldStr + '</div>';
         }
         if (divPerShareCalc > 0 && allocQty > 0) {
-          var estDivAmt = rbIsUSD ? fmtU(divPerShareCalc * allocQty, 2) : fmtK(Math.round(divPerShareCalc * allocQty));
-          estTd.innerHTML = estDivAmt + ' ' + rCur + rSubLine;
+          var estDivAmtCalc = divPerShareCalc * allocQty;
+          var estDivAmt = rbIsUSD ? fmtU(estDivAmtCalc, 2) : fmtK(Math.round(estDivAmtCalc));
+          var rTRatio = (item.taxBaseRatio !== undefined && item.taxBaseRatio > 0) ? item.taxBaseRatio : 100;
+          var rTDivTotal = estDivAmtCalc * (rTRatio / 100);
+          var rTDivFmt = rCur === 'USD' ? fmtU(rTDivTotal, 2) : fmtK(Math.round(rTDivTotal));
+          var rTaxLine = '<div style="font-size:0.75em;color:#9b2c2c;margin-top:2px;">(과세배당액 ' + rTDivFmt + ' ' + rCur + ' / ' + rTRatio.toFixed(1) + '%)</div>';
+          estTd.innerHTML = estDivAmt + ' ' + rCur + rSubLine + rTaxLine;
         } else {
           estTd.innerHTML = rSubLine ? '-' + rSubLine : '-';
         }
@@ -8607,31 +8625,39 @@
         if (tk2) liveTargetMap[tk2] = parseFloat(inp2.value) || 0;
       });
 
+      var totalTaxableDiv2 = 0;
       var totalEstDiv2 = rbSheetItems.reduce(function(s, it) {
         var p  = portMap[it.ticker] || { quantity: 0, divKRW: 0, divFX: 0, currentPrice: 0, rate: 1 };
         var tp = liveTargetMap[it.ticker] !== undefined ? liveTargetMap[it.ticker] : it.targetPct;
         var lp = p.currentPrice > 0 ? p.currentPrice : (it.currentPrice || 0);
         var lr = p.rate > 0 ? p.rate : 1;
-        var aq, dps;
+        var aq, dps, ed = 0;
         if (rbIsUSD) {
           var tB = rbAmountBase * tp / 100;
           aq  = lp > 0 ? Math.floor(tB / lp) : 0;
           dps = (p.quantity > 0 && p.divFX > 0) ? p.divFX / p.quantity : (it.divPerShare || 0);
-          return s + (dps > 0 && aq > 0 ? dps * aq : 0);
+          ed = (dps > 0 && aq > 0 ? dps * aq : 0);
         } else {
           var tK = rbAmountKRW * tp / 100;
           aq  = (lp > 0 && lr > 0) ? Math.floor(tK / (lp * lr)) : 0;
           dps = (p.quantity > 0 && p.divKRW > 0) ? p.divKRW / p.quantity : (it.divPerShare || 0);
-          return s + (dps > 0 && aq > 0 ? Math.round(dps * aq) : 0);
+          ed = (dps > 0 && aq > 0 ? Math.round(dps * aq) : 0);
         }
+        var tRatio = (it.taxBaseRatio !== undefined && it.taxBaseRatio > 0) ? it.taxBaseRatio : 100;
+        totalTaxableDiv2 += ed * (tRatio / 100);
+        return s + ed;
       }, 0);
 
       if (lTds[5]) {
         if (totalEstDiv2 > 0) {
           var yieldBase = rbIsUSD ? rbAmountBase : rbAmountKRW;
           var yieldPct  = yieldBase > 0 ? (totalEstDiv2 / yieldBase * 100).toFixed(2) + '%' : '';
+          var curBase = rbIsUSD ? 'USD' : 'KRW';
           lTds[5].innerHTML = (rbIsUSD ? fmtU(totalEstDiv2, 2) + ' USD' : fmtK(totalEstDiv2) + ' KRW') +
-            (yieldPct ? '<div style="font-size:0.82em;color:#718096;font-weight:400;">' + yieldPct + '</div>' : '');
+            (yieldPct ? '<div style="font-size:0.82em;color:#718096;font-weight:400;">' + yieldPct + '</div>' : '') +
+            '<div style="font-size:0.75em;color:#9b2c2c;font-weight:400;margin-top:2px;">(과세배당액 ' +
+              (rbIsUSD ? fmtU(totalTaxableDiv2,2) : fmtK(Math.round(totalTaxableDiv2))) + ' ' + curBase + ' / ' +
+              (totalEstDiv2 > 0 ? (totalTaxableDiv2 / totalEstDiv2 * 100).toFixed(1) : 0) + '%)</div>';
         } else {
           lTds[5].textContent = '-';
         }

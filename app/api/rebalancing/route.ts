@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSheetValues } from '@/lib/sheets';
 import { getOwnerSheetId } from '@/lib/config';
-import { getStockPrice, getAnnualDividendPerShare, get52WeekHighLow, getMostRecentDividend } from '@/lib/stock';
+import { getStockPrice, getAnnualDividendPerShare, get52WeekHighLow, getMostRecentDividend, getTTMDividendWithTaxBase } from '@/lib/stock';
 
 const REBALANCING_SHEET_NAME = 'Rebalancing';
 
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     // 현재가 + 주당연배당금(TTM) + 52주고저가 + 최근배당금(FWD계산용) 병렬 조회
     const [prices, divs, hls, recentDivs] = await Promise.all([
       Promise.all(filtered.map((it: any) => getStockPrice(it.ticker).catch(() => 0))),
-      Promise.all(filtered.map((it: any) => getAnnualDividendPerShare(it.ticker).catch(() => 0))),
+      Promise.all(filtered.map((it: any) => getTTMDividendWithTaxBase(it.ticker).catch(() => ({ ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 })))),
       Promise.all(filtered.map((it: any) => get52WeekHighLow(it.ticker).catch(() => ({ high: 0, low: 0 })))),
       Promise.all(filtered.map((it: any) => getMostRecentDividend(it.ticker).catch(() => 0))),
     ]);
@@ -83,7 +83,9 @@ export async function POST(req: NextRequest) {
       return {
         ...it,
         currentPrice,
-        divPerShare:  divs[i] || 0,
+        divPerShare:  divs[i].ttmAmount || 0,
+        taxBaseTtm:   divs[i].taxBaseTtm || 0,
+        taxBaseRatio: divs[i].taxBaseRatio || 0,
         weekHigh52:   hls[i].high || 0,
         weekLow52:    hls[i].low  || 0,
         fwdDivYield,
