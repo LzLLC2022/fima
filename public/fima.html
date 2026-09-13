@@ -8265,7 +8265,7 @@
         var estDivTotal = divPerShareAnnual * allocQty;
         var estDivFmt   = rbIsUSD ? fmtU(estDivTotal, 2) : fmtK(Math.round(estDivTotal));
         
-        var tRatio = (item.taxBaseRatio !== undefined && item.taxBaseRatio > 0) ? item.taxBaseRatio : 100;
+        var tRatio = (item.taxBaseRatio !== undefined && item.taxBaseRatio !== null) ? item.taxBaseRatio : 100;
         var tDivTotal = estDivTotal * (tRatio / 100);
         var tDivFmt = divSrc === 'USD' ? fmtU(tDivTotal, 2) : fmtK(Math.round(tDivTotal));
         var taxLine = '<div style="font-size:0.75em;color:#9b2c2c;margin-top:2px;">(과세배당액 ' + tDivFmt + ' ' + divSrc + ' / ' + tRatio.toFixed(1) + '%)</div>';
@@ -8351,7 +8351,7 @@
       var dpa = it.divPerShare > 0 ? it.divPerShare
               : (pos.quantity > 0 ? (rbIsUSD ? pos.divFX : pos.divKRW) / pos.quantity : 0);
       var ed = (dpa > 0 && aq > 0 ? dpa * aq : 0);
-      var tRatio = (it.taxBaseRatio !== undefined && it.taxBaseRatio > 0) ? it.taxBaseRatio : 100;
+      var tRatio = (it.taxBaseRatio !== undefined && it.taxBaseRatio !== null) ? it.taxBaseRatio : 100;
       totalTaxableDiv += ed * (tRatio / 100);
       return s + ed;
     }, 0);
@@ -8583,7 +8583,7 @@
         if (divPerShareCalc > 0 && allocQty > 0) {
           var estDivAmtCalc = divPerShareCalc * allocQty;
           var estDivAmt = rbIsUSD ? fmtU(estDivAmtCalc, 2) : fmtK(Math.round(estDivAmtCalc));
-          var rTRatio = (item.taxBaseRatio !== undefined && item.taxBaseRatio > 0) ? item.taxBaseRatio : 100;
+          var rTRatio = (item.taxBaseRatio !== undefined && item.taxBaseRatio !== null) ? item.taxBaseRatio : 100;
           var rTDivTotal = estDivAmtCalc * (rTRatio / 100);
           var rTDivFmt = rCur === 'USD' ? fmtU(rTDivTotal, 2) : fmtK(Math.round(rTDivTotal));
           var rTaxLine = '<div style="font-size:0.75em;color:#9b2c2c;margin-top:2px;">(과세배당액 ' + rTDivFmt + ' ' + rCur + ' / ' + rTRatio.toFixed(1) + '%)</div>';
@@ -8643,7 +8643,7 @@
           dps = (p.quantity > 0 && p.divKRW > 0) ? p.divKRW / p.quantity : (it.divPerShare || 0);
           ed = (dps > 0 && aq > 0 ? Math.round(dps * aq) : 0);
         }
-        var tRatio = (it.taxBaseRatio !== undefined && it.taxBaseRatio > 0) ? it.taxBaseRatio : 100;
+        var tRatio = (it.taxBaseRatio !== undefined && it.taxBaseRatio !== null) ? it.taxBaseRatio : 100;
         totalTaxableDiv2 += ed * (tRatio / 100);
         return s + ed;
       }, 0);

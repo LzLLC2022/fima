@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         currentPrice,
         divPerShare:  divs[i].ttmAmount || 0,
         taxBaseTtm:   divs[i].taxBaseTtm || 0,
-        taxBaseRatio: divs[i].taxBaseRatio || 0,
+        taxBaseRatio: divs[i].taxBaseRatio !== undefined ? divs[i].taxBaseRatio : null,
         weekHigh52:   hls[i].high || 0,
         weekLow52:    hls[i].low  || 0,
         fwdDivYield,

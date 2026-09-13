@@ -606,11 +606,11 @@ export async function get52WeekHighLow(ticker: string): Promise<{ high: number; 
  *  - 2년치 일봉 데이터를 받아 최근 365일 이내 배당 이벤트만 합산
  *  - 분기 배당(연 4회)·반기 배당(연 2회) 모두 정확히 합산됩니다
  */
-export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAmount: number, taxBaseTtm: number, taxBaseRatio: number }> {
-  if (!ticker) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
+export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAmount: number, taxBaseTtm: number, taxBaseRatio: number | null }> {
+  if (!ticker) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: null };
   ticker = ticker.toString().trim().toUpperCase();
 
-  if (isKoreanBondISIN(ticker)) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
+  if (isKoreanBondISIN(ticker)) return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: null };
 
   const candidates: string[] = isKoreanCode(ticker)
     ? [`${ticker.split('.')[0]}.KS`, `${ticker.split('.')[0]}.KQ`]
@@ -634,6 +634,7 @@ export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAm
     
     let ttmAmount = 0;
     let taxBaseTtm = 0;
+    let hasTaxBase = false;
 
     for (const [ts, d] of Object.entries(events as Record<string, { amount: number; date?: number }>)) {
       const t = d.date ?? Number(ts);
@@ -646,13 +647,14 @@ export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAm
         const tbInfo = await getTaxBaseInfo(ticker, exDateStr);
         if (tbInfo && typeof tbInfo.taxBase === 'number') {
             taxBaseTtm += tbInfo.taxBase;
+            hasTaxBase = true;
         } else {
             taxBaseTtm += (d.amount || 0);
         }
       }
     }
     
-    return { ttmAmount, taxBaseTtm };
+    return { ttmAmount, taxBaseTtm, hasTaxBase };
   };
 
   for (const yticker of candidates) {
@@ -663,14 +665,14 @@ export async function getTTMDividendWithTaxBase(ticker: string): Promise<{ ttmAm
         return {
            ttmAmount: Math.round(val.ttmAmount * 10000) / 10000,
            taxBaseTtm: Math.round(val.taxBaseTtm * 10000) / 10000,
-           taxBaseRatio: Math.round(ratio * 10) / 10
+           taxBaseRatio: val.hasTaxBase ? Math.round(ratio * 10) / 10 : null
         };
       }
     } catch {
       // next
     }
   }
-  return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: 0 };
+  return { ttmAmount: 0, taxBaseTtm: 0, taxBaseRatio: null };
 }
 
 
