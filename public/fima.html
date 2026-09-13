@@ -1754,17 +1754,11 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6ac4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
             <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #2d3748;">시장 지수</h3>
           </div>
-          <div style="display: flex; gap: 6px;">
-            <button onclick="document.getElementById('marketIndexContainer').scrollBy({left: -220, behavior: 'smooth'})" style="border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #718096; font-size: 14px;">&lt;</button>
-            <button onclick="document.getElementById('marketIndexContainer').scrollBy({left: 220, behavior: 'smooth'})" style="border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #718096; font-size: 14px;">&gt;</button>
-          </div>
         </div>
         
         <style>
-          .market-index-container::-webkit-scrollbar { display: none; }
-          .market-index-container { -ms-overflow-style: none; scrollbar-width: none; }
           .index-card {
-            min-width: 210px; background: #fff; border: 1px solid #edf2f7; border-radius: 10px; padding: 14px; flex-shrink: 0; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            flex: 1 1 210px; min-width: 210px; background: #fff; border: 1px solid #edf2f7; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
             cursor: pointer; transition: all 0.2s ease;
           }
           .index-card:hover {
@@ -1780,7 +1774,7 @@
           .sparkline-base { width: 100%; border-bottom: 1px dashed #cbd5e0; position: absolute; bottom: 8px; left: 0; }
         </style>
 
-        <div class="market-index-container" id="marketIndexContainer" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scroll-behavior: smooth;">
+        <div class="market-index-container" id="marketIndexContainer" style="display: flex; gap: 12px; flex-wrap: wrap; padding-bottom: 4px;">
           <!-- KOSPI -->
           <div class="index-card">
             <div class="index-name">KOSPI</div>
