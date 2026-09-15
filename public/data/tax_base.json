@@ -99,6 +99,10 @@
       "202608": {
         "dividend": 25,
         "taxBase": 25
+      },
+      "202609": {
+        "dividend": 35,
+        "taxBase": 35
       }
     }
   },

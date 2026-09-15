@@ -36,3 +36,9 @@
     [PLUS 고배당주위클리고정커버드콜(0018C0)] Navigation timeout of 30000 ms exceeded
     [SOL 팔란티어커버드콜OTM채권혼합(0040Y0)] SOL API Error: fetch failed
     [SOL 팔란티어미국채커버드콜혼합(0040X0)] SOL API Error: fetch failed
+[2026. 9. 16. AM 8:27:42] Scrape started.
+[2026. 9. 16. AM 8:27:42] Scrape finished. Fetched: 8, Empty: 7, Errors: 2. Data changed: Yes
+  - Empty: TIGER 배당프리미엄(139260), KODEX CD금리액티브(합성)(459580), TIGER 은행고배당플러스TOP10(466940), KODEX 200타겟위클리커버드콜(472170), KODEX 미국배당+10%프리미엄다우존스(475230), TIGER 미국30년국채커버드콜액티브(H)(476550), KODEX 미국S&P500타겟위클리커버드콜(합성 H)(480460)
+  - Errors:
+    [SOL 팔란티어커버드콜OTM채권혼합(0040Y0)] SOL API Error: fetch failed
+    [SOL 팔란티어미국채커버드콜혼합(0040X0)] SOL API Error: fetch failed
