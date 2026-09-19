@@ -3,7 +3,7 @@ name: IRP Monthly Reporter
 on:
   schedule:
     # 매월 1일 UTC 00:00 (KST 09:00)에 실행
-    - cron: '0 0 1 * *'
+    - cron: '17 0 1 * *'
   workflow_dispatch:
 
 jobs:
