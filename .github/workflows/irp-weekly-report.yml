@@ -3,7 +3,7 @@ name: IRP Weekly Reporter
 on:
   schedule:
     # 매주 토요일 UTC 00:00 (KST 09:00)에 실행
-    - cron: '0 0 * * 6'
+    - cron: '17 0 * * 6'
   workflow_dispatch:
 
 jobs:
