@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
+import https from 'https';
 
 export const dynamic = 'force-dynamic';
+
+function fetchHtml(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    https.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html'
+      }
+    }, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to fetch stockcircle: ${res.statusCode}`));
+        return;
+      }
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => resolve(data));
+    }).on('error', (err) => reject(err));
+  });
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,22 +38,12 @@ export async function GET(request: Request) {
       url += `?page=${page}`;
     }
 
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html'
-      },
-      cache: 'no-store' // Avoid caching empty responses
-    });
-
-    if (!res.ok) {
-      throw new Error(`Failed to fetch stockcircle: ${res.status}`);
-    }
-
-    const html = await res.text();
+    const html = await fetchHtml(url);
     const $ = cheerio.load(html);
 
     const holdings: any[] = [];
+    let latestQuarter = '';
+
     $('.share__top-box').each((i, el) => {
       const aTag = $(el).find('a.share__company-link');
       if (!aTag.length) return;
@@ -42,6 +52,11 @@ export async function GET(request: Request) {
       const ticker = href.split('/').pop()?.toUpperCase() || '';
       const name = aTag.find('img').attr('alt') || '';
       const info = $(el).text().replace(/\s+/g, ' ').trim();
+
+      if (!latestQuarter) {
+        const qMatch = info.match(/(Q[1-4]\s\d{4})/);
+        if (qMatch) latestQuarter = qMatch[1];
+      }
 
       // Extract details via regex
       const portfolioMatch = info.match(/% of Portfolio ([\d.]+)%/);
@@ -62,7 +77,6 @@ export async function GET(request: Request) {
       });
     });
 
-    // We can also extract total AUM from the header if it's page 1
     let aum = '';
     if (page === '1') {
       const desc = $('meta[name="description"]').attr('content') || '';
@@ -70,7 +84,7 @@ export async function GET(request: Request) {
       if (aumMatch) aum = aumMatch[1];
     }
 
-    return NextResponse.json({ guru, page, aum, holdings });
+    return NextResponse.json({ guru, page, aum, latestQuarter, holdings });
   } catch (error: any) {
     console.error('Guru fetch error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -10086,8 +10086,14 @@
         return;
       }
 
-      if (json.aum && currentGuruPage === 1) {
-        aum.textContent = json.aum;
+      if (currentGuruPage === 1) {
+        if (json.aum) aum.textContent = json.aum;
+        if (json.latestQuarter) {
+          const qtrSelect = document.getElementById('guru-qtr-select');
+          if (qtrSelect && qtrSelect.options.length > 0) {
+            qtrSelect.options[0].text = `최신 분기 (${json.latestQuarter})`;
+          }
+        }
       }
 
       let holdsHtml = '';
