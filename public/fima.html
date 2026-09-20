@@ -2171,6 +2171,33 @@
           </div>
         </div>
       </div>
+      <!-- 대가의 포트폴리오 (13F) -->
+      <div class="market-index-section" style="background: #f8f9fb; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6ac4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #2d3748;">대가의 포트폴리오 (13F)</h3>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <!-- Ray Dalio -->
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+               레이 달리오 (Bridgewater)
+               <span style="font-size:0.7rem; font-weight:400; color:#a0aec0;">Top 10</span>
+            </div>
+            <div id="guru-ray-dalio" style="min-height: 200px; display:flex; justify-content:center; align-items:center; color:#a0aec0; font-size:0.85rem;">로딩 중...</div>
+          </div>
+          <!-- Howard Marks -->
+          <div class="card" style="margin-bottom: 0;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+               하워드 막스 (Oaktree)
+               <span style="font-size:0.7rem; font-weight:400; color:#a0aec0;">Top 10</span>
+            </div>
+            <div id="guru-howard-marks" style="min-height: 200px; display:flex; justify-content:center; align-items:center; color:#a0aec0; font-size:0.85rem;">로딩 중...</div>
+          </div>
+        </div>
+      </div>
       
       </div>
 
@@ -9955,5 +9982,65 @@
   });
 </script>
 
+<script>
+  async function loadGurusPortfolio() {
+    const gurus = [
+      { id: 'ray-dalio', urlParam: 'ray-dalio' },
+      { id: 'howard-marks', urlParam: 'howard-marks' }
+    ];
+
+    for (const g of gurus) {
+      const container = document.getElementById(`guru-${g.id}`);
+      if (!container) continue;
+      
+      try {
+        const res = await fetch(`/api/gurus?guru=${g.urlParam}`);
+        const json = await res.json();
+        
+        if (!json.holdings || json.holdings.length === 0) {
+          container.innerHTML = '<div style="padding:20px;text-align:center;color:#e53e3e;">데이터를 불러오지 못했습니다.</div>';
+          continue;
+        }
+
+        let html = '<div style="display:flex;flex-direction:column;gap:8px;width:100%;">';
+        json.holdings.forEach(item => {
+          html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
+              <div style="display:flex; flex-direction:column; gap:2px; max-width: 65%; overflow: hidden;">
+                <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker}</div>
+                <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink: 0;">
+                <div style="font-weight:600; color:#4a5568; font-size:0.85rem;">${item.portfolioPct}%</div>
+                <div style="font-size:0.7rem; font-weight:600; color:${item.change.startsWith('+') ? '#38a169' : item.change.startsWith('-') ? '#e53e3e' : '#718096'};">${item.change || '-'}</div>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      } catch(e) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#e53e3e;">오류 발생</div>';
+      }
+    }
+  }
+
+  if (typeof window.origSwitchTabLab3 === 'undefined') {
+    window.origSwitchTabLab3 = window.switchTab;
+    window.switchTab = function(tab) {
+      try { if (window.origSwitchTabLab3) window.origSwitchTabLab3(tab); } catch(e) {}
+      if (tab === 'lab') {
+        loadGurusPortfolio();
+      }
+    };
+    
+    setTimeout(() => {
+       const activeTab = document.querySelector('.tab-btn.active');
+       if (activeTab && activeTab.id === 'subtab-lab') {
+          loadGurusPortfolio();
+       }
+    }, 600);
+  }
+</script>
 </body>
 </html>
