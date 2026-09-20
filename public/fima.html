@@ -9701,19 +9701,26 @@
       
       <div id="idxModal52W" style="display: flex; justify-content: space-around; background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem;">
         <div>
-          <div style="color: #718096; font-weight: 600; margin-bottom: 4px;">52주 최고</div>
+          <div id="idxModalHighLbl" style="color: #718096; font-weight: 600; margin-bottom: 4px;">52주 최고</div>
           <div id="idxModalHigh" style="font-weight: 700; color: #2d3748; font-family: monospace;">-</div>
           <div id="idxModalHighPct" style="font-size: 0.75rem; color: #e53e3e; margin-top: 2px;">-</div>
         </div>
         <div style="width: 1px; background: #e2e8f0;"></div>
         <div>
-          <div style="color: #718096; font-weight: 600; margin-bottom: 4px;">52주 최저</div>
+          <div id="idxModalLowLbl" style="color: #718096; font-weight: 600; margin-bottom: 4px;">52주 최저</div>
           <div id="idxModalLow" style="font-weight: 700; color: #2d3748; font-family: monospace;">-</div>
           <div id="idxModalLowPct" style="font-size: 0.75rem; color: #00a86b; margin-top: 2px;">-</div>
         </div>
       </div>
       
-      <div style="font-size: 0.8rem; font-weight: 700; color: #4a5568; margin-bottom: 8px; text-align: left;">52주 일별 추이</div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+        <div id="idxModalChartTitle" style="font-size: 0.8rem; font-weight: 700; color: #4a5568; text-align: left;">1년 일별 추이</div>
+        <div id="idxModalPeriodBtns" style="display: flex; gap: 6px;">
+          <button class="idx-period-btn" data-period="1Y" onclick="loadIndexChart('1Y')" style="padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: 1px solid #3182ce; background: #3182ce; color: #fff; border-radius: 4px; cursor: pointer;">1Y</button>
+          <button class="idx-period-btn" data-period="1M" onclick="loadIndexChart('1M')" style="padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: 1px solid #cbd5e0; background: #fff; color: #4a5568; border-radius: 4px; cursor: pointer;">1M</button>
+          <button class="idx-period-btn" data-period="1W" onclick="loadIndexChart('1W')" style="padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: 1px solid #cbd5e0; background: #fff; color: #4a5568; border-radius: 4px; cursor: pointer;">1W</button>
+        </div>
+      </div>
       <div id="idxModalChart" style="width: 100%; height: 120px; position: relative; margin: 0 auto; background: #fafafa; border: 1px solid #edf2f7; border-radius: 8px;"></div>
     </div>
   </div>
@@ -9723,6 +9730,9 @@
   function closeIndexDetailPopup() {
     document.getElementById('indexDetailModal').classList.add('hidden');
   }
+
+  window.currentIdxTicker = null;
+  window.currentIdxName = null;
 
   async function showIndexDetailPopup(el) {
     const name = el.querySelector('.index-name').innerText;
@@ -9764,16 +9774,46 @@
       return;
     }
     
+    window.currentIdxTicker = ticker;
+    window.currentIdxName = name;
+    await loadIndexChart('1Y');
+  }
+
+  async function loadIndexChart(range) {
+    const ticker = window.currentIdxTicker;
+    if (!ticker) return;
+
+    const btns = document.querySelectorAll('.idx-period-btn');
+    btns.forEach(btn => {
+      if (btn.getAttribute('data-period') === range) {
+        btn.style.background = '#3182ce';
+        btn.style.color = '#fff';
+        btn.style.border = '1px solid #3182ce';
+      } else {
+        btn.style.background = '#fff';
+        btn.style.color = '#4a5568';
+        btn.style.border = '1px solid #cbd5e0';
+      }
+    });
+
+    const titleMap = { '1Y': '1년 일별 추이', '1M': '1개월 일별 추이', '1W': '1주일 일별 추이' };
+    document.getElementById('idxModalChartTitle').innerText = titleMap[range] || '일별 추이';
+    document.getElementById('idxModalChart').innerHTML = '<div style="display:flex; height:100%; align-items:center; justify-content:center; color:#a0aec0; font-size:0.85rem;">데이터를 불러오는 중입니다...</div>';
+
     try {
-      const res = await fetch('/api/market-index?ticker=' + encodeURIComponent(ticker));
+      const res = await fetch('/api/market-index?ticker=' + encodeURIComponent(ticker) + '&range=' + range);
       const json = await res.json();
       if (!json || !json.data || json.data.length === 0) throw new Error('No data');
       
       const cp = json.currentPrice;
-      const pc = json.previousClose;
       const chg = json.change;
       const chgPct = json.changePercent;
       
+      const highLabel = range === '1Y' ? '52주 최고' : (range === '1M' ? '1개월 최고' : '1주 최고');
+      const lowLabel = range === '1Y' ? '52주 최저' : (range === '1M' ? '1개월 최저' : '1주 최저');
+      document.getElementById('idxModalHighLbl').innerText = highLabel;
+      document.getElementById('idxModalLowLbl').innerText = lowLabel;
+
       document.getElementById('idxModalVal').innerText = cp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       
       const isPos = chg > 0;

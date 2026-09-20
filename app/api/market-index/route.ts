@@ -3,10 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const ticker = searchParams.get('ticker');
+  const range = searchParams.get('range') || '1Y';
   if (!ticker) return NextResponse.json({ error: 'Missing ticker' }, { status: 400 });
 
   const end = Math.floor(Date.now() / 1000) + 86400;
-  const start = end - 365 * 86400; // 52 weeks
+  let days = 365;
+  if (range === '1M') days = 30;
+  if (range === '1W') days = 7;
+  const start = end - days * 86400;
   const encoded = encodeURIComponent(ticker);
 
   for (const host of ['query2', 'query1']) {
