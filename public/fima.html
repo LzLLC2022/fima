@@ -2214,6 +2214,8 @@
                <span>변동</span>
             </div>
             <div id="guru-top-buys" style="min-height: 200px; display:flex; flex-direction:column; gap:8px;"></div>
+            <div id="guru-buys-pagination" style="display:flex; justify-content:center; gap:6px; margin-top:12px; font-size:0.8rem;"></div>
+            <div id="guru-buys-pagination" style="display:flex; justify-content:center; gap:6px; margin-top:12px; font-size:0.8rem;"></div>
           </div>
           <!-- 매도 상위 -->
           <div class="card" style="margin-bottom: 0;">
@@ -2226,6 +2228,8 @@
                <span>변동</span>
             </div>
             <div id="guru-top-sells" style="min-height: 200px; display:flex; flex-direction:column; gap:8px;"></div>
+            <div id="guru-sells-pagination" style="display:flex; justify-content:center; gap:6px; margin-top:12px; font-size:0.8rem;"></div>
+            <div id="guru-sells-pagination" style="display:flex; justify-content:center; gap:6px; margin-top:12px; font-size:0.8rem;"></div>
           </div>
           <!-- 보유 종목 현황 -->
           <div class="card" style="margin-bottom: 0; display:flex; flex-direction:column; justify-content:space-between;">
@@ -2239,13 +2243,8 @@
                  <span>비중</span>
               </div>
               <div id="guru-holdings" style="min-height: 200px; display:flex; flex-direction:column; gap:8px;"></div>
-            </div>
-            <!-- 페이지네이션 -->
-            <div style="display:flex; justify-content:center; align-items:center; gap: 8px; margin-top: 16px; padding-top:16px; border-top:1px solid #edf2f7;" id="guru-pagination">
-               <button class="button button--secondary" style="padding:4px 8px; min-width:32px;" id="guru-prev-btn">&lt;</button>
-               <span id="guru-page-info" style="font-size:0.85rem; font-weight:600; color:#4a5568;">1</span>
-               <button class="button button--secondary" style="padding:4px 8px; min-width:32px;" id="guru-next-btn">&gt;</button>
-            </div>
+              <div id="guru-holds-pagination" style="display:flex; justify-content:center; gap:6px; margin-top:12px; font-size:0.8rem;"></div>
+              <div id="guru-holds-pagination" style="display:flex; justify-content:center; gap:6px; margin-top:12px; font-size:0.8rem;"></div>
           </div>
         </div>
       </div>
@@ -10034,12 +10033,16 @@
 </script>
 
 <script>
+  
   let currentGuru = 'ray-dalio';
-  let currentGuruPage = 1;
   const guruList = [
     { id: 'ray-dalio', name: '레이 달리오', org: 'Bridgewater Associates' },
     { id: 'howard-marks', name: '하워드 막스', org: 'Oaktree Capital' }
   ];
+
+  let currentGuruData = { buys: [], sells: [], holds: [] };
+  let guruPageStates = { buys: 1, sells: 1, holds: 1 };
+  const ITEMS_PER_PAGE = 5;
 
   function renderGuruTabs() {
     const tabs = document.getElementById('guru-tabs');
@@ -10060,22 +10063,143 @@
 
   window.selectGuru = function(id) {
     currentGuru = id;
-    currentGuruPage = 1;
+    guruPageStates = { buys: 1, sells: 1, holds: 1 };
     renderGuruTabs();
     fetchGuruData();
   }
 
+  function generatePaginationHtml(totalItems, currentPage, type) {
+     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+     if (totalPages <= 1) return '';
+     
+     let html = `<button onclick="changeGuruPage('${type}', ${currentPage - 1})" style="padding:2px 8px; border-radius:4px; border:1px solid #e2e8f0; background:white; cursor:${currentPage > 1 ? 'pointer' : 'not-allowed'}; opacity:${currentPage > 1 ? 1 : 0.5}">&lt;</button>`;
+     
+     const maxPagesToShow = 5;
+     let startPage = Math.max(1, currentPage - 2);
+     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+     
+     if (endPage - startPage + 1 < maxPagesToShow) {
+         startPage = Math.max(1, endPage - maxPagesToShow + 1);
+     }
+     
+     if (startPage > 1) {
+         html += `<button onclick="changeGuruPage('${type}', 1)" style="padding:2px 8px; border-radius:4px; border:1px solid #e2e8f0; background:white; cursor:pointer;">1</button>`;
+         if (startPage > 2) html += `<span style="color:#a0aec0; padding:2px 4px;">...</span>`;
+     }
+     
+     for (let i = startPage; i <= endPage; i++) {
+         const isActive = i === currentPage;
+         html += `<button onclick="changeGuruPage('${type}', ${i})" style="padding:2px 8px; border-radius:4px; border:1px solid ${isActive ? '#5c6ac4' : '#e2e8f0'}; background:${isActive ? '#5c6ac4' : 'white'}; color:${isActive ? 'white' : '#4a5568'}; cursor:pointer;">${i}</button>`;
+     }
+     
+     if (endPage < totalPages) {
+         if (endPage < totalPages - 1) html += `<span style="color:#a0aec0; padding:2px 4px;">...</span>`;
+         html += `<button onclick="changeGuruPage('${type}', ${totalPages})" style="padding:2px 8px; border-radius:4px; border:1px solid #e2e8f0; background:white; cursor:pointer;">${totalPages}</button>`;
+     }
+     
+     html += `<button onclick="changeGuruPage('${type}', ${currentPage + 1})" style="padding:2px 8px; border-radius:4px; border:1px solid #e2e8f0; background:white; cursor:${currentPage < totalPages ? 'pointer' : 'not-allowed'}; opacity:${currentPage < totalPages ? 1 : 0.5}">&gt;</button>`;
+     return html;
+  }
+
+  window.changeGuruPage = function(type, newPage) {
+     const totalItems = currentGuruData[type].length;
+     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+     if (newPage >= 1 && newPage <= totalPages) {
+         guruPageStates[type] = newPage;
+         if (type === 'buys') renderGuruBuys();
+         else if (type === 'sells') renderGuruSells();
+         else if (type === 'holds') renderGuruHolds();
+     }
+  }
+
+  function renderGuruBuys() {
+      const container = document.getElementById('guru-top-buys');
+      const pageContainer = document.getElementById('guru-buys-pagination');
+      if(!container) return;
+      
+      const startIdx = (guruPageStates.buys - 1) * ITEMS_PER_PAGE;
+      const items = currentGuruData.buys.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+      
+      let html = '';
+      items.forEach(item => {
+         html += `
+           <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
+             <div style="display:flex; flex-direction:column; max-width: 70%;">
+               <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker || item.name}</div>
+               <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+             </div>
+             <div style="display:flex; flex-direction:column; align-items:flex-end;">
+               <div style="font-weight:700; font-size:0.85rem; color:#38a169;">${item.change}</div>
+             </div>
+           </div>
+         `;
+      });
+      container.innerHTML = html || '<div style="font-size:0.8rem; color:#a0aec0; text-align:center; padding:20px;">매수 내역 없음</div>';
+      if (pageContainer) pageContainer.innerHTML = generatePaginationHtml(currentGuruData.buys.length, guruPageStates.buys, 'buys');
+  }
+
+  function renderGuruSells() {
+      const container = document.getElementById('guru-top-sells');
+      const pageContainer = document.getElementById('guru-sells-pagination');
+      if(!container) return;
+      
+      const startIdx = (guruPageStates.sells - 1) * ITEMS_PER_PAGE;
+      const items = currentGuruData.sells.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+      
+      let html = '';
+      items.forEach(item => {
+         html += `
+           <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
+             <div style="display:flex; flex-direction:column; max-width: 70%;">
+               <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker || item.name}</div>
+               <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+             </div>
+             <div style="display:flex; flex-direction:column; align-items:flex-end;">
+               <div style="font-weight:700; font-size:0.85rem; color:#e53e3e;">${item.change}</div>
+             </div>
+           </div>
+         `;
+      });
+      container.innerHTML = html || '<div style="font-size:0.8rem; color:#a0aec0; text-align:center; padding:20px;">매도 내역 없음</div>';
+      if (pageContainer) pageContainer.innerHTML = generatePaginationHtml(currentGuruData.sells.length, guruPageStates.sells, 'sells');
+  }
+
+  function renderGuruHolds() {
+      const container = document.getElementById('guru-holdings');
+      const pageContainer = document.getElementById('guru-holds-pagination');
+      if(!container) return;
+      
+      const startIdx = (guruPageStates.holds - 1) * ITEMS_PER_PAGE;
+      const items = currentGuruData.holds.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+      
+      let html = '';
+      items.forEach(item => {
+         html += `
+           <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #edf2f7;">
+             <div style="display:flex; flex-direction:column; max-width: 65%;">
+               <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker || item.name}</div>
+               <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+             </div>
+             <div style="display:flex; flex-direction:column; align-items:flex-end;">
+               <div style="font-weight:600; color:#4a5568; font-size:0.85rem;">${item.weightPct}%</div>
+               <div style="font-size:0.7rem; font-weight:600; color:#718096; margin-top:2px;">${item.valueStr}</div>
+             </div>
+           </div>
+         `;
+      });
+      container.innerHTML = html || '<div style="font-size:0.8rem; color:#a0aec0; text-align:center; padding:20px;">보유 내역 없음</div>';
+      if (pageContainer) pageContainer.innerHTML = generatePaginationHtml(currentGuruData.holds.length, guruPageStates.holds, 'holds');
+  }
+
   async function fetchGuruData() {
     const holds = document.getElementById('guru-holdings');
-    const buys = document.getElementById('guru-top-buys');
-    const sells = document.getElementById('guru-top-sells');
     const aum = document.getElementById('guru-aum');
     
     if(!holds) return;
     holds.innerHTML = '<div style="padding:20px;text-align:center;color:#a0aec0;">데이터 불러오는 중...</div>';
     
     try {
-      const res = await fetch(`/api/gurus?guru=${currentGuru}&page=${currentGuruPage}`);
+      const res = await fetch(`/api/gurus?guru=${currentGuru}`);
       const json = await res.json();
       
       if (!json.holdings || json.holdings.length === 0) {
@@ -10083,105 +10207,41 @@
         return;
       }
 
-      if (currentGuruPage === 1) {
-        if (json.aum) aum.textContent = json.aum;
-        if (json.latestQuarter) {
-          const qtrSelect = document.getElementById('guru-qtr-select');
-          if (qtrSelect && qtrSelect.options.length > 0) {
-            qtrSelect.options[0].text = `최신 분기 (${json.latestQuarter})`;
-          }
+      if (json.aum) aum.textContent = json.aum;
+      if (json.latestQuarter) {
+        const qtrSelect = document.getElementById('guru-qtr-select');
+        if (qtrSelect && qtrSelect.options.length > 0) {
+          qtrSelect.options[0].text = `최신 분기 (${json.latestQuarter})`;
         }
       }
 
-      let holdsHtml = '';
-      let buysHtml = '';
-      let sellsHtml = '';
-      
       let buyList = [];
       let sellList = [];
 
       json.holdings.forEach((item) => {
-        // Build holding row
-        holdsHtml += `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #edf2f7;">
-            <div style="display:flex; flex-direction:column; max-width: 65%;">
-              <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker || item.name}</div>
-              <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:flex-end;">
-              <div style="font-weight:600; color:#4a5568; font-size:0.85rem;">${item.weightPct}%</div>
-              <div style="font-size:0.7rem; font-weight:600; color:#718096; margin-top:2px;">${item.valueStr}</div>
-            </div>
-          </div>
-        `;
-
-        if (currentGuruPage === 1) {
           if (item.changeRawText && item.changeRawText.includes('+')) {
             buyList.push(item);
           } else if (item.changeRawText && item.changeRawText.includes('-')) {
             sellList.push(item);
           }
-        }
       });
 
-      if (currentGuruPage === 1) {
-        // Sort and slice buys
-        buyList.sort((a, b) => Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0))
-               .slice(0, 5)
-               .forEach(item => {
-                 buysHtml += `
-                   <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
-                     <div style="display:flex; flex-direction:column; max-width: 70%;">
-                       <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker || item.name}</div>
-                       <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
-                     </div>
-                     <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                       <div style="font-weight:700; font-size:0.85rem; color:#38a169;">${item.change}</div>
-                     </div>
-                   </div>
-                 `;
-               });
+      buyList.sort((a, b) => Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0));
+      sellList.sort((a, b) => Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0));
 
-        // Sort and slice sells
-        sellList.sort((a, b) => Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0))
-                .slice(0, 5)
-                .forEach(item => {
-                  sellsHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
-                      <div style="display:flex; flex-direction:column; max-width: 70%;">
-                        <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker || item.name}</div>
-                        <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
-                      </div>
-                      <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                        <div style="font-weight:700; font-size:0.85rem; color:#e53e3e;">${item.change}</div>
-                      </div>
-                    </div>
-                  `;
-                });
-      }
+      currentGuruData.buys = buyList;
+      currentGuruData.sells = sellList;
+      currentGuruData.holds = json.holdings;
       
-      holds.innerHTML = holdsHtml;
-      if (currentGuruPage === 1) {
-        buys.innerHTML = buysHtml || '<div style="font-size:0.8rem; color:#a0aec0;">매수 내역 없음</div>';
-        sells.innerHTML = sellsHtml || '<div style="font-size:0.8rem; color:#a0aec0;">매도 내역 없음</div>';
-      }
-
-      document.getElementById('guru-page-info').textContent = currentGuruPage;
-      document.getElementById('guru-prev-btn').disabled = currentGuruPage === 1;
+      renderGuruBuys();
+      renderGuruSells();
+      renderGuruHolds();
 
     } catch(e) {
       holds.innerHTML = '<div style="padding:20px;text-align:center;color:#e53e3e;">오류 발생</div>';
     }
   }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const prev = document.getElementById('guru-prev-btn');
-    const next = document.getElementById('guru-next-btn');
-    if(prev) prev.addEventListener('click', () => { if(currentGuruPage > 1) { currentGuruPage--; fetchGuruData(); } });
-    if(next) next.addEventListener('click', () => { currentGuruPage++; fetchGuruData(); });
-  });
-
-  if (typeof window.origSwitchTabLab4 === 'undefined') {
+if (typeof window.origSwitchTabLab4 === 'undefined') {
     window.origSwitchTabLab4 = window.switchTab;
     window.switchTab = function(tab) {
       try { if (window.origSwitchTabLab4) window.origSwitchTabLab4(tab); } catch(e) {}

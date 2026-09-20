@@ -71,9 +71,11 @@ export async function GET(request: Request) {
     if (prevData && prevData.data) {
         prevData.data.forEach((row: any) => {
            const cusip = row[3];
+           const opt = row[8] || '';
+           const key = `${cusip}_${opt}`;
            const valueThousand = row[4] || 0;
            const shares = row[6] || 0;
-           prevMap.set(cusip, { shares, valueThousand });
+           prevMap.set(key, { shares, valueThousand });
         });
     }
     
@@ -87,13 +89,20 @@ export async function GET(request: Request) {
            
            const name = (row[1] || '').trim();
            const cusip = (row[3] || '').trim();
+           const opt = row[8] || '';
+           const key = `${cusip}_${opt}`;
+           
+           if (opt) {
+               ticker = `${ticker} (${opt.toUpperCase()})`;
+           }
+           
            const valueThousand = row[4] || 0;
            const currentShares = row[6] || 0;
            
            totalAum += valueThousand;
            
            let changeShares = 0;
-           const prevDataRow = prevMap.get(cusip);
+           const prevDataRow = prevMap.get(key);
            if (prevDataRow) {
                changeShares = currentShares - prevDataRow.shares;
            } else {
@@ -114,7 +123,7 @@ export async function GET(request: Request) {
            else valStr = '$' + (valueThousand/1000).toFixed(1) + 'M';
            
            holdings.push({
-               cusip,
+               key,
                ticker, 
                name, 
                valueThousand, 
@@ -130,9 +139,17 @@ export async function GET(request: Request) {
     if (prevData && prevData.data) {
         prevData.data.forEach((row: any) => {
             const cusip = (row[3] || '').trim();
-            if (!holdings.find(h => h.cusip === cusip)) {
+            const opt = row[8] || '';
+            const key = `${cusip}_${opt}`;
+            
+            if (!holdings.find(h => h.key === key)) {
                 let ticker = (row[0] || '').trim();
                 if (!ticker) ticker = cusip;
+                
+                if (opt) {
+                    ticker = `${ticker} (${opt.toUpperCase()})`;
+                }
+                
                 const name = (row[1] || '').trim();
                 const prevValueThousand = row[4] || 0;
                 const prevShares = row[6] || 0;
@@ -161,8 +178,8 @@ export async function GET(request: Request) {
        else h.change = '';
     });
     
-    // Remove cusip to save payload size
-    holdings.forEach(h => delete h.cusip);
+    // Remove key to save payload size
+    holdings.forEach(h => delete h.key);
     
     // Sort by descending weight
     holdings.sort((a, b) => b.valueThousand - a.valueThousand);
