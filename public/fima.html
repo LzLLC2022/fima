@@ -2031,7 +2031,12 @@
           </div>
 
 
-          <div id="fg-chart-view" style="flex: 0 0 calc(60% - 20px); min-width: 400px; padding: 20px 0; display: flex; align-items: center;">
+          <div id="fg-chart-view" style="flex: 0 0 calc(60% - 20px); min-width: 400px; padding: 20px 0; display: flex; flex-direction: column; position: relative;">
+            <div style="align-self: flex-end; display: flex; gap: 8px; z-index: 10; margin-bottom: 10px;">
+              <button class="fg-period-btn" data-period="1Y" onclick="renderFgChart('1Y')" style="padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border: 1px solid #3182ce; background: #3182ce; color: #fff; border-radius: 4px; cursor: pointer;">1Y</button>
+              <button class="fg-period-btn" data-period="1M" onclick="renderFgChart('1M')" style="padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border: 1px solid #cbd5e0; background: #fff; color: #4a5568; border-radius: 4px; cursor: pointer;">1M</button>
+              <button class="fg-period-btn" data-period="1W" onclick="renderFgChart('1W')" style="padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border: 1px solid #cbd5e0; background: #fff; color: #4a5568; border-radius: 4px; cursor: pointer;">1W</button>
+            </div>
             <div style="height: 250px; width: 100%; position: relative;">
             <!-- Grid lines -->
             <div style="position: absolute; top: 0; left: 0; right: 0; border-top: 1px dashed #e2e8f0; height: 25%;">
@@ -9542,6 +9547,80 @@
     }
   }
 
+
+  window.renderFgChart = function(period) {
+    const fullData = window.fgHistData;
+    if (!fullData || fullData.length === 0) return;
+    
+    // Update button styles
+    document.querySelectorAll('.fg-period-btn').forEach(btn => {
+      if (btn.getAttribute('data-period') === period) {
+        btn.style.background = '#3182ce';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#3182ce';
+      } else {
+        btn.style.background = '#fff';
+        btn.style.color = '#4a5568';
+        btn.style.borderColor = '#cbd5e0';
+      }
+    });
+
+    let histData = fullData;
+    const now = new Date(fullData[fullData.length - 1].x); // use the latest data point as 'now' to be safe
+    let cutoff = new Date(0);
+    
+    if (period === '1W') {
+      cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (period === '1M') {
+      cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else if (period === '1Y') {
+      cutoff = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    }
+    
+    histData = fullData.filter(pt => pt.x >= cutoff.getTime());
+    if (histData.length === 0) histData = fullData;
+    
+    const minX = histData[0].x;
+    const maxX = histData[histData.length - 1].x;
+    const dx = maxX - minX;
+    
+    let points = [];
+    histData.forEach(pt => {
+      const px = dx === 0 ? 0 : ((pt.x - minX) / dx) * 1000;
+      const py = 250 - (pt.y / 100 * 250);
+      points.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+    });
+    
+    const lineEl = document.getElementById('fg-chart-line');
+    if (lineEl) {
+      lineEl.setAttribute('points', points.join(' '));
+    }
+    
+    const lbls = [];
+    let numLabels = 4;
+    if (period === '1W') numLabels = 7;
+    else if (period === '1M') numLabels = 5;
+    
+    for (let i = 0; i < numLabels; i++) {
+      const t = minX + dx * (i / (numLabels - 1));
+      const d = new Date(t);
+      let lblStr = '';
+      if (period === '1Y') {
+        lblStr = `${d.toLocaleString('en-US', { month: 'short' })} ${d.getFullYear()}`;
+      } else if (period === '1M') {
+        lblStr = `${d.toLocaleString('en-US', { month: 'short' })} ${d.getDate()}`;
+      } else {
+        lblStr = `${d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+      }
+      lbls.push(`<span>${lblStr}</span>`);
+    }
+    
+    const labelsEl = document.getElementById('fg-chart-labels');
+    if (labelsEl) {
+      labelsEl.innerHTML = lbls.join('');
+    }
+  };
+
   function loadFearGreedData() {
     fetch('/api/fear-and-greed')
       .then(res => res.json())
@@ -9580,37 +9659,8 @@
         updateFearGreedRow('fg-hist-1y', fg.previous_1_year);
         
         // Update Chart
-        const histData = data.fear_and_greed_historical?.data;
-        if (histData && histData.length > 0) {
-          const minX = histData[0].x;
-          const maxX = histData[histData.length - 1].x;
-          const dx = maxX - minX;
-          
-          let points = [];
-          histData.forEach(pt => {
-            const px = dx === 0 ? 0 : ((pt.x - minX) / dx) * 1000;
-            // score is y, max=100 min=0, SVG height=250. so 0 score is y=250, 100 score is y=0
-            const py = 250 - (pt.y / 100 * 250);
-            points.push(`${px.toFixed(1)},${py.toFixed(1)}`);
-          });
-          
-          if (document.getElementById('fg-chart-line')) {
-            document.getElementById('fg-chart-line').setAttribute('points', points.join(' '));
-          }
-          
-          // Labels (Quarterly roughly)
-          const lbls = [];
-          const numLabels = 4;
-          for (let i = 0; i < numLabels; i++) {
-            const t = minX + dx * (i / (numLabels - 1));
-            const d = new Date(t);
-            const mStr = d.toLocaleString('en-US', { month: 'short' });
-            lbls.push(`<span>${mStr} ${d.getFullYear()}</span>`);
-          }
-          if (document.getElementById('fg-chart-labels')) {
-            document.getElementById('fg-chart-labels').innerHTML = lbls.join('');
-          }
-        }
+        window.fgHistData = data.fear_and_greed_historical?.data;
+        renderFgChart('1Y');
       })
       .catch(err => console.error('Failed to load F&G:', err));
   }
