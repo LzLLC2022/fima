@@ -51,14 +51,9 @@ export async function GET(request: Request) {
     const holdings: any[] = [];
     let latestQuarter = '';
     let currentName = '';
+    let totalAum = 0;
 
-    // Try to get latest quarter from h1 or table header
-    const thText = $('table#hldtable th').text();
-    const qMatch = thText.match(/to\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})/);
-    if (qMatch) {
-      latestQuarter = qMatch[1]; // e.g. "06/30/2026"
-    }
-
+    // First pass: extract all holdings and sum AUM
     $('table#hldtable tr').each((i, el) => {
       const isMain = $(el).find('td.mainrow').length > 0;
       const isArow = $(el).find('td.arow').length > 0;
@@ -67,40 +62,66 @@ export async function GET(request: Request) {
         currentName = $(el).find('td').eq(0).text().replace(/\s+/g, ' ').trim();
       } else if (isArow) {
         const tds = $(el).find('td');
-        const ticker = tds.eq(0).text().replace(/\s+/g, ' ').trim();
-        const changeRaw = tds.eq(2).text().replace(/\s+/g, ' ').trim();
-        const valueRaw = tds.eq(3).text().replace(/\s+/g, ' ').trim();
+        const securityType = tds.eq(0).text().replace(/\s+/g, ' ').trim();
+        const sharesRaw = tds.eq(1).text().replace(/[^0-9]/g, '');
+        const changeRawText = tds.eq(2).text().replace(/\s+/g, ' ').trim();
+        const changeRawNum = tds.eq(2).text().replace(/[^0-9-]/g, '');
+        const valueRaw = tds.eq(3).text().replace(/[^0-9]/g, '');
 
-        // format value from "$2,248,382" (which is in 1000s) to "$2.2B" or "$2,248M"
+        let parsedName = currentName;
+        let parsedTicker = securityType;
+        const tickerMatch = currentName.match(/(.+?)\s+\(([A-Z]+)\)$/);
+        if (tickerMatch) {
+          parsedName = tickerMatch[1].trim();
+          parsedTicker = tickerMatch[2].trim();
+        }
+
+        const shares = parseInt(sharesRaw) || 0;
+        let changeShares = parseInt(changeRawNum) || 0;
+        if (changeRawText.includes('+')) changeShares = Math.abs(changeShares);
+        else if (changeRawText.includes('-')) changeShares = -Math.abs(changeShares);
+
+        const valueThousand = parseInt(valueRaw) || 0;
+        totalAum += valueThousand;
+
+        // format value
         let valStr = valueRaw;
-        const numVal = parseInt(valueRaw.replace(/[^0-9]/g, ''));
-        if (!isNaN(numVal)) {
-          if (numVal > 1000000) {
-            valStr = `$${(numVal / 1000000).toFixed(2)}B`;
-          } else {
-            valStr = `$${(numVal / 1000).toFixed(1)}M`;
-          }
+        if (valueThousand > 1000000) valStr = `$${(valueThousand / 1000000).toFixed(2)}B`;
+        else valStr = `$${(valueThousand / 1000).toFixed(1)}M`;
+
+        // Calculate value of the changed shares
+        let changeValueThousand = 0;
+        if (shares > 0) {
+           changeValueThousand = (changeShares / shares) * valueThousand;
         }
 
         holdings.push({
-          ticker: ticker,
-          name: currentName,
-          portfolioPct: valStr, // Abuse portfolioPct to show value
-          change: changeRaw
+          ticker: parsedTicker,
+          name: parsedName,
+          valueStr: valStr,
+          valueThousand: valueThousand,
+          changeRawText: changeRawText,
+          changeValueThousand: changeValueThousand
         });
       }
     });
 
-    let aum = '';
-    // AUM can be estimated by summing all valueRaw in 1000s
-    let totalAum = 0;
-    $('table#hldtable tr td.arow').each((i, el) => {
-        const tds = $(el).find('td');
-        const valueRaw = tds.eq(3).text().replace(/\s+/g, ' ').trim();
-        const numVal = parseInt(valueRaw.replace(/[^0-9]/g, ''));
-        if (!isNaN(numVal)) totalAum += numVal;
+    // Second pass: calculate weights
+    holdings.forEach(h => {
+       h.weightPct = totalAum > 0 ? ((h.valueThousand / totalAum) * 100).toFixed(2) : '0.00';
+       h.changeWeightPct = totalAum > 0 ? ((Math.abs(h.changeValueThousand) / totalAum) * 100).toFixed(2) : '0.00';
+       
+       // Format change string for UI
+       if (h.changeRawText.includes('+')) {
+         h.change = `+${h.changeWeightPct}%`;
+       } else if (h.changeRawText.includes('-')) {
+         h.change = `-${h.changeWeightPct}%`;
+       } else {
+         h.change = '';
+       }
     });
 
+    let aum = '';
     if (totalAum > 0) {
         if (totalAum > 1000000) aum = `$${(totalAum / 1000000).toFixed(2)}B`;
         else aum = `$${(totalAum / 1000).toFixed(1)}M`;
