@@ -5,20 +5,25 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const guru = searchParams.get('guru'); // e.g., 'ray-dalio', 'howard-marks'
+  const guru = searchParams.get('guru'); 
+  const page = searchParams.get('page') || '1';
 
   if (!guru) {
     return NextResponse.json({ error: 'guru parameter is required' }, { status: 400 });
   }
 
   try {
-    const url = `https://stockcircle.com/portfolio/${guru}`;
+    let url = `https://stockcircle.com/portfolio/${guru}`;
+    if (page && page !== '1') {
+      url += `?page=${page}`;
+    }
+
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html'
       },
-      next: { revalidate: 3600 * 24 } // 24 hours cache
+      cache: 'no-store' // Avoid caching empty responses
     });
 
     if (!res.ok) {
@@ -30,8 +35,6 @@ export async function GET(request: Request) {
 
     const holdings: any[] = [];
     $('.share__top-box').each((i, el) => {
-      if (i >= 10) return; // Top 10 only
-
       const aTag = $(el).find('a.share__company-link');
       if (!aTag.length) return;
       
@@ -59,7 +62,15 @@ export async function GET(request: Request) {
       });
     });
 
-    return NextResponse.json({ guru, holdings });
+    // We can also extract total AUM from the header if it's page 1
+    let aum = '';
+    if (page === '1') {
+      const desc = $('meta[name="description"]').attr('content') || '';
+      const aumMatch = desc.match(/portfolio value of ([\$\d\.BM]+)/);
+      if (aumMatch) aum = aumMatch[1];
+    }
+
+    return NextResponse.json({ guru, page, aum, holdings });
   } catch (error: any) {
     console.error('Guru fetch error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

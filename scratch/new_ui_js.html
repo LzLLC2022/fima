@@ -1,0 +1,147 @@
+<script>
+  let currentGuru = 'ray-dalio';
+  let currentGuruPage = 1;
+  const guruList = [
+    { id: 'warren-buffett', name: '워런 버핏', org: 'Berkshire Hathaway' },
+    { id: 'ray-dalio', name: '레이 달리오', org: 'Bridgewater Associates' },
+    { id: 'bill-ackman', name: '빌 애크먼', org: 'Pershing Square Capital' },
+    { id: 'cathie-wood', name: '캐시 우드', org: 'ARK Investment Management' },
+    { id: 'carl-icahn', name: '칼 아이칸', org: 'Icahn Enterprises' },
+  ];
+
+  function renderGuruTabs() {
+    const tabs = document.getElementById('guru-tabs');
+    if(!tabs) return;
+    
+    let html = '';
+    guruList.forEach(g => {
+      const isActive = g.id === currentGuru;
+      html += `
+        <div onclick="selectGuru('${g.id}')" style="min-width: 130px; cursor:pointer; padding: 12px; border-radius: 8px; border: 1px solid ${isActive ? '#5c6ac4' : '#e2e8f0'}; background: ${isActive ? '#f4f5fa' : '#fff'}; display:flex; flex-direction:column; align-items:center; gap:8px;">
+           <div style="font-weight:700; color:${isActive ? '#5c6ac4' : '#2d3748'}; font-size:0.9rem;">${g.name}</div>
+           <div style="font-size:0.7rem; color:#718096; text-align:center; line-height:1.2;">${g.org}</div>
+        </div>
+      `;
+    });
+    tabs.innerHTML = html;
+  }
+
+  window.selectGuru = function(id) {
+    currentGuru = id;
+    currentGuruPage = 1;
+    renderGuruTabs();
+    fetchGuruData();
+  }
+
+  async function fetchGuruData() {
+    const holds = document.getElementById('guru-holdings');
+    const buys = document.getElementById('guru-top-buys');
+    const sells = document.getElementById('guru-top-sells');
+    const aum = document.getElementById('guru-aum');
+    
+    if(!holds) return;
+    holds.innerHTML = '<div style="padding:20px;text-align:center;color:#a0aec0;">데이터 불러오는 중...</div>';
+    
+    try {
+      const res = await fetch(`/api/gurus?guru=${currentGuru}&page=${currentGuruPage}`);
+      const json = await res.json();
+      
+      if (!json.holdings || json.holdings.length === 0) {
+        holds.innerHTML = '<div style="padding:20px;text-align:center;color:#e53e3e;">데이터가 없습니다.</div>';
+        return;
+      }
+
+      if (json.aum && currentGuruPage === 1) {
+        aum.textContent = json.aum;
+      }
+
+      let holdsHtml = '';
+      let buysHtml = '';
+      let sellsHtml = '';
+      
+      let buyCount = 0;
+      let sellCount = 0;
+
+      json.holdings.forEach((item, idx) => {
+        // Build holding row
+        holdsHtml += `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #edf2f7;">
+            <div style="display:flex; flex-direction:column; max-width: 65%;">
+              <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker}</div>
+              <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+              <div style="font-weight:600; color:#4a5568; font-size:0.85rem;">${item.portfolioPct}%</div>
+              <div style="font-size:0.7rem; font-weight:600; color:${item.change.startsWith('+') ? '#38a169' : item.change.startsWith('-') ? '#e53e3e' : '#718096'};">${item.change || '-'}</div>
+            </div>
+          </div>
+        `;
+
+        if (currentGuruPage === 1) {
+          if (item.change.startsWith('+') && buyCount < 5) {
+            buysHtml += `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #edf2f7;">
+                <div style="display:flex; flex-direction:column; max-width: 70%;">
+                  <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker}</div>
+                  <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+                </div>
+                <div style="font-weight:700; font-size:0.85rem; color:#38a169;">${item.change}</div>
+              </div>
+            `;
+            buyCount++;
+          }
+          if (item.change.startsWith('-') && sellCount < 5) {
+            sellsHtml += `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #edf2f7;">
+                <div style="display:flex; flex-direction:column; max-width: 70%;">
+                  <div style="font-weight:700; color:#2d3748; font-size:0.85rem;">${item.ticker}</div>
+                  <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+                </div>
+                <div style="font-weight:700; font-size:0.85rem; color:#e53e3e;">${item.change}</div>
+              </div>
+            `;
+            sellCount++;
+          }
+        }
+      });
+      
+      holds.innerHTML = holdsHtml;
+      if (currentGuruPage === 1) {
+        buys.innerHTML = buysHtml || '<div style="font-size:0.8rem; color:#a0aec0;">매수 내역 없음</div>';
+        sells.innerHTML = sellsHtml || '<div style="font-size:0.8rem; color:#a0aec0;">매도 내역 없음</div>';
+      }
+
+      document.getElementById('guru-page-info').textContent = currentGuruPage;
+      document.getElementById('guru-prev-btn').disabled = currentGuruPage === 1;
+
+    } catch(e) {
+      holds.innerHTML = '<div style="padding:20px;text-align:center;color:#e53e3e;">오류 발생</div>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const prev = document.getElementById('guru-prev-btn');
+    const next = document.getElementById('guru-next-btn');
+    if(prev) prev.addEventListener('click', () => { if(currentGuruPage > 1) { currentGuruPage--; fetchGuruData(); } });
+    if(next) next.addEventListener('click', () => { currentGuruPage++; fetchGuruData(); });
+  });
+
+  if (typeof window.origSwitchTabLab4 === 'undefined') {
+    window.origSwitchTabLab4 = window.switchTab;
+    window.switchTab = function(tab) {
+      try { if (window.origSwitchTabLab4) window.origSwitchTabLab4(tab); } catch(e) {}
+      if (tab === 'lab') {
+        renderGuruTabs();
+        fetchGuruData();
+      }
+    };
+    
+    setTimeout(() => {
+       const activeTab = document.querySelector('.tab-btn.active');
+       if (activeTab && activeTab.id === 'subtab-lab') {
+          renderGuruTabs();
+          fetchGuruData();
+       }
+    }, 600);
+  }
+</script>
