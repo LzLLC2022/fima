@@ -13,7 +13,7 @@ function fetchHtml(url: string): Promise<string> {
       }
     }, (res) => {
       if (res.statusCode !== 200) {
-        reject(new Error(`Failed to fetch stockcircle: ${res.statusCode}`));
+        reject(new Error(`Failed to fetch holdingschannel: ${res.statusCode}`));
         return;
       }
       let data = '';
@@ -23,65 +23,87 @@ function fetchHtml(url: string): Promise<string> {
   });
 }
 
+const GURU_URLS: Record<string, string> = {
+  'ray-dalio': 'https://www.holdingschannel.com/13f/bridgewater-associates-lp-top-holdings/',
+  'howard-marks': 'https://www.holdingschannel.com/13f/oaktree-capital-management-lp-top-holdings/'
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const guru = searchParams.get('guru'); 
   const page = searchParams.get('page') || '1';
 
-  if (!guru) {
-    return NextResponse.json({ error: 'guru parameter is required' }, { status: 400 });
+  if (!guru || !GURU_URLS[guru]) {
+    return NextResponse.json({ error: 'guru parameter is invalid' }, { status: 400 });
+  }
+
+  // HoldingsChannel doesn't have simple pagination for top holdings, it shows top 100 or so on one page.
+  // So if page > 1, we just return empty so UI pagination stops.
+  if (page && page !== '1') {
+    return NextResponse.json({ guru, page, aum: '', latestQuarter: '', holdings: [], debugHtmlLength: 0 });
   }
 
   try {
-    let url = `https://stockcircle.com/portfolio/${guru}`;
-    if (page && page !== '1') {
-      url += `?page=${page}`;
-    }
-
+    const url = GURU_URLS[guru];
     const html = await fetchHtml(url);
     const $ = cheerio.load(html);
 
     const holdings: any[] = [];
     let latestQuarter = '';
+    let currentName = '';
 
-    $('.share__top-box').each((i, el) => {
-      const aTag = $(el).find('a.share__company-link');
-      if (!aTag.length) return;
-      
-      const href = aTag.attr('href') || '';
-      const ticker = href.split('/').pop()?.toUpperCase() || '';
-      const name = aTag.find('img').attr('alt') || '';
-      const info = $(el).text().replace(/\s+/g, ' ').trim();
+    // Try to get latest quarter from h1 or table header
+    const thText = $('table#hldtable th').text();
+    const qMatch = thText.match(/to\s+([0-9]{2}\/[0-9]{2}\/[0-9]{4})/);
+    if (qMatch) {
+      latestQuarter = qMatch[1]; // e.g. "06/30/2026"
+    }
 
-      if (!latestQuarter) {
-        const qMatch = info.match(/(Q[1-4]\s\d{4})/);
-        if (qMatch) latestQuarter = qMatch[1];
+    $('table#hldtable tr').each((i, el) => {
+      const isMain = $(el).find('td.mainrow').length > 0;
+      const isArow = $(el).find('td.arow').length > 0;
+
+      if (isMain) {
+        currentName = $(el).find('td').eq(0).text().replace(/\s+/g, ' ').trim();
+      } else if (isArow) {
+        const tds = $(el).find('td');
+        const ticker = tds.eq(0).text().replace(/\s+/g, ' ').trim();
+        const changeRaw = tds.eq(2).text().replace(/\s+/g, ' ').trim();
+        const valueRaw = tds.eq(3).text().replace(/\s+/g, ' ').trim();
+
+        // format value from "$2,248,382" (which is in 1000s) to "$2.2B" or "$2,248M"
+        let valStr = valueRaw;
+        const numVal = parseInt(valueRaw.replace(/[^0-9]/g, ''));
+        if (!isNaN(numVal)) {
+          if (numVal > 1000000) {
+            valStr = `$${(numVal / 1000000).toFixed(2)}B`;
+          } else {
+            valStr = `$${(numVal / 1000).toFixed(1)}M`;
+          }
+        }
+
+        holdings.push({
+          ticker: ticker,
+          name: currentName,
+          portfolioPct: valStr, // Abuse portfolioPct to show value
+          change: changeRaw
+        });
       }
-
-      // Extract details via regex
-      const portfolioMatch = info.match(/% of Portfolio ([\d.]+)%/);
-      const portfolioPct = portfolioMatch ? portfolioMatch[1] : '';
-
-      const addedMatch = info.match(/Increased shares by ([\d.]+)%/);
-      const soldMatch = info.match(/Sold ([\d.]+)% shares/);
-
-      let change = '';
-      if (addedMatch) change = `+${addedMatch[1]}%`;
-      else if (soldMatch) change = `-${soldMatch[1]}%`;
-
-      holdings.push({
-        ticker,
-        name,
-        portfolioPct,
-        change
-      });
     });
 
     let aum = '';
-    if (page === '1') {
-      const desc = $('meta[name="description"]').attr('content') || '';
-      const aumMatch = desc.match(/portfolio value of ([\$\d\.BM]+)/);
-      if (aumMatch) aum = aumMatch[1];
+    // AUM can be estimated by summing all valueRaw in 1000s
+    let totalAum = 0;
+    $('table#hldtable tr td.arow').each((i, el) => {
+        const tds = $(el).find('td');
+        const valueRaw = tds.eq(3).text().replace(/\s+/g, ' ').trim();
+        const numVal = parseInt(valueRaw.replace(/[^0-9]/g, ''));
+        if (!isNaN(numVal)) totalAum += numVal;
+    });
+
+    if (totalAum > 0) {
+        if (totalAum > 1000000) aum = `$${(totalAum / 1000000).toFixed(2)}B`;
+        else aum = `$${(totalAum / 1000).toFixed(1)}M`;
     }
 
     return NextResponse.json({ guru, page, aum, latestQuarter, holdings, debugHtmlLength: html.length });
