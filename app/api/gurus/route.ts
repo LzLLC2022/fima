@@ -84,7 +84,7 @@ export async function GET(request: Request) {
       if (aumMatch) aum = aumMatch[1];
     }
 
-    return NextResponse.json({ guru, page, aum, latestQuarter, holdings });
+    return NextResponse.json({ guru, page, aum, latestQuarter, holdings, debugHtmlLength: html.length });
   } catch (error: any) {
     console.error('Guru fetch error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

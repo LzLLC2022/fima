@@ -10037,11 +10037,8 @@
   let currentGuru = 'ray-dalio';
   let currentGuruPage = 1;
   const guruList = [
-    { id: 'warren-buffett', name: '워런 버핏', org: 'Berkshire Hathaway' },
     { id: 'ray-dalio', name: '레이 달리오', org: 'Bridgewater Associates' },
-    { id: 'bill-ackman', name: '빌 애크먼', org: 'Pershing Square Capital' },
-    { id: 'cathie-wood', name: '캐시 우드', org: 'ARK Investment Management' },
-    { id: 'carl-icahn', name: '칼 아이칸', org: 'Icahn Enterprises' },
+    { id: 'howard-marks', name: '하워드 막스', org: 'Oaktree Capital' }
   ];
 
   function renderGuruTabs() {
@@ -10082,7 +10079,7 @@
       const json = await res.json();
       
       if (!json.holdings || json.holdings.length === 0) {
-        holds.innerHTML = '<div style="padding:20px;text-align:center;color:#e53e3e;">데이터가 없습니다.</div>';
+        holds.innerHTML = `<div style="padding:20px;text-align:center;color:#e53e3e;">데이터가 없습니다. (HTML: ${json.debugHtmlLength}B)</div>`;
         return;
       }
 
