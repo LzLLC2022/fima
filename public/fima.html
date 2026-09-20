@@ -10138,7 +10138,7 @@
       items.forEach(item => {
          html += `
            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
-             <div style="display:flex; flex-direction:column; max-width: 70%; cursor:pointer;" onclick="showStockDetail('${(item.ticker || item.name).split(\' \')[0]}', event)">
+             <div style="display:flex; flex-direction:column; max-width: 70%; cursor:pointer;" onclick="showStockDetail('${(item.ticker || item.name).split(' ')[0]}', event)">
                <div style="font-weight:700; color:#5b4fa0; font-size:0.85rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">${item.ticker || item.name}</div>
                <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
              </div>
@@ -10164,7 +10164,7 @@
       items.forEach(item => {
          html += `
            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
-             <div style="display:flex; flex-direction:column; max-width: 70%; cursor:pointer;" onclick="showStockDetail('${(item.ticker || item.name).split(\' \')[0]}', event)">
+             <div style="display:flex; flex-direction:column; max-width: 70%; cursor:pointer;" onclick="showStockDetail('${(item.ticker || item.name).split(' ')[0]}', event)">
                <div style="font-weight:700; color:#5b4fa0; font-size:0.85rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">${item.ticker || item.name}</div>
                <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
              </div>
@@ -10190,7 +10190,7 @@
       items.forEach(item => {
          html += `
            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #edf2f7;">
-             <div style="display:flex; flex-direction:column; max-width: 65%; cursor:pointer;" onclick="showStockDetail('${(item.ticker || item.name).split(\' \')[0]}', event)">
+             <div style="display:flex; flex-direction:column; max-width: 65%; cursor:pointer;" onclick="showStockDetail('${(item.ticker || item.name).split(' ')[0]}', event)">
                <div style="font-weight:700; color:#5b4fa0; font-size:0.85rem;" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">${item.ticker || item.name}</div>
                <div style="font-size:0.7rem; color:#718096; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
              </div>

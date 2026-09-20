@@ -1,10 +1,27 @@
 const fs = require('fs');
-const lines = fs.readFileSync('public/fima.html', 'utf8').split('\n');
-let found = false;
-lines.forEach((l, i) => {
-  if (l.includes('id="labPfAccount"')) {
-    console.log(i + 1, l);
-    found = true;
+const cp = require('child_process');
+const html = fs.readFileSync('public/fima.html', 'utf8');
+
+let startIndex = 0;
+let count = 0;
+while (true) {
+  const start = html.indexOf('<script>', startIndex);
+  if (start === -1) break;
+  const end = html.indexOf('</script>', start);
+  if (end === -1) break;
+  
+  const jsCode = html.substring(start + 8, end);
+  const fn = `scratch/script_${count}.js`;
+  fs.writeFileSync(fn, jsCode);
+  
+  try {
+    cp.execSync(`node -c ${fn}`);
+  } catch(e) {
+    console.log(`Syntax Error in script block ${count}!`);
+    console.log(e.message);
   }
-});
-if (!found) console.log('Not found');
+  
+  count++;
+  startIndex = end;
+}
+console.log('Checked all script blocks.');
