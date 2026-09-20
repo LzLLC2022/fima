@@ -10038,6 +10038,23 @@
   ];
 
   let currentGuruData = { buys: [], sells: [], holds: [] };
+  let guruSortStates = { buys: 'desc', sells: 'desc' };
+
+  window.toggleGuruSort = function(type) {
+     guruSortStates[type] = guruSortStates[type] === 'desc' ? 'asc' : 'desc';
+     const icon = document.getElementById(`guru-${type}-sort-icon`);
+     if (icon) icon.textContent = guruSortStates[type] === 'desc' ? '▼' : '▲';
+     
+     // Re-sort
+     currentGuruData[type].sort((a, b) => {
+         const diff = Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0);
+         return guruSortStates[type] === 'desc' ? diff : -diff;
+     });
+     
+     guruPageStates[type] = 1;
+     if (type === 'buys') renderGuruBuys();
+     else if (type === 'sells') renderGuruSells();
+  }
   let guruPageStates = { buys: 1, sells: 1, holds: 1 };
   const ITEMS_PER_PAGE = 5;
 
@@ -10223,8 +10240,14 @@
           }
       });
 
-      buyList.sort((a, b) => Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0));
-      sellList.sort((a, b) => Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0));
+      buyList.sort((a, b) => {
+          const diff = Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0);
+          return guruSortStates.buys === 'desc' ? diff : -diff;
+      });
+      sellList.sort((a, b) => {
+          const diff = Math.abs(b.changeValueThousand || 0) - Math.abs(a.changeValueThousand || 0);
+          return guruSortStates.sells === 'desc' ? diff : -diff;
+      });
 
       currentGuruData.buys = buyList;
       currentGuruData.sells = sellList;
