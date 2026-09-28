@@ -228,8 +228,7 @@ export async function POST(req: NextRequest) {
       //   (배당금은 0이어도 세금이 있는 거래, 또는 환율 누락으로 divKRW=0인 거래 포함)
       const yr = String(date.getUTCFullYear());
       const mo = String(date.getUTCMonth() + 1).padStart(2, '0');
-      if ((tax2 > 0 || divFX > 0)) {
-        const tkr = ticker2 || '기타(Unknown)';
+      if ((tax2 > 0 || divFX > 0) && ticker2) {
         const taxCurrency = currencyMap[region2] || 'KRW';
         if (taxCurrency !== 'KRW') {
           // 배당 발생 당시 기록된 환율(rate2) 우선, 없으면 최근 캐시 사용
@@ -238,15 +237,15 @@ export async function POST(req: NextRequest) {
           const taxKRW = tax2 > 0 ? Math.floor(tax2 * taxRate) : 0;
           const name2  = nameIdx >= 0 ? String(row[nameIdx] ?? '').trim() : '';
           if (!foreignTaxMap[yr]) foreignTaxMap[yr] = {};
-          if (!foreignTaxMap[yr][tkr]) {
-            foreignTaxMap[yr][tkr] = { name: name2 || tkr, taxFX: 0, taxKRW: 0, currency: taxCurrency, divFX: 0, divKRW: 0 };
+          if (!foreignTaxMap[yr][ticker2]) {
+            foreignTaxMap[yr][ticker2] = { name: name2, taxFX: 0, taxKRW: 0, currency: taxCurrency, divFX: 0, divKRW: 0 };
           }
-          foreignTaxMap[yr][tkr].taxFX  += tax2;
-          foreignTaxMap[yr][tkr].taxKRW += taxKRW;
-          foreignTaxMap[yr][tkr].divFX  += divFX;
-          foreignTaxMap[yr][tkr].divKRW += divKRW;
-          if (!foreignTaxMap[yr][tkr].name && name2) {
-            foreignTaxMap[yr][tkr].name = name2;
+          foreignTaxMap[yr][ticker2].taxFX  += tax2;
+          foreignTaxMap[yr][ticker2].taxKRW += taxKRW;
+          foreignTaxMap[yr][ticker2].divFX  += divFX;
+          foreignTaxMap[yr][ticker2].divKRW += divKRW;
+          if (!foreignTaxMap[yr][ticker2].name && name2) {
+            foreignTaxMap[yr][ticker2].name = name2;
           }
         }
       }
