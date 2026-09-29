@@ -357,6 +357,10 @@
       "202608": {
         "dividend": 99,
         "taxBase": 0
+      },
+      "202609": {
+        "dividend": 99,
+        "taxBase": 0
       }
     }
   },
@@ -575,6 +579,10 @@
       "202608": {
         "dividend": 152,
         "taxBase": 0
+      },
+      "202609": {
+        "dividend": 150,
+        "taxBase": 0
       }
     }
   },
@@ -749,6 +757,10 @@
       "202608": {
         "dividend": 144,
         "taxBase": 35
+      },
+      "202609": {
+        "dividend": 146,
+        "taxBase": 0
       }
     }
   },
@@ -899,6 +911,10 @@
       "202608": {
         "dividend": 164,
         "taxBase": 0
+      },
+      "202609": {
+        "dividend": 160,
+        "taxBase": 0
       }
     }
   },
@@ -968,6 +984,10 @@
       "202608": {
         "dividend": 143,
         "taxBase": 100
+      },
+      "202609": {
+        "dividend": 140,
+        "taxBase": 0
       }
     }
   }
