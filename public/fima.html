@@ -3927,7 +3927,11 @@
   }
 
   function applyClientFilters() {
-    if (!rawQueryResult.data.length) return;
+    if (!rawQueryResult || !rawQueryResult.data) return;
+    if (rawQueryResult.data.length === 0) {
+      renderTable(rawQueryResult.headers || [], [], []);
+      return;
+    }
 
     const nameFilter  = (document.getElementById('qName').value  || '').trim().toLowerCase();
     const tradeFilter = (document.getElementById('qTrade').value || '').trim().toLowerCase();

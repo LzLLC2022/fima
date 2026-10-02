@@ -12,10 +12,11 @@ export async function POST(req: NextRequest) {
 
     const headers    = data[0].map((h: any) => String(h ?? '').trim());
     const rows       = data.slice(1);
-    const dateIdx    = headers.indexOf('Date');
-    const accountIdx = headers.indexOf('Account');
-    const tickerIdx  = headers.indexOf('Ticker');
-    const aoIdx      = headers.indexOf('Account Owner');
+    const colIdx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+    const dateIdx    = colIdx('date');
+    const accountIdx = colIdx('account');
+    const tickerIdx  = colIdx('ticker');
+    const aoIdx      = colIdx('account owner');
 
     // 인덱스 보존하면서 필터 (sheetRow = 시트 행 번호, 1-indexed, 헤더=1이므로 i+2)
     const filteredWithIdx = rows
