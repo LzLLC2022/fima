@@ -366,6 +366,7 @@ export async function POST(req: NextRequest) {
     });
 
     const runningState: State = { cashFX: {}, netDepositKRW: 0, positions: {}, latestRate: {} };
+    const accountStates: Record<string, State> = {};
     const monthlyStates: Record<string, State> = {};
 
     let txIdx = 0;
@@ -387,61 +388,71 @@ export async function POST(req: NextRequest) {
         const tax     = taxIdx >= 0 ? (Number(row[taxIdx]) || 0) : 0;
         const charge  = chgIdx >= 0 ? (Number(row[chgIdx]) || 0) : 0;
 
+        const acctName = acctIdx >= 0 ? String(row[acctIdx] ?? '').trim() : '일반';
+        const acct = acctName || '일반';
+        if (!accountStates[acct]) {
+          accountStates[acct] = { cashFX: {}, netDepositKRW: 0, positions: {}, latestRate: {} };
+        }
+        const aState = accountStates[acct];
+
         // 순투자액 반영 여부: NAME이 "투자금"인 경우만 (이자소득·자동환전·잔액보정 등 제외)
         const isRealInvestment = name === '투자금';
 
-        if (!runningState.cashFX[region]) runningState.cashFX[region] = 0;
-        const effRate = rate > 0 ? rate : (runningState.latestRate[region] || 1);
-        if (rate > 0) runningState.latestRate[region] = rate;
+        const applyToState = (st: State) => {
+          if (!st.cashFX[region]) st.cashFX[region] = 0;
+          const effRate = rate > 0 ? rate : (st.latestRate[region] || 1);
+          if (rate > 0) st.latestRate[region] = rate;
 
-        if (t.startsWith('dep')) {
-          runningState.cashFX[region]    += price - tax - charge;
-          if (isRealInvestment) runningState.netDepositKRW += Math.floor((price - tax - charge) * effRate);
-        } else if (t.startsWith('with')) {
-          runningState.cashFX[region]    -= price + tax + charge;
-          if (isRealInvestment) runningState.netDepositKRW -= Math.floor((price + tax + charge) * effRate);
-        } else if (t === 'buy') {
-          if (asset.toLowerCase() === 'cash') {
-            runningState.cashFX[region] += price * (qty || 1);
-          } else {
-            runningState.cashFX[region] -= price * qty + charge;
+          if (t.startsWith('dep')) {
+            st.cashFX[region]    += price - tax - charge;
+            if (isRealInvestment) st.netDepositKRW += Math.floor((price - tax - charge) * effRate);
+          } else if (t.startsWith('with')) {
+            st.cashFX[region]    -= price + tax + charge;
+            if (isRealInvestment) st.netDepositKRW -= Math.floor((price + tax + charge) * effRate);
+          } else if (t === 'buy') {
+            if (asset.toLowerCase() === 'cash') {
+              st.cashFX[region] += price * (qty || 1);
+            } else {
+              st.cashFX[region] -= price * qty + charge;
+            }
+          } else if (t === 'sell') {
+            st.cashFX[region] += price * qty - tax - charge;
+          } else if (t.startsWith('div') && !t.includes('stock')) {
+            st.cashFX[region] += (divAmt || price) - tax - charge;
+          } else if (t.includes('stock')) {
+            st.cashFX[region] += (divAmt || 0) - price * qty - charge - tax;
           }
-        } else if (t === 'sell') {
-          runningState.cashFX[region] += price * qty - tax - charge;
-        } else if (t.startsWith('div') && !t.includes('stock')) {
-          runningState.cashFX[region] += (divAmt || price) - tax - charge;
-        } else if (t.includes('stock')) {
-          // Dividend-Stock: 현금 배당(divAmt) + 주식 취득 비용(-price*qty) 순효과
-          // portfolio/route.ts 와 동일 로직 (divAmt=0 이면 cash 차감)
-          runningState.cashFX[region] += (divAmt || 0) - price * qty - charge - tax;
-        }
 
-        if (!ticker || asset.toLowerCase() === 'cash') continue;
-        const isDiv = t.startsWith('div');
-        const validT = ['buy', 'sell', 'split', 'merge', 'reversesplit'];
-        if (!validT.includes(t) && !isDiv) continue;
+          if (!ticker || asset.toLowerCase() === 'cash') return;
+          const isDiv = t.startsWith('div');
+          const validT = ['buy', 'sell', 'split', 'merge', 'reversesplit'];
+          if (!validT.includes(t) && !isDiv) return;
 
-        if (!runningState.positions[ticker]) {
-          runningState.positions[ticker] = {
-            qty: 0, buyCostFX: 0, buyCostKRW: 0,
-            region, assetType: asset,
-            name: String(row[nameIdx] ?? '').trim(),
-            lastRate: 0,
-          };
-        }
-        const p = runningState.positions[ticker];
-        if (rate > 0) p.lastRate = rate;
+          if (!st.positions[ticker]) {
+            st.positions[ticker] = {
+              qty: 0, buyCostFX: 0, buyCostKRW: 0,
+              region, assetType: asset,
+              name: String(row[nameIdx] ?? '').trim(),
+              lastRate: 0,
+            };
+          }
+          const p = st.positions[ticker];
+          if (rate > 0) p.lastRate = rate;
 
-        if (t === 'buy' || (isDiv && t.includes('stock'))) {
-          p.qty += qty; p.buyCostFX += price * qty;
-          p.buyCostKRW += Math.floor(price * qty * effRate);  // 거래일별 환산 후 소수점 버림
-        } else if (t === 'sell') {
-          p.qty -= qty;
-        } else if (t === 'split') {
-          p.qty += qty;
-        } else if (t === 'merge' || t === 'reversesplit') {
-          p.qty -= qty;
-        }
+          if (t === 'buy' || (isDiv && t.includes('stock'))) {
+            p.qty += qty; p.buyCostFX += price * qty;
+            p.buyCostKRW += Math.floor(price * qty * effRate);  // 거래일별 환산 후 소수점 버림
+          } else if (t === 'sell') {
+            p.qty -= qty;
+          } else if (t === 'split') {
+            p.qty += qty;
+          } else if (t === 'merge' || t === 'reversesplit') {
+            p.qty -= qty;
+          }
+        };
+
+        applyToState(runningState);
+        applyToState(aState);
       }
       monthlyStates[mm] = cloneState(runningState);
     }
@@ -838,7 +849,26 @@ export async function POST(req: NextRequest) {
         ),
       ])
     );
-    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, tickerMonthlyDivKRW, basePnl, foreignTaxByYear });
+
+    const resultsByAccount = Object.entries(accountStates).map(([accName, aState]) => {
+      let mkt = 0;
+      Object.entries(aState.cashFX).forEach(([region, amt]) => {
+        mkt += amt * resolveRate(region);
+      });
+      Object.entries(aState.positions).forEach(([t, p]) => {
+        if (p.qty < 0.0001) return;
+        mkt += (currentPrice[t] || 0) * p.qty * resolveRate(p.region);
+      });
+      return {
+        accountName: accName,
+        summary: {
+          netInvestmentKRW: Math.round(aState.netDepositKRW),
+          marketValueKRW: Math.round(mkt),
+        }
+      };
+    });
+
+    return NextResponse.json({ success: true, summary: { ...summary, ytd, mtd, daily }, monthly, indices, stocks, dividends, divDetail, tickerMonthlyDivKRW, basePnl, foreignTaxByYear, resultsByAccount });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
