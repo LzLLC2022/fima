@@ -2132,7 +2132,7 @@
                 <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#4299e1;"></div>부동산</div>
                 <div id="txtAssetRealEstate" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
               </div>
-              <div>
+              <div style="cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.15s; margin-left: -4px;" onmouseover="this.style.background='#edf2f7'" onmouseout="this.style.background='transparent'" onclick="openFimaAssetPopup()">
                 <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#718096; margin-bottom:2px;"><div style="width:8px;height:8px;border-radius:2px;background:#48bb78;"></div>금융투자자산</div>
                 <div id="txtAssetFima" style="font-size:0.9rem; font-weight:700; color:#2d3748; font-family:monospace;">-</div>
               </div>
@@ -10283,6 +10283,75 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
           fetchGuruData();
        }
     }, 600);
+  }
+</script>
+
+<script>
+  function openFimaAssetPopup() {
+      if (!window._labTotalPfData || !window._labTotalPfData.summary) {
+          alert("데이터를 불러오는 중이거나 없습니다.");
+          return;
+      }
+      const d = window._labTotalPfData;
+      
+      const totalNet = d.summary.netInvestmentKRW || 0;
+      const totalMkt = d.summary.marketValueKRW || 0;
+      
+      let html = `
+      <div id="fimaAssetPopupBackdrop" class="detail-modal-backdrop" onclick="if(event.target===this) this.remove()">
+          <div class="detail-modal-box">
+              <div class="detail-modal-header">
+                  <h3>금융투자자산 상세</h3>
+                  <button class="modal-close" onclick="document.getElementById('fimaAssetPopupBackdrop').remove()">×</button>
+              </div>
+              <div class="detail-modal-body" style="padding:20px;">
+                  <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin-bottom:16px;">
+                      <h4 style="font-size:0.9rem; font-weight:700; color:#2d3748; margin-bottom:12px;">전체 합계</h4>
+                      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                          <span style="font-size:0.8rem; color:#718096;">전체 순투자금액</span>
+                          <strong style="font-size:0.95rem; color:#2d3748;">${totalNet.toLocaleString()}원</strong>
+                      </div>
+                      <div style="display:flex; justify-content:space-between;">
+                          <span style="font-size:0.8rem; color:#718096;">총자산(평가)금액</span>
+                          <strong style="font-size:0.95rem; color:#2d3748;">${totalMkt.toLocaleString()}원</strong>
+                      </div>
+                  </div>
+                  <h4 style="font-size:0.85rem; font-weight:700; color:#4a5568; margin-bottom:12px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">계좌별 현황</h4>
+                  <div style="display:grid; gap:12px;">
+      `;
+  
+      if (d.resultsByAccount && d.resultsByAccount.length > 0) {
+          d.resultsByAccount.forEach(acc => {
+              const net = acc.summary ? (acc.summary.netInvestmentKRW || 0) : 0;
+              const mkt = acc.summary ? (acc.summary.marketValueKRW || 0) : 0;
+              html += `
+              <div style="border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+                  <div style="font-size:0.8rem; font-weight:700; color:#3d2f7f; margin-bottom:8px;">${acc.accountName || '알 수 없는 계좌'}</div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                      <span style="font-size:0.75rem; color:#718096;">순투자금액</span>
+                      <span style="font-size:0.85rem; font-weight:600; color:#4a5568;">${net.toLocaleString()}원</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between;">
+                      <span style="font-size:0.75rem; color:#718096;">총자산(평가)금액</span>
+                      <span style="font-size:0.85rem; font-weight:600; color:#2f855a;">${mkt.toLocaleString()}원</span>
+                  </div>
+              </div>
+              `;
+          });
+      } else {
+          html += `<div style="font-size:0.8rem; color:#a0aec0; text-align:center; padding:10px;">계좌별 데이터가 없습니다.</div>`;
+      }
+  
+      html += `
+                  </div>
+              </div>
+          </div>
+      </div>
+      `;
+      
+      const div = document.createElement('div');
+      div.innerHTML = html.trim();
+      document.body.appendChild(div.firstElementChild);
   }
 </script>
 
