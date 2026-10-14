@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿# Ensure paths are correct
+﻿﻿﻿﻿# Ensure paths are correct
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $configPath = Join-Path $scriptDir "..\portfolio_config.json"
 $templatePath = Join-Path $scriptDir "..\resources\report_template.html"
@@ -21,6 +21,7 @@ if ($password -eq "YOUR_APP_PASSWORD_HERE" -or [string]::IsNullOrWhiteSpace($pas
 
 $totalInvest = 0
 $cash = 0
+$totalDividend = 0
 
 # Fetch from FiMa API to dynamically update portfolio holdings, cash, and target weights
 if ($null -ne $config.Target) {
@@ -61,6 +62,18 @@ if ($null -ne $config.Target) {
                     foreach ($f in $fimaRes.funds) { 
                         $fimaHoldings[$f.ticker] = $f
                         $totalInvest += $f.purchaseAmt
+                    }
+                }
+                
+                if ($null -ne $fimaRes.totalDividendKRW) {
+                    $totalDividend = [double]$fimaRes.totalDividendKRW
+                } else {
+                    $totalDividend = 0
+                    if ($null -ne $fimaRes.stocks) { 
+                        foreach ($s in $fimaRes.stocks) { $totalDividend += [double]$s.divKRW }
+                    }
+                    if ($null -ne $fimaRes.funds) { 
+                        foreach ($f in $fimaRes.funds) { $totalDividend += [double]$f.divKRW }
                     }
                 }
                 
@@ -302,7 +315,8 @@ $rebalancingRows = $cashRebalanceRow + $rebalancingRows
 $totalPnl = $totalEval - $totalPurchase
 $totalPnlRatio = 0; if ($totalPurchase -gt 0) { $totalPnlRatio = [math]::Round(($totalPnl / $totalPurchase) * 100, 2) }
 $totalPnlColor = "black"; if ($totalPnl -gt 0) { $totalPnlColor = "red" } elseif ($totalPnl -lt 0) { $totalPnlColor = "blue" }
-$assetTotalRow = "<tr style='font-weight:bold; background-color:#fcfcfc;'><td colspan='4'>합계</td><td>$("{0:N0}" -f $totalPurchase)</td><td>$("{0:N0}" -f $totalEval)</td><td>100%</td><td style='color:$totalPnlColor;'>$("{0:N0}" -f $totalPnl) ($totalPnlRatio%)</td></tr>"
+$assetTotalRow = "<tr style='font-weight:bold; background-color:#fcfcfc;'><td colspan='4'>합계</td><td>$("{0:N0}" -f $totalPurchase)</td><td>$("{0:N0}" -f $totalEval)</td><td>100%</td><td style='color:$totalPnlColor;'>$("{0:N0}" -f $totalPnl) ($totalPnlRatio%)</td></tr>`n" +
+                 "<tr style='font-weight:bold; background-color:#fcfcfc;'><td colspan='7'>누적배당금</td><td style='color:#27ae60;'>$("{0:N0}" -f $totalDividend)</td></tr>"
 
 $rebalancingTotalRow = "<tr style='font-weight:bold; background-color:#fcfcfc;'><td colspan='2'>합계</td><td>100%</td><td>$("{0:N0}" -f $totalEval)</td><td>100%</td><td>$("{0:N0}" -f $totalPurchase)</td><td>$("{0:N0}" -f $totalEval)</td><td>-</td><td>-</td><td>-</td><td>{{TOTAL_NEED_STR}}</td><td></td></tr>"
 

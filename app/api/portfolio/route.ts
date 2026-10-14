@@ -451,10 +451,14 @@ export async function POST(req: NextRequest) {
     const totalStockKRW = stocks.reduce((s, i) => s + i.marketValue, 0);
     const totalFundKRW  = funds.reduce((s, i)  => s + i.marketValue, 0);
 
+    // 계좌 내 전체 누적 배당금 (전체 종목 합산)
+    const totalDividendKRW = Object.values(posMap).reduce((s, p) => s + (p.divKRW || 0), 0);
+
     return NextResponse.json({
       success: true, cash, stocks, funds,
       totalKRW     : totalCashKRW + totalStockKRW + totalFundKRW,
       totalCashKRW, totalStockKRW, totalFundKRW,
+      totalDividendKRW,
     });
 
   } catch (e: any) {
