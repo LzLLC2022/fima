@@ -178,7 +178,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, summary: null, monthly: [], indices: {}, stocks: [] });
     }
 
-    // ── 월별 배당 집계 (전체 기간 — 연도×월 크로스탭) ────────────────
+    // 사용자 지정 월 범위
+    const startMonth = filters.startMonth ? String(filters.startMonth) : '';
+    const endMonth   = filters.endMonth
+      ? String(filters.endMonth)
+      : (filters.endDate ? String(filters.endDate).slice(0, 7) : '');
+
+    const now       = new Date();
+    const nowMM     = toYYYYMM(now);
+    const targetMM  = endMonth || nowMM;
+    const isHistorical = !!(endMonth && endMonth < nowMM);
+    const targetEndDate = endMonth ? monthEndDate(endMonth) : null;
+
+    // ── 월별 배당 집계 (기준일 이전까지) ────────────────────────────
     const divByYearMonth: Record<string, Record<string, number>> = {};
     const divRateCache: Record<string, number> = {};
     // 종목별 월배당 상세 (예상 계산용): [year][mo][ticker] = { divKRW, divFX, qty }
@@ -192,6 +204,7 @@ export async function POST(req: NextRequest) {
 
     sorted.forEach(({ row, date }) => {
       if (date.getTime() === 0) return;
+      if (targetEndDate && date > targetEndDate) return;
       const t2      = String(row[tradeIdx]  ?? '').trim().toLowerCase().replace(/[-\s]/g, '');
       const ticker2 = String(row[tickerIdx] ?? '').trim().toUpperCase();
       const qty2    = Number(row[qtyIdx])   || 0;
@@ -310,8 +323,6 @@ export async function POST(req: NextRequest) {
 
     // ── 분석 대상 월 목록 (최근 13개월) ─────────────────────────────
     const firstDate = firstActual;
-    const now       = new Date();
-    const nowMM     = toYYYYMM(now);
 
     const allMonths: string[] = [];
     let cur = new Date(Date.UTC(firstDate.getUTCFullYear(), firstDate.getUTCMonth(), 1));
@@ -319,12 +330,6 @@ export async function POST(req: NextRequest) {
       allMonths.push(toYYYYMM(cur));
       cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
     }
-
-    // 사용자 지정 월 범위 적용 (없으면 최근 13개월)
-    const startMonth = filters.startMonth ? String(filters.startMonth) : '';
-    const endMonth   = filters.endMonth
-      ? String(filters.endMonth)
-      : (filters.endDate ? String(filters.endDate).slice(0, 7) : '');
 
     let analyzeMonths: string[];
     if (startMonth) {
@@ -535,14 +540,17 @@ export async function POST(req: NextRequest) {
           fetchMonthlyCloses('^IXIC', fetchMonths, targetEnd).then(d => ({ name: 'NASDAQ', data: d })).catch(() => ({ name: 'NASDAQ', data: [] })),
         ]);
       })(),
-      // 환율 (현재)
+      // 환율 (과거 종료월인 경우 해당 월말 환율 우선 조회)
       (async () => {
         const regions = Array.from(new Set(heldTickers.map(t => currentState.positions[t].region)));
         const rates: Record<string, number> = { KRW: 1 };
+        const dateParam = isHistorical && targetEndDate
+          ? `${targetEndDate.getUTCFullYear()}-${String(targetEndDate.getUTCMonth() + 1).padStart(2, '0')}-${String(targetEndDate.getUTCDate()).padStart(2, '0')}`
+          : undefined;
         await Promise.allSettled(regions.map(async region => {
           const currency = currencyMap[region] || 'KRW';
           if (currency === 'KRW') { rates[region] = 1; return; }
-          const r = await getExchangeRate(currency).catch(() => 0);
+          const r = await getExchangeRate(currency, dateParam).catch(() => 0);
           rates[region] = r > 0 ? r : (currentState.latestRate[region] || 1);
         }));
         return rates;
@@ -573,6 +581,22 @@ export async function POST(req: NextRequest) {
         currentPrice[t] = p.qty > 0 ? p.buyCostFX / p.qty : 0;
       } else {
         currentPrice[t] = 0;
+      }
+    });
+
+    // 기준 시점(targetMM) 평가가:
+    // 과거 종료월(isHistorical)인 경우 해당 월말 역사적 종가(priceMap[t][targetMM]) 우선 적용
+    const evalPrice: Record<string, number> = {};
+    heldTickers.forEach(t => {
+      const p = currentState.positions[t];
+      if (isHistorical) {
+        let hp = priceMap[t]?.[targetMM] || 0;
+        if (hp === 0 && isKoreanBondISIN(t)) {
+          hp = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+        }
+        evalPrice[t] = hp > 0 ? hp : (currentPrice[t] || 0);
+      } else {
+        evalPrice[t] = currentPrice[t] || 0;
       }
     });
 
@@ -639,7 +663,7 @@ export async function POST(req: NextRequest) {
     heldTickers.forEach(t => {
       const p = currentState.positions[t];
       if (p.qty < 0.0001) return;
-      marketValueKRW += (currentPrice[t] || 0) * p.qty * resolveRate(p.region);
+      marketValueKRW += (evalPrice[t] || 0) * p.qty * resolveRate(p.region);
     });
 
     const netInvKRW = currentState.netDepositKRW;
@@ -712,22 +736,26 @@ export async function POST(req: NextRequest) {
       const p = currentState.positions[t];
       if (p.qty < 0.0001) return null;
       const pm = priceMap[t] || {};
-      const cp = currentPrice[t] || 0;
+      const ep = evalPrice[t] || 0;
       const rate = resolveRate(p.region);
-      const mktVal = cp * p.qty * rate;
+      const mktVal = ep * p.qty * rate;
       // 일봉 기준가 우선, 없으면 월봉 폴백
       const ps = periodStartResults[idx]?.status === 'fulfilled' ? periodStartResults[idx].value : { ytd: 0, mtd: 0 };
-      const ysp  = ps.ytd  || pm[prevYearDec] || pm[`${targetYear}-01`] || 0;
-      const mpsp = ps.mtd  || pm[prevMonth]   || 0;
+      const ysp  = isHistorical
+        ? (pm[prevYearDec] || pm[`${targetYear}-01`] || 0)
+        : (ps.ytd || pm[prevYearDec] || pm[`${targetYear}-01`] || 0);
+      const mpsp = isHistorical
+        ? (pm[prevMonth] || 0)
+        : (ps.mtd || pm[prevMonth] || 0);
 
       // 현지 통화 기준 값
-      const marketValueFX = cp * p.qty;   // 평가금액 (현지통화)
+      const marketValueFX = ep * p.qty;   // 평가금액 (현지통화)
       const buyCostFX     = p.buyCostFX;  // 매입금액 (현지통화)
 
       // 현지통화 기준 수익률 (가격 변동만 반영, 환율 효과 제외)
-      // avgPriceFX = 매입평균단가(현지통화), cp = 현재가(현지통화)
+      // avgPriceFX = 매입평균단가(현지통화), ep = 기준평가가(현지통화)
       const avgPriceFX = p.qty > 0 ? p.buyCostFX / p.qty : 0;
-      const pnlPct = avgPriceFX > 0 && cp > 0 ? (cp - avgPriceFX) / avgPriceFX * 100 : null;
+      const pnlPct = avgPriceFX > 0 && ep > 0 ? (ep - avgPriceFX) / avgPriceFX * 100 : null;
 
       return {
         ticker: t, name: p.name,
@@ -736,7 +764,7 @@ export async function POST(req: NextRequest) {
         qty: p.qty,
         marketValueKRW: Math.floor(mktVal),
         marketValueFX:  marketValueFX,
-        currentPrice:   cp,
+        currentPrice:   ep,
         buyCostFX:      buyCostFX,
         buyCostKRW:     p.buyCostKRW,  // 이미 거래일별 floor 누적된 정수
         pnlFX:          marketValueFX - buyCostFX,
@@ -744,8 +772,8 @@ export async function POST(req: NextRequest) {
         pnlPct:         pnlPct,
         cumDividendKRW: cumDivByTicker[t] || 0,  // 이미 거래일별 floor 누적된 정수
         cumDividendFX:  cumDivFXByTicker[t] || 0,
-        annualReturnPct:  ysp  > 0 && cp > 0 ? (cp - ysp)  / ysp  * 100 : null,
-        monthlyReturnPct: mpsp > 0 && cp > 0 ? (cp - mpsp) / mpsp * 100 : null,
+        annualReturnPct:  ysp  > 0 && ep > 0 ? (ep - ysp)  / ysp  * 100 : null,
+        monthlyReturnPct: mpsp > 0 && ep > 0 ? (ep - mpsp) / mpsp * 100 : null,
         yearStartPrice:   ysp  > 0 ? ysp  : null,
         monthStartPrice:  mpsp > 0 ? mpsp : null,
       };
@@ -832,7 +860,8 @@ export async function POST(req: NextRequest) {
       };
     })() : null;
 
-    const daily = yesterdayValueKRW > 0 ? {
+    // Daily 손익: 과거 월 조회 시에는 전일 시세가 오늘 기준이므로 N/A 처리 (현재 월 조회 시에만 유효)
+    const daily = !isHistorical && yesterdayValueKRW > 0 ? {
       startValueKRW: Math.round(yesterdayValueKRW),
       pnlKRW       : Math.round(curVal - yesterdayValueKRW),
       pnlPct       : (curVal - yesterdayValueKRW) / yesterdayValueKRW * 100,
@@ -848,7 +877,7 @@ export async function POST(req: NextRequest) {
       });
       Object.entries(baseState.positions).forEach(([t, p]) => {
         if (p.qty < 0.0001) return;
-        const price = (priceMap[t]?.[baseMM]) || currentPrice[t] || 0;
+        const price = (priceMap[t]?.[baseMM]) || evalPrice[t] || 0;
         if (price > 0) baseVal += price * p.qty * resolveRate(p.region);
       });
       basePnl = Math.round(baseVal - baseState.netDepositKRW);
@@ -878,7 +907,7 @@ export async function POST(req: NextRequest) {
       });
       Object.entries(aState.positions).forEach(([t, p]) => {
         if (p.qty < 0.0001) return;
-        mkt += (currentPrice[t] || 0) * p.qty * resolveRate(p.region);
+        mkt += (evalPrice[t] || 0) * p.qty * resolveRate(p.region);
       });
       return {
         accountName: accName,
