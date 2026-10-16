@@ -110,6 +110,58 @@
       border-bottom: 1px solid #e5e1f5;
     }
 
+    /* 접기/펼치기 카드 스타일 */
+    .collapsible-card {
+      transition: padding 0.2s ease;
+    }
+    .card-collapse-header {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: opacity 0.15s ease;
+    }
+    .card-collapse-header:hover {
+      opacity: 0.82;
+    }
+    .collapse-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: rgba(124, 108, 224, 0.08);
+      color: #7c6ce0;
+      font-size: 0.68rem;
+      line-height: 1;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      margin-left: 8px;
+      user-select: none;
+    }
+    .card-collapse-header:hover .collapse-icon-btn {
+      background: rgba(124, 108, 224, 0.2);
+      color: #5a4abf;
+    }
+    .collapsible-card.collapsed {
+      padding-top: 14px !important;
+      padding-bottom: 14px !important;
+    }
+    .collapsible-card.collapsed .card-title,
+    .collapsible-card.collapsed .card-collapse-header {
+      margin-bottom: 0 !important;
+      padding-bottom: 0 !important;
+      border-bottom: none !important;
+    }
+    .collapsible-card.collapsed #pfChartToggles {
+      display: none !important;
+    }
+    .collapsible-card.collapsed .card-collapse-body {
+      display: none !important;
+    }
+
     /* 그리드 */
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .span2 { grid-column: span 2; }
@@ -1144,28 +1196,33 @@
     <div id="tab-overview" class="tab-content active">
 
       <!-- 현황 필터 카드 -->
-      <div class="card" style="margin-bottom:14px;">
-        <div class="card-title">🔎 조회 조건</div>
-        <div class="ov-filter-row">
-          <div class="field">
-            <label>Account</label>
-            <select id="ovAccount">
-              <option value="">전체</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>기준일 <span style="font-weight:400;color:#a0aec0;">(해당 날짜까지의 거래 집계)</span></label>
-            <input type="date" id="ovEndDate" />
-          </div>
-          <div class="field ov-btn-field">
-            <label class="lbl-hidden">&nbsp;</label>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-search" id="ovSearchBtn" style="padding:9px 22px;font-size:0.87rem;" onclick="applyOvFilter()">조회</button>
-              <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetOvFilter()">초기화</button>
+      <div class="card collapsible-card" id="ovFilterCard" style="margin-bottom:14px;">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('ovFilterCard', event)">
+          <span>🔎 조회 조건</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div class="ov-filter-row">
+            <div class="field">
+              <label>Account</label>
+              <select id="ovAccount">
+                <option value="">전체</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>기준일 <span style="font-weight:400;color:#a0aec0;">(해당 날짜까지의 거래 집계)</span></label>
+              <input type="date" id="ovEndDate" />
+            </div>
+            <div class="field ov-btn-field">
+              <label class="lbl-hidden">&nbsp;</label>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-search" id="ovSearchBtn" style="padding:9px 22px;font-size:0.87rem;" onclick="applyOvFilter()">조회</button>
+                <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetOvFilter()">초기화</button>
+              </div>
             </div>
           </div>
+          <div id="ovFilterBadge" class="ov-filter-badge hidden"></div>
         </div>
-        <div id="ovFilterBadge" class="ov-filter-badge hidden"></div>
       </div>
 
       <div class="ov-refresh-row">
@@ -1189,21 +1246,36 @@
       </div>
 
       <!-- 현금(예수금) -->
-      <div class="card">
-        <div class="card-title">💰 현금 / 예수금</div>
-        <div id="ovCashSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+      <div class="card collapsible-card" id="ovCashCard">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('ovCashCard', event)">
+          <span>💰 현금 / 예수금</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div id="ovCashSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+        </div>
       </div>
 
       <!-- Stock -->
-      <div class="card">
-        <div class="card-title">📈 Stock(ETF) 현황</div>
-        <div id="ovStockSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+      <div class="card collapsible-card" id="ovStockCard">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('ovStockCard', event)">
+          <span>📈 Stock(ETF) 현황</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div id="ovStockSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+        </div>
       </div>
 
       <!-- Fund / ETF -->
-      <div class="card">
-        <div class="card-title">📊 Fund/Bond 현황</div>
-        <div id="ovFundSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+      <div class="card collapsible-card" id="ovFundCard">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('ovFundCard', event)">
+          <span>📊 Fund/Bond 현황</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div id="ovFundSection" class="ov-empty">새로고침 버튼을 눌러 조회하세요.</div>
+        </div>
       </div>
 
     </div><!-- /tab-overview -->
@@ -1398,32 +1470,37 @@
     <div id="tab-portfolio" class="tab-content">
 
       <!-- 포트폴리오 필터 카드 -->
-      <div class="card" style="margin-bottom:14px;">
-        <div class="card-title">🔎 조회 조건</div>
-        <div class="pf-filter-row">
-          <div class="field pf-account-field">
-            <label>Account</label>
-            <select id="pfAccount">
-              <option value="">전체</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>시작월</label>
-            <input type="month" id="pfStartMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
-          </div>
-          <div class="field">
-            <label>종료월</label>
-            <input type="month" id="pfEndMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
-          </div>
-          <div class="field pf-btn-field">
-            <label class="lbl-hidden">&nbsp;</label>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyPfFilter()">조회</button>
-              <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetPfFilter()">초기화</button>
+      <div class="card collapsible-card" id="pfFilterCard" style="margin-bottom:14px;">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('pfFilterCard', event)">
+          <span>🔎 조회 조건</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div class="pf-filter-row">
+            <div class="field pf-account-field">
+              <label>Account</label>
+              <select id="pfAccount">
+                <option value="">전체</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>시작월</label>
+              <input type="month" id="pfStartMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
+            </div>
+            <div class="field">
+              <label>종료월</label>
+              <input type="month" id="pfEndMonth" style="padding:8px 10px;border:1px solid #e5e1f5;border-radius:6px;font-size:0.87rem;color:#2d2747;width:100%;" />
+            </div>
+            <div class="field pf-btn-field">
+              <label class="lbl-hidden">&nbsp;</label>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;" onclick="applyPfFilter()">조회</button>
+                <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetPfFilter()">초기화</button>
+              </div>
             </div>
           </div>
+          <div id="pfFilterBadge" class="ov-filter-badge hidden"></div>
         </div>
-        <div id="pfFilterBadge" class="ov-filter-badge hidden"></div>
       </div>
 
       <div id="pfLoading" style="text-align:center;padding:40px;color:#718096;display:none;">⏳ 데이터 조회 중... (역사적 시세 포함, 수십 초 소요될 수 있습니다)</div>
@@ -1431,42 +1508,47 @@
       <div id="pfContent" style="display:none;">
 
         <!-- 기준값 디버그 패널 -->
-        <div class="card" style="margin-bottom:14px;padding:10px 16px;background:#f5f3ff;border:1px dashed #ddd8ff;">
-          <div style="font-size:0.72rem;font-weight:700;color:#ddd8ff;margin-bottom:10px;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액 / 순투자액 / 평가손익</div>
-          <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
-            <thead>
-              <tr>
-                <th style="text-align:left;color:#a0aec0;font-weight:600;padding:3px 8px 6px 0;width:72px;"></th>
-                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전년 12월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(YTD 기준)</span></th>
-                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(MTD 기준)</span></th>
-                <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전일<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(Daily 기준)</span></th>
-                <th style="text-align:right;color:#4a5568;font-weight:700;padding:3px 8px 6px;border-bottom:2px solid #4a5568;border-left:2px solid #e5e1f5;">현재일</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="color:#a0aec0;padding:4px 8px 3px 0;font-size:0.72rem;">평가액</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgYtdVal">-</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgMtdVal">-</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgDailyVal">-</td>
-                <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="pfDbgCurVal">-</td>
-              </tr>
-              <tr>
-                <td style="color:#a0aec0;padding:3px 8px 3px 0;font-size:0.72rem;">순투자액</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="pfDbgYtdNetInv">-</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="pfDbgMtdNetInv">-</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#718096;" id="pfDbgDailyNetInv">-</td>
-                <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="pfDbgCurNetInv">-</td>
-              </tr>
-              <tr>
-                <td style="color:#a0aec0;padding:3px 8px 4px 0;font-size:0.72rem;border-top:1px solid #ede9fe;">평가손익</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgYtdPnl">-</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgMtdPnl">-</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgDailyPnl">-</td>
-                <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;border-left:2px solid #e5e1f5;" id="pfDbgCurPnl">-</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="card collapsible-card" id="pfDebugCard" style="margin-bottom:14px;padding:10px 16px;background:#f5f3ff;border:1px dashed #ddd8ff;">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfDebugCard', event)">
+            <div style="font-size:0.72rem;font-weight:700;color:#7c6ce0;letter-spacing:0.06em;">🔍 DEBUG — 기준 평가액 / 순투자액 / 평가손익</div>
+            <span class="collapse-icon-btn" style="width:20px;height:20px;font-size:0.65rem;" title="접기/펼치기">▼</span>
+          </div>
+          <div class="card-collapse-body" style="margin-top:10px;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;color:#a0aec0;font-weight:600;padding:3px 8px 6px 0;width:72px;"></th>
+                  <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전년 12월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(YTD 기준)</span></th>
+                  <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전월 말<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(MTD 기준)</span></th>
+                  <th style="text-align:right;color:#718096;font-weight:600;padding:3px 8px 6px;border-bottom:1px solid #e5e1f5;">전일<br><span style="font-size:0.68rem;color:#a0aec0;font-weight:400;">(Daily 기준)</span></th>
+                  <th style="text-align:right;color:#4a5568;font-weight:700;padding:3px 8px 6px;border-bottom:2px solid #4a5568;border-left:2px solid #e5e1f5;">현재일</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="color:#a0aec0;padding:4px 8px 3px 0;font-size:0.72rem;">평가액</td>
+                  <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgYtdVal">-</td>
+                  <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgMtdVal">-</td>
+                  <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;" id="pfDbgDailyVal">-</td>
+                  <td style="text-align:right;padding:4px 8px 3px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="pfDbgCurVal">-</td>
+                </tr>
+                <tr>
+                  <td style="color:#a0aec0;padding:3px 8px 3px 0;font-size:0.72rem;">순투자액</td>
+                  <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="pfDbgYtdNetInv">-</td>
+                  <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;" id="pfDbgMtdNetInv">-</td>
+                  <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#718096;" id="pfDbgDailyNetInv">-</td>
+                  <td style="text-align:right;padding:3px 8px;font-family:monospace;color:#2d2747;font-weight:700;border-left:2px solid #e5e1f5;" id="pfDbgCurNetInv">-</td>
+                </tr>
+                <tr>
+                  <td style="color:#a0aec0;padding:3px 8px 4px 0;font-size:0.72rem;border-top:1px solid #ede9fe;">평가손익</td>
+                  <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgYtdPnl">-</td>
+                  <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgMtdPnl">-</td>
+                  <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;" id="pfDbgDailyPnl">-</td>
+                  <td style="text-align:right;padding:3px 8px 4px;font-family:monospace;font-weight:700;border-top:1px solid #ede9fe;border-left:2px solid #e5e1f5;" id="pfDbgCurPnl">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- 요약 카드 -->
@@ -1509,65 +1591,95 @@
         </div>
 
         <!-- 월별 수익률 차트 -->
-        <div class="card" style="margin-bottom:20px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div class="card collapsible-card" id="pfChartCard" style="margin-bottom:20px;">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfChartCard', event)" style="margin-bottom:10px;">
             <div style="font-weight:700;color:#2d2747;">📈 월별 누적 수익률 비교</div>
-            <div id="pfChartToggles" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div id="pfChartToggles" style="display:flex;flex-wrap:wrap;gap:6px;" onclick="event.stopPropagation()"></div>
+              <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+            </div>
           </div>
-          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 포트폴리오·지수 모두 분석 시작 시점 대비 누적 등락률</div>
-          <div id="pfChart"></div>
-          <div id="pfChartNote" style="font-size:0.75rem;color:#a0aec0;margin-top:8px;"></div>
+          <div class="card-collapse-body">
+            <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 포트폴리오·지수 모두 분석 시작 시점 대비 누적 등락률</div>
+            <div id="pfChart"></div>
+            <div id="pfChartNote" style="font-size:0.75rem;color:#a0aec0;margin-top:8px;"></div>
+          </div>
         </div>
 
         <!-- 월별 수익금액 차트 -->
-        <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">💰 월별 수익금액</div>
-          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 (평가액 − 순투자액)</div>
-          <div id="pfAmtChart"></div>
+        <div class="card collapsible-card" id="pfAmtChartCard" style="margin-bottom:20px;">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfAmtChartCard', event)" style="margin-bottom:10px;">
+            <div style="font-weight:700;color:#2d2747;">💰 월별 수익금액</div>
+            <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+          </div>
+          <div class="card-collapse-body">
+            <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 (평가액 − 순투자액)</div>
+            <div id="pfAmtChart"></div>
+          </div>
         </div>
 
         <!-- 월별 자산총액 차트 -->
-        <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">🏦 월별 자산총액</div>
-          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 평가액 (KRW)</div>
-          <div id="pfAssetChart"></div>
+        <div class="card collapsible-card" id="pfAssetChartCard" style="margin-bottom:20px;">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfAssetChartCard', event)" style="margin-bottom:10px;">
+            <div style="font-weight:700;color:#2d2747;">🏦 월별 자산총액</div>
+            <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+          </div>
+          <div class="card-collapse-body">
+            <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">※ 각 월말 기준 평가액 (KRW)</div>
+            <div id="pfAssetChart"></div>
+          </div>
         </div>
 
         <!-- 월별 배당 현황 -->
-        <div class="card" style="margin-bottom:20px;">
-          <div style="font-weight:700;color:#2d2747;margin-bottom:10px;">&#x1F4CA; 월별 배당 현황</div>
-          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">&#x203B; 세금&#xB7;수수료 차감 후 KRW 환산 기준</div>
-          <div id="pfDivChart"></div>
-          <div id="pfDivTable" style="margin-top:16px;overflow-x:auto;"></div>
+        <div class="card collapsible-card" id="pfDivCard" style="margin-bottom:20px;">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfDivCard', event)" style="margin-bottom:10px;">
+            <div style="font-weight:700;color:#2d2747;">&#x1F4CA; 월별 배당 현황</div>
+            <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+          </div>
+          <div class="card-collapse-body">
+            <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:8px;">&#x203B; 세금&#xB7;수수료 차감 후 KRW 환산 기준</div>
+            <div id="pfDivChart"></div>
+            <div id="pfDivTable" style="margin-top:16px;overflow-x:auto;"></div>
+          </div>
         </div>
 
         <!-- 해외주식 배당소득세 납부현황 -->
-        <div class="card" style="margin-bottom:20px;" id="pfTaxCard">
-          <div style="font-weight:700;color:#2d2747;margin-bottom:4px;">&#x1F9FE; 해외주식 배당소득세 납부현황</div>
-          <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:12px;">&#x203B; 배당 발생 당시 기록된 환율 기준 KRW 환산, 소수점 이하 버림</div>
-          <!-- 연도 탭 -->
-          <div id="pfTaxTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
-          <!-- 종목별 테이블 -->
-          <div id="pfTaxTableWrap" style="overflow-x:auto;"></div>
+        <div class="card collapsible-card" style="margin-bottom:20px;" id="pfTaxCard">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfTaxCard', event)" style="margin-bottom:4px;">
+            <div style="font-weight:700;color:#2d2747;">&#x1F9FE; 해외주식 배당소득세 납부현황</div>
+            <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+          </div>
+          <div class="card-collapse-body">
+            <div style="font-size:0.75rem;color:#a0aec0;margin-bottom:12px;margin-top:8px;">&#x203B; 배당 발생 당시 기록된 환율 기준 KRW 환산, 소수점 이하 버림</div>
+            <!-- 연도 탭 -->
+            <div id="pfTaxTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+            <!-- 종목별 테이블 -->
+            <div id="pfTaxTableWrap" style="overflow-x:auto;"></div>
+          </div>
         </div>
 
         <!-- 종목별 수익률 테이블 -->
-        <div class="card">
-          <div style="font-weight:700;color:#2d2747;margin-bottom:12px;">📋 보유 종목별 수익률</div>
-          <div class="table-wrap">
-            <table id="pfStockTable">
-              <thead><tr>
-                <th>Name</th>
-                <th style="text-align:right;">매입금액</th>
-                <th style="text-align:right;">평가금액</th>
-                <th style="text-align:right;">손익</th>
-                <th style="text-align:right;">투자수익률</th>
-                <th style="text-align:right;">누적배당금</th>
-                <th style="text-align:right;">연간 수익률 (YTD)</th>
-                <th style="text-align:right;">월간 수익률 (MTD)</th>
-              </tr></thead>
-              <tbody id="pfStockBody"></tbody>
-            </table>
+        <div class="card collapsible-card" id="pfStockCard">
+          <div class="card-collapse-header" onclick="toggleCardCollapse('pfStockCard', event)" style="margin-bottom:12px;">
+            <div style="font-weight:700;color:#2d2747;">📋 보유 종목별 수익률</div>
+            <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+          </div>
+          <div class="card-collapse-body">
+            <div class="table-wrap">
+              <table id="pfStockTable">
+                <thead><tr>
+                  <th>Name</th>
+                  <th style="text-align:right;">매입금액</th>
+                  <th style="text-align:right;">평가금액</th>
+                  <th style="text-align:right;">손익</th>
+                  <th style="text-align:right;">투자수익률</th>
+                  <th style="text-align:right;">누적배당금</th>
+                  <th style="text-align:right;">연간 수익률 (YTD)</th>
+                  <th style="text-align:right;">월간 수익률 (MTD)</th>
+                </tr></thead>
+                <tbody id="pfStockBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1577,33 +1689,38 @@
     <div id="tab-rebalance" class="tab-content">
 
       <!-- 조회 조건 카드 -->
-      <div class="card" style="margin-bottom:14px;">
-        <div class="card-title">⚖️ 리밸런싱 조건</div>
-        <div class="rb-filter-row">
-          <div class="field">
-            <label>Account</label>
-            <select id="rbAccount" onchange="onRbFilterChange()">
-              <option value="">-- 선택 --</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Region</label>
-            <select id="rbRegion" onchange="onRbFilterChange()">
-              <option value="">-- 선택 --</option>
-              <option value="KOREA">KOREA</option>
-              <option value="USA">USA</option>
-            </select>
-          </div>
-          <div class="field rb-amount-field">
-            <label id="rbAmountLabel">리밸런싱 금액 (KRW) <span class="rb-amount-hint" style="font-weight:400;color:#a0aec0;font-size:0.8em;">— 조회 시 현재 자산총액으로 자동 설정</span></label>
-            <input type="text" id="rbAmountInput" placeholder="조회 후 자동 설정" style="text-align:right;font-weight:700;"
-              oninput="onRbAmountInput(this)" onblur="onRbAmountBlur(this)" onfocus="onRbAmountFocus(this)" />
-          </div>
-          <div class="field rb-btn-field">
-            <label class="lbl-hidden">&nbsp;</label>
-            <div style="display:flex;gap:6px;">
-              <button id="rbSearchBtn" class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;display:none;" onclick="loadRebalanceData(true)">조회</button>
-              <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetRbFilter()">초기화</button>
+      <div class="card collapsible-card" id="rbFilterCard" style="margin-bottom:14px;">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('rbFilterCard', event)">
+          <span>⚖️ 리밸런싱 조건</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div class="rb-filter-row">
+            <div class="field">
+              <label>Account</label>
+              <select id="rbAccount" onchange="onRbFilterChange()">
+                <option value="">-- 선택 --</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Region</label>
+              <select id="rbRegion" onchange="onRbFilterChange()">
+                <option value="">-- 선택 --</option>
+                <option value="KOREA">KOREA</option>
+                <option value="USA">USA</option>
+              </select>
+            </div>
+            <div class="field rb-amount-field">
+              <label id="rbAmountLabel">리밸런싱 금액 (KRW) <span class="rb-amount-hint" style="font-weight:400;color:#a0aec0;font-size:0.8em;">— 조회 시 현재 자산총액으로 자동 설정</span></label>
+              <input type="text" id="rbAmountInput" placeholder="조회 후 자동 설정" style="text-align:right;font-weight:700;"
+                oninput="onRbAmountInput(this)" onblur="onRbAmountBlur(this)" onfocus="onRbAmountFocus(this)" />
+            </div>
+            <div class="field rb-btn-field">
+              <label class="lbl-hidden">&nbsp;</label>
+              <div style="display:flex;gap:6px;">
+                <button id="rbSearchBtn" class="btn btn-search" style="padding:9px 22px;font-size:0.87rem;display:none;" onclick="loadRebalanceData(true)">조회</button>
+                <button class="btn btn-reset-filter" style="padding:9px 14px;font-size:0.87rem;" onclick="resetRbFilter()">초기화</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2332,56 +2449,61 @@
 
       <div id="queryAlertBox"></div>
 
-      <div class="card">
-        <div class="card-title">조회 조건</div>
-        <div class="query-filter-row">
-          <div class="field">
-            <label>시작일</label>
-            <input type="date" id="qStartDate" />
-          </div>
-          <div class="field">
-            <label>종료일</label>
-            <input type="date" id="qEndDate" />
-          </div>
-          <div class="field">
-            <label>Account</label>
-            <select id="qAccount">
-              <option value="">전체</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Name</label>
-            <div class="qname-wrap">
-              <input type="text" id="qName" placeholder="종목명 또는 Ticker"
-                     autocomplete="off"
-                     oninput="qNameInput()"
-                     onfocus="qNameFocus()"
-                     onblur="qNameBlur()" />
-              <div id="qNameDropdown" class="qname-dropdown hidden"></div>
+      <div class="card collapsible-card" id="qFilterCard">
+        <div class="card-title card-collapse-header" onclick="toggleCardCollapse('qFilterCard', event)">
+          <span>조회 조건</span>
+          <span class="collapse-icon-btn" title="접기/펼치기">▼</span>
+        </div>
+        <div class="card-collapse-body">
+          <div class="query-filter-row">
+            <div class="field">
+              <label>시작일</label>
+              <input type="date" id="qStartDate" />
             </div>
-          </div>
-          <div class="field">
-            <label>Trade</label>
-            <select id="qTrade" onchange="applyClientFilters()">
-              <option value="">전체</option>
-              <option value="Buy">Buy</option>
-              <option value="Sell">Sell</option>
-              <option value="Deposit">Deposit</option>
-              <option value="Withdraw">Withdraw</option>
-              <option value="Dividend">Dividend</option>
-              <option value="Dividend-Stock">Dividend-Stock</option>
-              <option value="Split">Split</option>
-              <option value="Merge">Merge</option>
-              <option value="Reverse-Split">Reverse-Split</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>&nbsp;</label>
-            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              <button class="btn btn-search" id="qSearchBtn" onclick="runQuery()">조회</button>
-              <button class="btn btn-reset-filter" onclick="resetQuery()">초기화</button>
-              <button class="btn-export" id="exportBtn" onclick="exportToCSV()" disabled>CSV 내보내기</button>
-              <button class="btn-add-tx hidden" id="qAddTxBtn" onclick="openInputPopupFromQuery()">➕ 거래입력</button>
+            <div class="field">
+              <label>종료일</label>
+              <input type="date" id="qEndDate" />
+            </div>
+            <div class="field">
+              <label>Account</label>
+              <select id="qAccount">
+                <option value="">전체</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Name</label>
+              <div class="qname-wrap">
+                <input type="text" id="qName" placeholder="종목명 또는 Ticker"
+                       autocomplete="off"
+                       oninput="qNameInput()"
+                       onfocus="qNameFocus()"
+                       onblur="qNameBlur()" />
+                <div id="qNameDropdown" class="qname-dropdown hidden"></div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Trade</label>
+              <select id="qTrade" onchange="applyClientFilters()">
+                <option value="">전체</option>
+                <option value="Buy">Buy</option>
+                <option value="Sell">Sell</option>
+                <option value="Deposit">Deposit</option>
+                <option value="Withdraw">Withdraw</option>
+                <option value="Dividend">Dividend</option>
+                <option value="Dividend-Stock">Dividend-Stock</option>
+                <option value="Split">Split</option>
+                <option value="Merge">Merge</option>
+                <option value="Reverse-Split">Reverse-Split</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <button class="btn btn-search" id="qSearchBtn" onclick="runQuery()">조회</button>
+                <button class="btn btn-reset-filter" onclick="resetQuery()">초기화</button>
+                <button class="btn-export" id="exportBtn" onclick="exportToCSV()" disabled>CSV 내보내기</button>
+                <button class="btn-add-tx hidden" id="qAddTxBtn" onclick="openInputPopupFromQuery()">➕ 거래입력</button>
+              </div>
             </div>
           </div>
         </div>
@@ -2563,8 +2685,53 @@
   var pendingEditMode   = false; // 미리보기 모달이 "수정" 흐름인지 식별
   var pendingEditFields = null;  // 수정 저장 시 /api/update-transaction 으로 보낼 필드
 
+  // ---- 카드 접기/펼치기 (Fold/Unfold) ----
+  function toggleCardCollapse(cardOrId, evt) {
+    if (evt && evt.target && evt.target.closest('button, input, select, a, .tab-btn, .year-btn, #pfChartToggles')) {
+      return;
+    }
+    var card = typeof cardOrId === 'string' ? document.getElementById(cardOrId) : (cardOrId.closest ? cardOrId.closest('.collapsible-card') : cardOrId);
+    if (!card) return;
+    var icon = card.querySelector('.collapse-icon-btn');
+
+    var isCollapsed = card.classList.toggle('collapsed');
+    if (icon) {
+      icon.textContent = isCollapsed ? '▶' : '▼';
+    }
+
+    try {
+      if (card.id) {
+        localStorage.setItem('fima_collapsed_' + card.id, isCollapsed ? '1' : '0');
+      }
+    } catch (e) {}
+
+    // 차트 또는 테이블 등이 포함되어 있을 경우 레이아웃 리사이징
+    if (!isCollapsed) {
+      setTimeout(function() {
+        window.dispatchEvent(new Event('resize'));
+      }, 50);
+    }
+  }
+  window.toggleCardCollapse = toggleCardCollapse;
+
+  function initCollapsibleCards() {
+    var cards = document.querySelectorAll('.collapsible-card');
+    cards.forEach(function(card) {
+      if (!card.id) return;
+      try {
+        var saved = localStorage.getItem('fima_collapsed_' + card.id);
+        if (saved === '1') {
+          card.classList.add('collapsed');
+          var icon = card.querySelector('.collapse-icon-btn');
+          if (icon) icon.textContent = '▶';
+        }
+      } catch (e) {}
+    });
+  }
+
   // ---- 초기화 ----
   window.addEventListener('DOMContentLoaded', () => {
+    initCollapsibleCards();
     setTodayDate();
     document.getElementById('tradeForm').addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
