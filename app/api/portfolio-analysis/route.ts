@@ -56,11 +56,18 @@ async function fetchPeriodStartPrices(
   return { ytd: 0, mtd: 0 };
 }
 
+function monthEndDate(yyyymm: string): Date {
+  const [y, m] = yyyymm.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 0, 23, 59, 59)); // last day of month
+}
+
 // ── 월별 종가 조회 (Yahoo Finance 1mo interval) ──────────────────────────
 async function fetchMonthlyCloses(
-  ticker: string, months = 15
+  ticker: string, months = 15, targetEndMonth?: string
 ): Promise<{ month: string; close: number }[]> {
-  const end = Math.floor(Date.now() / 1000) + 86400;
+  const end = targetEndMonth
+    ? Math.floor(monthEndDate(targetEndMonth).getTime() / 1000) + 86400
+    : Math.floor(Date.now() / 1000) + 86400;
   const start = end - (months + 2) * 31 * 86400;
   const encoded = encodeURIComponent(ticker);
 
@@ -105,11 +112,6 @@ function parseDate(raw: any): Date | null {
 
 function toYYYYMM(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-function monthEndDate(yyyymm: string): Date {
-  const [y, m] = yyyymm.split('-').map(Number);
-  return new Date(Date.UTC(y, m, 0, 23, 59, 59)); // last day of month
 }
 
 // ── 메인 라우트 ───────────────────────────────────────────────────────
@@ -320,16 +322,27 @@ export async function POST(req: NextRequest) {
 
     // 사용자 지정 월 범위 적용 (없으면 최근 13개월)
     const startMonth = filters.startMonth ? String(filters.startMonth) : '';
-    const endMonth   = filters.endMonth   ? String(filters.endMonth)   : '';
+    const endMonth   = filters.endMonth
+      ? String(filters.endMonth)
+      : (filters.endDate ? String(filters.endDate).slice(0, 7) : '');
+
     let analyzeMonths: string[];
-    if (startMonth || endMonth) {
+    if (startMonth) {
+      // 시작월이 지정된 경우: 시작월부터 (종료월 있으면 종료월까지, 없으면 끝까지)
       analyzeMonths = allMonths.filter(mm =>
-        (!startMonth || mm >= startMonth) &&
-        (!endMonth   || mm <= endMonth)
+        mm >= startMonth && (!endMonth || mm <= endMonth)
       );
-      if (analyzeMonths.length === 0) analyzeMonths = allMonths.slice(-1); // 최소 1개
+      if (analyzeMonths.length === 0) {
+        analyzeMonths = (endMonth ? allMonths.filter(mm => mm <= endMonth) : allMonths).slice(-1); // 최소 1개
+      }
+    } else if (endMonth) {
+      // 시작월 없이 종료월만 지정된 경우: 종료월 기준 이전 12개월(기준월 포함 총 13개월)
+      const filtered = allMonths.filter(mm => mm <= endMonth);
+      analyzeMonths = filtered.slice(-13);
+      if (analyzeMonths.length === 0) analyzeMonths = allMonths.slice(-1);
     } else {
-      analyzeMonths = allMonths.slice(-13); // 기본값: 최근 13개월
+      // 기간 미지정 기본값: 최근 13개월 (기준월 포함 총 13개월, 이전 12개월치)
+      analyzeMonths = allMonths.slice(-13);
     }
 
     // 월 초(1~5일)이고 사용자 지정 endMonth 없으면 당월 제외
@@ -502,9 +515,10 @@ export async function POST(req: NextRequest) {
         const region   = currentState.positions[t]?.region || '';
         const currency = currencyMap[region] || 'KRW';
         const yahooTk  = toYahooTicker(t, currency);
+        const fetchMonths = Math.max(15, analyzeMonths.length + 2);
         return {
           ticker: t,
-          data: await fetchMonthlyCloses(yahooTk, 15).catch(() => [] as { month: string; close: number }[]),
+          data: await fetchMonthlyCloses(yahooTk, fetchMonths, endMonth || undefined).catch(() => [] as { month: string; close: number }[]),
         };
       })),
       // 종목 현재가 (getStockPrice — portfolio 탭과 동일 방식)
@@ -512,11 +526,15 @@ export async function POST(req: NextRequest) {
       // 종목 전일 종가 (Daily PnL용) — 오늘 거래일 여부 판별을 위해 'all' 조회
       Promise.allSettled(heldTickers.map(t => getStockInfo(t, 'all'))),
       // 지수 월별 종가
-      Promise.all([
-        fetchMonthlyCloses('^KS11', 15).then(d => ({ name: 'KOSPI',  data: d })).catch(() => ({ name: 'KOSPI',  data: [] })),
-        fetchMonthlyCloses('^GSPC', 15).then(d => ({ name: 'SP500',  data: d })).catch(() => ({ name: 'SP500',  data: [] })),
-        fetchMonthlyCloses('^IXIC', 15).then(d => ({ name: 'NASDAQ', data: d })).catch(() => ({ name: 'NASDAQ', data: [] })),
-      ]),
+      (() => {
+        const fetchMonths = Math.max(15, analyzeMonths.length + 2);
+        const targetEnd = endMonth || undefined;
+        return Promise.all([
+          fetchMonthlyCloses('^KS11', fetchMonths, targetEnd).then(d => ({ name: 'KOSPI',  data: d })).catch(() => ({ name: 'KOSPI',  data: [] })),
+          fetchMonthlyCloses('^GSPC', fetchMonths, targetEnd).then(d => ({ name: 'SP500',  data: d })).catch(() => ({ name: 'SP500',  data: [] })),
+          fetchMonthlyCloses('^IXIC', fetchMonths, targetEnd).then(d => ({ name: 'NASDAQ', data: d })).catch(() => ({ name: 'NASDAQ', data: [] })),
+        ]);
+      })(),
       // 환율 (현재)
       (async () => {
         const regions = Array.from(new Set(heldTickers.map(t => currentState.positions[t].region)));
@@ -682,10 +700,13 @@ export async function POST(req: NextRequest) {
     // ── 종목별 연간/월간 수익률 ──────────────────────────────────
     // YTD/MTD 기준가: 일봉 기준 (stock-info 팝업과 동일), 실패 시 월봉 폴백
     const periodStartResults = await periodStartPromise;
-    const prevYearDec = `${now.getFullYear() - 1}-12`;
-    const prevMonth   = now.getMonth() === 0
-      ? `${now.getFullYear() - 1}-12`
-      : `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+    const targetDate  = endMonth ? monthEndDate(endMonth) : now;
+    const targetYear  = targetDate.getUTCFullYear();
+    const targetMonth = targetDate.getUTCMonth(); // 0-based
+    const prevYearDec = `${targetYear - 1}-12`;
+    const prevMonth   = targetMonth === 0
+      ? `${targetYear - 1}-12`
+      : `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
 
     const stocks = heldTickers.map((t, idx) => {
       const p = currentState.positions[t];
@@ -696,7 +717,7 @@ export async function POST(req: NextRequest) {
       const mktVal = cp * p.qty * rate;
       // 일봉 기준가 우선, 없으면 월봉 폴백
       const ps = periodStartResults[idx]?.status === 'fulfilled' ? periodStartResults[idx].value : { ytd: 0, mtd: 0 };
-      const ysp  = ps.ytd  || pm[prevYearDec] || pm[`${now.getFullYear()}-01`] || 0;
+      const ysp  = ps.ytd  || pm[prevYearDec] || pm[`${targetYear}-01`] || 0;
       const mpsp = ps.mtd  || pm[prevMonth]   || 0;
 
       // 현지 통화 기준 값
