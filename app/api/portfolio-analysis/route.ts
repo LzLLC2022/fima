@@ -509,7 +509,7 @@ export async function POST(req: NextRequest) {
     );
 
     // ── 병렬 데이터 조회 ─────────────────────────────────────────
-    const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates] = await Promise.all([
+    const [tickerHistory, currentPriceList, yesterdayPriceList, indexHistory, exchangeRates, monthlyExchangeRates] = await Promise.all([
       // 종목 월별 역사적 종가: allHistoryTickers (현재 보유 + 과거 보유 매도 종목 포함)
       Promise.all(allHistoryTickers.map(async t => {
         if (isKoreanBondISIN(t)) {
@@ -554,6 +554,84 @@ export async function POST(req: NextRequest) {
           rates[region] = r > 0 ? r : (currentState.latestRate[region] || 1);
         }));
         return rates;
+      })(),
+      // 통화별 월별 역사적 환율 (Yahoo Finance 일봉에서 각 월말 종가 추출)
+      (async () => {
+        const allRegions = new Set<string>();
+        Object.keys(currencyMap).forEach(r => allRegions.add(r));
+        Object.values(monthlyStates).forEach(st => {
+          Object.keys(st.cashFX).forEach(r => allRegions.add(r));
+          Object.values(st.positions).forEach(p => { if (p.region) allRegions.add(p.region); });
+        });
+        const foreignCurrencies = Array.from(new Set(
+          Array.from(allRegions)
+            .map(r => currencyMap[r] || (r === 'USA' ? 'USD' : r === 'JPN' ? 'JPY' : ''))
+            .filter(c => c && c !== 'KRW')
+        ));
+        if (foreignCurrencies.length === 0) return {} as Record<string, Record<string, number>>;
+
+        const tickerMap: Record<string, string> = {
+          USD: 'KRW=X', JPY: 'JPYKRW=X', EUR: 'EURKRW=X',
+          GBP: 'GBPKRW=X', HKD: 'HKDKRW=X', CNY: 'CNYKRW=X',
+          AUD: 'AUDKRW=X', CAD: 'CADKRW=X', CHF: 'CHFKRW=X',
+          SGD: 'SGDKRW=X', MXN: 'MXNKRW=X', TWD: 'TWDKRW=X',
+        };
+
+        const sortedMonths = [...computeMonths].sort();
+        const firstMonth = sortedMonths[0];
+        const lastMonth = sortedMonths[sortedMonths.length - 1];
+        const [fy, fm] = firstMonth.split('-').map(Number);
+        const startTs = Math.floor(new Date(Date.UTC(fy, fm - 1, 1)).getTime() / 1000) - 7 * 86400;
+        const endTs = Math.floor(monthEndDate(lastMonth).getTime() / 1000) + 86400;
+
+        const result: Record<string, Record<string, number>> = {};
+
+        await Promise.allSettled(foreignCurrencies.map(async curr => {
+          const yTicker = tickerMap[curr.toUpperCase()] || `${curr}KRW=X`;
+          result[curr] = {};
+
+          for (const host of ['query2', 'query1']) {
+            try {
+              const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yTicker)}?interval=1d&period1=${startTs}&period2=${endTs}`;
+              const res = await fetch(url, {
+                headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com' },
+              });
+              const json = await res.json();
+              const chartRes = json?.chart?.result?.[0];
+              if (!chartRes) continue;
+
+              const timestamps: number[] = chartRes.timestamp || [];
+              const rawCloses: (number | null)[] =
+                chartRes.indicators?.quote?.[0]?.close ||
+                chartRes.indicators?.adjclose?.[0]?.adjclose || [];
+
+              const dailyMap: Record<string, number> = {};
+              timestamps.forEach((ts, idx) => {
+                const c = Number(rawCloses[idx]);
+                if (c > 0) {
+                  const d = new Date(ts * 1000);
+                  const dtStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+                  dailyMap[dtStr] = c;
+                }
+              });
+
+              computeMonths.forEach(mm => {
+                const endDate = monthEndDate(mm);
+                for (let i = 0; i < 10; i++) {
+                  const checkDt = new Date(endDate.getTime() - i * 86400 * 1000);
+                  const dtStr = `${checkDt.getUTCFullYear()}-${String(checkDt.getUTCMonth() + 1).padStart(2, '0')}-${String(checkDt.getUTCDate()).padStart(2, '0')}`;
+                  if (dailyMap[dtStr]) {
+                    result[curr][mm] = dailyMap[dtStr];
+                    break;
+                  }
+                }
+              });
+              break;
+            } catch (_e) {}
+          }
+        }));
+
+        return result;
       })(),
     ]);
 
@@ -637,6 +715,16 @@ export async function POST(req: NextRequest) {
     const resolveRate = (region: string) => {
       const cur = currencyMap[region] || 'KRW';
       return cur === 'KRW' ? 1 : (exchangeRates[region] || currentState.latestRate[region] || 1);
+    };
+
+    const resolveMonthlyRate = (region: string, month: string) => {
+      const cur = currencyMap[region] || (region === 'USA' ? 'USD' : region === 'JPN' ? 'JPY' : 'KRW');
+      if (cur === 'KRW') return 1;
+      // 기준 종료월(targetMM)이면 exchangeRates(지정 종료일 환율) 우선 적용하여 summary 카드와 100% 일치
+      if (month === targetMM && exchangeRates[region]) return exchangeRates[region];
+      const mRate = monthlyExchangeRates?.[cur]?.[month];
+      if (mRate && mRate > 0) return mRate;
+      return resolveRate(region);
     };
 
     // ── 월별 주당배당 KRW 환산 (resolveRate 확보 후 처리) ────────────
@@ -780,14 +868,14 @@ export async function POST(req: NextRequest) {
     }).filter(Boolean).sort((a, b) => (b?.marketValueKRW || 0) - (a?.marketValueKRW || 0));
 
     // ── 월별 포트폴리오 가치 계산 ────────────────────────────────
-    // 각 월말 state × 해당 월 역사적 가격 (환율은 현재 환율 근사)
+    // 각 월말 state × 해당 월 역사적 가격 및 해당 월 역사적 환율
     const monthly = analyzeMonths.map(mm => {
       const state = monthlyStates[mm];
       if (!state) return { month: mm, marketValueKRW: 0, netInvestmentKRW: 0, returnPct: 0 };
 
       let val = 0;
       Object.entries(state.cashFX).forEach(([region, amt]) => {
-        val += amt * resolveRate(region);
+        val += amt * resolveMonthlyRate(region, mm);
       });
       Object.entries(state.positions).forEach(([t, p]) => {
         if (p.qty < 0.0001) return;
@@ -801,7 +889,7 @@ export async function POST(req: NextRequest) {
         if (price === 0 && (mm === nowMM || (todayDay <= 5 && isLastMonth))) {
           price = currentPrice[t] || 0;
         }
-        if (price > 0) val += price * p.qty * resolveRate(p.region);
+        if (price > 0) val += price * p.qty * resolveMonthlyRate(p.region, mm);
       });
 
       const netInv = state.netDepositKRW;
@@ -873,12 +961,12 @@ export async function POST(req: NextRequest) {
     if (baseState && allMonths.includes(baseMM)) {
       let baseVal = 0;
       Object.entries(baseState.cashFX).forEach(([region, amt]) => {
-        baseVal += amt * resolveRate(region);
+        baseVal += amt * resolveMonthlyRate(region, baseMM);
       });
       Object.entries(baseState.positions).forEach(([t, p]) => {
         if (p.qty < 0.0001) return;
         const price = (priceMap[t]?.[baseMM]) || evalPrice[t] || 0;
-        if (price > 0) baseVal += price * p.qty * resolveRate(p.region);
+        if (price > 0) baseVal += price * p.qty * resolveMonthlyRate(p.region, baseMM);
       });
       basePnl = Math.round(baseVal - baseState.netDepositKRW);
     }
