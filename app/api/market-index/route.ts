@@ -9,7 +9,9 @@ export async function GET(req: NextRequest) {
   const end = Math.floor(Date.now() / 1000) + 86400;
   let days = 365;
   if (range === '1M') days = 30;
-  if (range === '1W') days = 7;
+  else if (range === '3M') days = 90;
+  else if (range === '1Y') days = 365;
+  else if (range === '1W') days = 7;
   const start = end - days * 86400;
   const encoded = encodeURIComponent(ticker);
 

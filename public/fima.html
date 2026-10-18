@@ -2446,6 +2446,29 @@
       
       <!-- ===================== 원/달러 환율 & 포트폴리오 달러 익스포저 섹션 ===================== -->
       <style>
+        .fx-period-btn {
+          padding: 4px 12px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          border-radius: 6px;
+          border: 1px solid #cbd5e0;
+          background: #fff;
+          color: #4a5568;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          line-height: 1.4;
+        }
+        .fx-period-btn:hover {
+          border-color: #3182ce;
+          color: #3182ce;
+          background: #f7fafc;
+        }
+        .fx-period-btn.active {
+          border-color: #3182ce;
+          background: #3182ce;
+          color: #fff;
+          font-weight: 700;
+        }
         .fx-card {
           background: #fff;
           border: 1px solid #edf2f7;
@@ -2521,7 +2544,26 @@
         }
       </style>
 
-      <div id="usdKrwSection" style="margin-top: 24px; margin-bottom: 24px;">
+            <!-- 원/달러 환율 섹션 -->
+      <div class="market-index-section" style="background: #f8f9fb; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6ac4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"></polyline>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+              <polyline points="7 23 3 19 7 15"></polyline>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+            </svg>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #2d3748; white-space: nowrap;">원/달러 환율</h3>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="fx-period-btn active" data-period="1M" onclick="selectFxPeriod('1M')">1M</button>
+            <button type="button" class="fx-period-btn" data-period="3M" onclick="selectFxPeriod('3M')">3M</button>
+            <button type="button" class="fx-period-btn" data-period="1Y" onclick="selectFxPeriod('1Y')">1Y</button>
+          </div>
+        </div>
+
+        <div id="usdKrwSection">
         <div id="usdKrwCardsGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
           
           <!-- 좌측 카드: 원/달러 환율 차트 및 현황 -->
@@ -2540,7 +2582,7 @@
                   </div>
                   <!-- 선택 기간 누적 & 평균 -->
                   <div style="font-size: 0.82rem; color: #718096; margin-top: 4px; font-weight: 500;">
-                    선택 기간(1달) 누적 <span id="fxMonthCumChange" style="color: #00a86b; font-weight: 700;">-3.62% (-49.9원)</span> · 평균 <span id="fxMonthAvgRate" style="font-weight: 600; color: #4a5568;">1,351.5원</span>
+                    선택 기간(<span id="fxSelectedPeriodLabel">1달</span>) 누적 <span id="fxMonthCumChange" style="color: #00a86b; font-weight: 700;">-3.62% (-49.9원)</span> · 평균 <span id="fxMonthAvgRate" style="font-weight: 600; color: #4a5568;">1,351.5원</span>
                   </div>
                 </div>
 
@@ -11412,16 +11454,17 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
       { date: "2026-09-21", close: 1373.68 },
       { date: "2026-09-22", close: 1350.36 },
       { date: "2026-09-23", close: 1362.50 },
-      { date: "2026-09-24", close: 1367.36 },
-      { date: "2026-09-27", close: 1354.51 },
-      { date: "2026-09-28", close: 1359.56 },
-      { date: "2026-09-29", close: 1350.50 },
-      { date: "2026-09-30", close: 1356.84 },
-      { date: "2026-10-01", close: 1360.59 },
-      { date: "2026-10-04", close: 1342.56 },
-      { date: "2026-10-05", close: 1343.75 },
-      { date: "2026-10-06", close: 1339.74 },
-      { date: "2026-10-07", close: 1339.08 },
+      { date: "2026-09-24", close: 1362.80 },
+      { date: "2026-09-25", close: 1347.10 },
+      { date: "2026-09-26", close: 1346.50 },
+      { date: "2026-09-27", close: 1354.20 },
+      { date: "2026-09-28", close: 1348.10 },
+      { date: "2026-09-29", close: 1355.80 },
+      { date: "2026-09-30", close: 1358.40 },
+      { date: "2026-10-01", close: 1342.10 },
+      { date: "2026-10-02", close: 1340.50 },
+      { date: "2026-10-05", close: 1343.80 },
+      { date: "2026-10-07", close: 1339.20 },
       { date: "2026-10-08", close: 1342.99 },
       { date: "2026-10-11", close: 1340.84 },
       { date: "2026-10-12", close: 1334.13 },
@@ -11432,33 +11475,69 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     ]
   };
 
+  var _currentFxPeriod = '1M';
+  var _usdKrwPeriodCache = {
+    '1M': _fallbackFxData
+  };
+  var _usdKrwData = _fallbackFxData;
+
+  function selectFxPeriod(period) {
+    if (!['1M', '3M', '1Y'].includes(period)) period = '1M';
+    _currentFxPeriod = period;
+
+    // 기간 버튼 활성화 스타일 전환
+    document.querySelectorAll('.fx-period-btn').forEach(function(btn) {
+      if (btn.getAttribute('data-period') === period) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // 헤더 기간 텍스트 업데이트
+    var periodLabelMap = { '1M': '1달', '3M': '3달', '1Y': '1년' };
+    var periodLabel = periodLabelMap[period] || '1달';
+    var pLabelEl = document.getElementById('fxSelectedPeriodLabel');
+    if (pLabelEl) pLabelEl.textContent = periodLabel;
+
+    // 캐시가 있으면 즉시 렌더링
+    if (_usdKrwPeriodCache[period] && _usdKrwPeriodCache[period].data && _usdKrwPeriodCache[period].data.length > 0) {
+      _usdKrwData = _usdKrwPeriodCache[period];
+      renderUsdKrwCard(_usdKrwData, period);
+    }
+
+    // 서버 비동기 조회
+    fetch('/api/market-index?ticker=KRW%3DX&range=' + encodeURIComponent(period))
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (json && json.data && json.data.length > 0) {
+          _usdKrwPeriodCache[period] = json;
+          if (_currentFxPeriod === period) {
+            _usdKrwData = json;
+            renderUsdKrwCard(json, period);
+            renderUsdExposureCard();
+          }
+        }
+      })
+      .catch(function(err) {
+        console.warn('USD/KRW fetch error for period ' + period + ':', err);
+      });
+  }
+
   function loadUsdKrwSection() {
     var sec = document.getElementById('usdKrwSection');
     if (!sec) return;
 
-    // 즉시 기본/캐시 데이터로 렌더링
-    if (!_usdKrwData) {
-      _usdKrwData = _fallbackFxData;
-      renderUsdKrwCard(_usdKrwData);
-      renderUsdExposureCard();
-    }
+    // 초기 1M 렌더링
+    renderUsdKrwCard(_fallbackFxData, '1M');
+    renderUsdExposureCard();
 
-    // 최신 1개월 환율 데이터 비동기 조회
-    fetch('/api/market-index?ticker=KRW%3DX&range=1M')
-      .then(function(r) { return r.json(); })
-      .then(function(json) {
-        if (json && json.data && json.data.length > 0) {
-          _usdKrwData = json;
-          renderUsdKrwCard(json);
-          renderUsdExposureCard();
-        }
-      })
-      .catch(function(err) {
-        console.warn('USD/KRW fetch error, using fallback:', err);
-      });
+    // 최신 데이터 가져오기
+    selectFxPeriod('1M');
   }
 
-  function renderUsdKrwCard(json) {
+  function renderUsdKrwCard(json, period) {
+    if (!period) period = _currentFxPeriod || '1M';
     if (!json || !json.data || json.data.length === 0) return;
 
     var data = json.data;
@@ -11480,13 +11559,16 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
       arrowEl.textContent = isPos ? '↗' : (isNeg ? '↘' : '―');
       var sign = isPos ? '+' : '';
       textEl.textContent = sign + chgPct.toFixed(2) + '% (' + sign + chg.toFixed(1) + '원)';
-      
-      // 환율 하락(원화 강세)은 초록, 상승은 빨강
       badgeEl.style.background = isNeg ? '#e6f9f0' : (isPos ? '#fee2e2' : '#f1f5f9');
       badgeEl.style.color = isNeg ? '#00a86b' : (isPos ? '#dc2626' : '#64748b');
     }
 
     // 선택 기간 누적 & 평균 계산
+    var periodLabelMap = { '1M': '1달', '3M': '3달', '1Y': '1년' };
+    var periodLabel = periodLabelMap[period] || '1달';
+    var pLabelEl = document.getElementById('fxSelectedPeriodLabel');
+    if (pLabelEl) pLabelEl.textContent = periodLabel;
+
     var firstClose = data[0].close;
     var cumDiff = cur - firstClose;
     var cumPct = firstClose > 0 ? (cumDiff / firstClose) * 100 : 0;
@@ -11513,33 +11595,36 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var highPt = data[highIdx];
     var lowPt = data[lowIdx];
 
-    // 1달 레인지 위치 계산: (현재가 - 최저) / (최고 - 최저) * 100
+    // 기간 레인지 위치 계산: (현재가 - 최저) / (최고 - 최저) * 100
     var rangePct = highPt.close === lowPt.close ? 50 : Math.round(((cur - lowPt.close) / (highPt.close - lowPt.close)) * 100);
     if (rangePct < 0) rangePct = 0;
     if (rangePct > 100) rangePct = 100;
     var rangeTextEl = document.getElementById('fxRangeText');
-    if (rangeTextEl) rangeTextEl.textContent = '1달 레인지: ' + rangePct + '% 위치';
+    if (rangeTextEl) rangeTextEl.textContent = periodLabel + ' 레인지: ' + rangePct + '% 위치';
 
     // 하단 최고/최저 표시
-    var formatShortDate = function(dtStr) {
+    var formatShortDate = function(dtStr, p) {
       var parts = dtStr.split('-');
+      if (p === '1Y') {
+        return '(' + parts[0].slice(2) + '.' + parts[1] + '.' + parts[2] + ')';
+      }
       return '(' + parts[1] + '-' + parts[2] + ')';
     };
     var highDateEl = document.getElementById('fxHighDate');
     var highPriceEl = document.getElementById('fxHighPrice');
-    if (highDateEl) highDateEl.textContent = formatShortDate(highPt.date);
+    if (highDateEl) highDateEl.textContent = formatShortDate(highPt.date, period);
     if (highPriceEl) highPriceEl.textContent = Math.round(highPt.close).toLocaleString() + '원';
 
     var lowDateEl = document.getElementById('fxLowDate');
     var lowPriceEl = document.getElementById('fxLowPrice');
-    if (lowDateEl) lowDateEl.textContent = formatShortDate(lowPt.date);
+    if (lowDateEl) lowDateEl.textContent = formatShortDate(lowPt.date, period);
     if (lowPriceEl) lowPriceEl.textContent = Math.round(lowPt.close).toLocaleString() + '원';
 
     // 인터랙티브 SVG 차트 렌더링
-    renderUsdKrwSvgChart(data, highIdx, lowIdx, avgRate);
+    renderUsdKrwSvgChart(data, highIdx, lowIdx, avgRate, period);
   }
 
-  function renderUsdKrwSvgChart(data, highIdx, lowIdx, avgRate) {
+  function renderUsdKrwSvgChart(data, highIdx, lowIdx, avgRate, period) {
     var container = document.getElementById('fxChartContainer');
     if (!container) return;
 
@@ -11552,17 +11637,29 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var chartWidth = width - marginLeft - marginRight;
     var chartHeight = height - marginTop - marginBottom;
 
-    // Y축 눈금 (1319 ~ 1395)
     var closes = data.map(function(d) { return d.close; });
     var minVal = Math.min.apply(null, closes);
     var maxVal = Math.max.apply(null, closes);
 
-    var yMin = 1319;
-    var yMax = 1395;
-    if (minVal < yMin) yMin = Math.floor(minVal - 5);
-    if (maxVal > yMax) yMax = Math.ceil(maxVal + 5);
+    var yMin, yMax, yTicks;
+    if (period === '1M' && minVal >= 1315 && maxVal <= 1395) {
+      yMin = 1319;
+      yMax = 1395;
+      yTicks = [1395, 1379, 1359, 1339, 1319];
+    } else {
+      var diff = maxVal - minVal;
+      var pad = Math.max(5, diff * 0.08);
+      yMin = Math.floor((minVal - pad) / 5) * 5;
+      yMax = Math.ceil((maxVal + pad) / 5) * 5;
+      if (yMax <= yMin) yMax = yMin + 20;
 
-    var yTicks = [1395, 1379, 1359, 1339, 1319];
+      yTicks = [];
+      for (var t = 0; t < 5; t++) {
+        var val = Math.round(yMax - ((yMax - yMin) / 4) * t);
+        yTicks.push(val);
+      }
+    }
+
     var gridSvg = '';
     yTicks.forEach(function(tick) {
       var y = marginTop + chartHeight - ((tick - yMin) / (yMax - yMin)) * chartHeight;
@@ -11596,15 +11693,29 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     }
     var areaD = pathD + ' L ' + pts[pts.length - 1].x.toFixed(1) + ',' + (marginTop + chartHeight).toFixed(1) + ' L ' + pts[0].x.toFixed(1) + ',' + (marginTop + chartHeight).toFixed(1) + ' Z';
 
-    // X축 날짜 라벨 (약 10~11개 균등 분할)
+    // X축 날짜 라벨
     var xLabelsSvg = '';
-    var step = Math.max(1, Math.floor(pts.length / 10));
-    pts.forEach(function(p, idx) {
-      if (idx % step === 0 || idx === pts.length - 1) {
-        var parts = p.date.split('-');
-        var label = parseInt(parts[1], 10) + '.' + parseInt(parts[2], 10);
-        xLabelsSvg += '<text x="' + p.x.toFixed(1) + '" y="' + (marginTop + chartHeight + 18).toFixed(1) + '" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">' + label + '</text>';
+    var numLabels = period === '1Y' ? 7 : (period === '3M' ? 7 : 10);
+    var step = Math.max(1, Math.floor((pts.length - 1) / (numLabels - 1)));
+    var pickedIndices = [];
+    for (var k = 0; k < numLabels - 1; k++) {
+      var idxToPick = k * step;
+      if (idxToPick < pts.length) pickedIndices.push(idxToPick);
+    }
+    if (!pickedIndices.includes(pts.length - 1)) {
+      pickedIndices.push(pts.length - 1);
+    }
+
+    pickedIndices.forEach(function(idx) {
+      var p = pts[idx];
+      var parts = p.date.split('-');
+      var label = '';
+      if (period === '1Y') {
+        label = parts[0].slice(2) + '.' + parseInt(parts[1], 10);
+      } else {
+        label = parseInt(parts[1], 10) + '.' + parseInt(parts[2], 10);
       }
+      xLabelsSvg += '<text x="' + p.x.toFixed(1) + '" y="' + (marginTop + chartHeight + 18).toFixed(1) + '" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">' + label + '</text>';
     });
 
     var hPt = pts[highIdx];
@@ -11630,281 +11741,284 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
         '</g>' +
       '</g>' +
 
-      // 최저점 뱃지
-      '<g transform="translate(' + lPt.x.toFixed(1) + ', ' + lPt.y.toFixed(1) + ')">' +
-        '<circle r="4.5" fill="#0284c7" stroke="#ffffff" stroke-width="2"/>' +
-        '<g transform="translate(0, 14)">' +
-          '<rect x="-27" y="-3" width="54" height="17" rx="4" ry="4" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>' +
-          '<text x="0" y="9" font-size="9.5" font-weight="700" fill="#0284c7" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">최저 ' + Math.round(lPt.close).toLocaleString() + '</text>' +
-        '</g>' +
-      '</g>' +
+      // 최저점 뱃지 (경계값 자동 회피)
+      (function() {
+        var isNearBottom = lPt.y > (marginTop + chartHeight - 24);
+        var isNearRight = lPt.x > (marginLeft + chartWidth - 32);
+        var badgeY = isNearBottom ? -13 : 14;
+        var badgeX = isNearRight ? -18 : 0;
+        var rectY = isNearBottom ? -14 : -3;
+        var textY = isNearBottom ? -2 : 9;
+
+        return '<g transform="translate(' + lPt.x.toFixed(1) + ', ' + lPt.y.toFixed(1) + ')">' +
+          '<circle r="4.5" fill="#0284c7" stroke="#ffffff" stroke-width="2"/>' +
+          '<g transform="translate(' + badgeX + ', ' + badgeY + ')">' +
+            '<rect x="-27" y="' + rectY + '" width="54" height="17" rx="4" ry="4" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>' +
+            '<text x="0" y="' + textY + '" font-size="9.5" font-weight="700" fill="#0284c7" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">최저 ' + Math.round(lPt.close).toLocaleString() + '</text>' +
+          '</g>' +
+        '</g>';
+      })() +
 
       xLabelsSvg +
 
       // 마우스 오버 가이드라인 & 포인트
       '<line id="fxHoverLine" x1="0" y1="' + marginTop + '" x2="0" y2="' + (marginTop + chartHeight) + '" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" style="display:none;"/>' +
       '<circle id="fxHoverPoint" r="4.5" fill="#6366f1" stroke="#fff" stroke-width="2" style="display:none;"/>' +
-      '<rect id="fxOverlay" x="' + marginLeft + '" y="' + marginTop + '" width="' + chartWidth + '" height="' + chartHeight + '" fill="transparent" style="cursor:crosshair;"/>' +
-    '</svg>' +
-    '<div id="fxChartTooltip" class="fx-chart-tooltip"></div>';
+      '<rect id="fxOverlay" x="' + marginLeft + '" y="' + marginTop + '" width="' + chartWidth + '" height="' + chartHeight + '" fill="transparent" style="cursor: crosshair;"/>' +
+    '</svg>';
 
     container.innerHTML = html;
 
-    // 마우스 오버 이벤트 등록
+    // 마우스 이벤트 바인딩
     var overlay = document.getElementById('fxOverlay');
-    var hLine = document.getElementById('fxHoverLine');
-    var hPoint = document.getElementById('fxHoverPoint');
-    var tooltip = document.getElementById('fxChartTooltip');
+    var hoverLine = document.getElementById('fxHoverLine');
+    var hoverPoint = document.getElementById('fxHoverPoint');
+    var tooltip = document.getElementById('fxTooltip');
 
-    if (overlay && hLine && hPoint && tooltip) {
+    if (overlay) {
       overlay.addEventListener('mousemove', function(e) {
         var rect = overlay.getBoundingClientRect();
-        var mouseX = e.clientX - rect.left;
-        var ratio = Math.max(0, Math.min(1, mouseX / rect.width));
-        var idx = Math.round(ratio * (pts.length - 1));
-        var targetPt = pts[idx];
+        var clientX = e.clientX - rect.left;
+        var ratio = Math.max(0, Math.min(1, clientX / rect.width));
+        var dataIdx = Math.round(ratio * (pts.length - 1));
+        var targetPt = pts[dataIdx];
         if (!targetPt) return;
 
-        hLine.setAttribute('x1', targetPt.x);
-        hLine.setAttribute('x2', targetPt.x);
-        hLine.style.display = 'block';
-
-        hPoint.setAttribute('cx', targetPt.x);
-        hPoint.setAttribute('cy', targetPt.y);
-        hPoint.style.display = 'block';
-
-        tooltip.textContent = targetPt.date + ': ' + targetPt.close.toFixed(1) + '원';
-        var containerRect = container.getBoundingClientRect();
-        var posX = (targetPt.x / width) * containerRect.width;
-        var posY = (targetPt.y / height) * containerRect.height;
-        tooltip.style.left = posX + 'px';
-        tooltip.style.top = posY + 'px';
-        tooltip.style.display = 'block';
+        if (hoverLine) {
+          hoverLine.setAttribute('x1', targetPt.x);
+          hoverLine.setAttribute('x2', targetPt.x);
+          hoverLine.style.display = 'block';
+        }
+        if (hoverPoint) {
+          hoverPoint.setAttribute('cx', targetPt.x);
+          hoverPoint.setAttribute('cy', targetPt.y);
+          hoverPoint.style.display = 'block';
+        }
+        if (tooltip) {
+          var containerRect = container.getBoundingClientRect();
+          var ttX = (targetPt.x / width) * containerRect.width;
+          var ttY = (targetPt.y / height) * containerRect.height;
+          tooltip.style.left = ttX + 'px';
+          tooltip.style.top = ttY + 'px';
+          tooltip.textContent = targetPt.date + ': ' + targetPt.close.toFixed(1) + '원';
+          tooltip.style.display = 'block';
+        }
       });
 
       overlay.addEventListener('mouseleave', function() {
-        hLine.style.display = 'none';
-        hPoint.style.display = 'none';
-        tooltip.style.display = 'none';
+        if (hoverLine) hoverLine.style.display = 'none';
+        if (hoverPoint) hoverPoint.style.display = 'none';
+        if (tooltip) tooltip.style.display = 'none';
       });
     }
   }
 
-  function getBrandBadge(name, ticker) {
-    if (name.includes('KODEX') || ticker.includes('475080') || ticker.includes('494300')) {
-      return { text: '삼', bg: '#1d4ed8' };
+  // ==================== 달러 익스포저 & 시뮬레이터 로직 ====================
+  function getDollarAssets() {
+    var userCfg = JSON.parse(localStorage.getItem('fima_usd_exposure_config') || 'null');
+    var currentRate = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
+
+    // 수동 직접 입력 모드
+    if (userCfg && userCfg.manualEnabled) {
+      var manualUsd = parseFloat(userCfg.manualUsd) || 51225;
+      var manualKrw = parseFloat(userCfg.manualKrw) || (manualUsd * currentRate);
+      return {
+        totalUSD: manualUsd,
+        totalKRW: manualKrw,
+        topAssets: [
+          { name: 'KODEX 테슬라커버드콜채권혼합액티브', code: '475080.KS', pct: 34.8, krw: 23680000, brand: 'sam' },
+          { name: 'KODEX 미국나스닥100데일리커버드콜OTM', code: '494300.KS', pct: 23.7, krw: 16140000, brand: 'sam' },
+          { name: 'SOL 팔란티어커버드콜OTM채권혼합', code: '0040Y0.KS', pct: 21.1, krw: 14360000, brand: 'sol' }
+        ]
+      };
     }
-    if (name.includes('SOL') || ticker.includes('0040Y') || ticker.includes('0040X')) {
-      return { text: 'SOL', bg: '#059669' };
+
+    // 포트폴리오 데이터 기반 동적 추출
+    var holdings = (window.appState && window.appState.holdings) || [];
+    var items = [];
+    var sumUSD = 0;
+    var sumKRW = 0;
+
+    holdings.forEach(function(h) {
+      var name = h.name || h.stockName || '';
+      var code = h.code || h.ticker || '';
+      var valKRW = parseFloat(h.evalAmount || h.valuation || h.totalPrice || 0);
+
+      // 달러 노출 판단
+      var isUsdExposed = false;
+      if (userCfg && userCfg.customExclusions && userCfg.customExclusions[code] !== undefined) {
+        isUsdExposed = !userCfg.customExclusions[code];
+      } else {
+        var isCurrencyHedged = name.includes('(H)') || name.includes('환헤지');
+        var isOverseas = h.isOverseas || /미국|S&P|나스닥|테슬라|팔란티어|엔비디아|빅테크|다우|글로벌|배당다우|SCHD|QQQ|SPY/i.test(name) || /^[A-Z]{1,5}$/.test(code);
+        isUsdExposed = isOverseas && !isCurrencyHedged;
+      }
+
+      if (isUsdExposed && valKRW > 0) {
+        var valUSD = valKRW / currentRate;
+        sumKRW += valKRW;
+        sumUSD += valUSD;
+        items.push({
+          name: name,
+          code: code,
+          krw: valKRW,
+          usd: valUSD,
+          brand: name.startsWith('KODEX') ? 'sam' : (name.startsWith('SOL') ? 'sol' : (name.startsWith('TIGER') ? 'tiger' : 'other'))
+        });
+      }
+    });
+
+    if (items.length === 0 || sumKRW === 0) {
+      return {
+        totalUSD: 51225,
+        totalKRW: 68100000,
+        topAssets: [
+          { name: 'KODEX 테슬라커버드콜채권혼합액티브', code: '475080.KS', pct: 34.8, krw: 23680000, brand: 'sam' },
+          { name: 'KODEX 미국나스닥100데일리커버드콜OTM', code: '494300.KS', pct: 23.7, krw: 16140000, brand: 'sam' },
+          { name: 'SOL 팔란티어커버드콜OTM채권혼합', code: '0040Y0.KS', pct: 21.1, krw: 14360000, brand: 'sol' }
+        ]
+      };
     }
-    if (name.includes('TIGER')) {
-      return { text: '호', bg: '#ea580c' };
-    }
-    if (name.includes('ACE')) {
-      return { text: '한', bg: '#1e3a8a' };
-    }
-    if (name.includes('PLUS') || name.includes('ARIRANG')) {
-      return { text: '플', bg: '#7c3aed' };
-    }
-    return { text: ticker.replace('.KS', '').slice(0, 2), bg: '#475569' };
+
+    items.sort(function(a, b) { return b.krw - a.krw; });
+    var topAssets = items.slice(0, 3).map(function(item) {
+      return {
+        name: item.name,
+        code: item.code,
+        pct: (item.krw / sumKRW) * 100,
+        krw: item.krw,
+        brand: item.brand
+      };
+    });
+
+    return { totalUSD: sumUSD, totalKRW: sumKRW, topAssets: topAssets };
   }
 
   function renderUsdExposureCard() {
-    var curFx = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
-    var userCfg = JSON.parse(localStorage.getItem('fima_usd_exposure_config') || 'null');
+    var exposed = getDollarAssets();
+    _usdExposedTotalKRW = exposed.totalKRW;
+    _usdExposedTotalUSD = exposed.totalUSD;
 
-    var totalUSD = _defaultTotalExposureUSD;
-    var totalKRW = _defaultTotalExposureKRW;
-    var totalPortfolioKRW = _defaultTotalPortfolioKRW;
-    var exposurePct = _defaultExposurePct;
-    var topAssets = _defaultExposedAssets;
-
-    // 실제 포트폴리오 데이터가 존재하는 경우 연동
-    var pfData = window._labTotalPfData || window._lastPfData;
-    if (pfData && pfData.summary && pfData.summary.marketValueKRW > 0) {
-      totalPortfolioKRW = pfData.summary.marketValueKRW;
-
-      // 수동 직접 입력 모드가 아닌 경우 보유 종목 기반 자동 계산
-      if (!userCfg || !userCfg.isManual) {
-        var stocks = pfData.stocks || [];
-        var exposedList = [];
-
-        stocks.forEach(function(s) {
-          var t = s.ticker || '';
-          var n = s.name || '';
-          var isExcluded = (userCfg && userCfg.excludedTickers && userCfg.excludedTickers.indexOf(t) !== -1);
-          if (isExcluded) return;
-
-          var isIncludedByUser = (userCfg && userCfg.includedTickers && userCfg.includedTickers.indexOf(t) !== -1);
-          var isForeignCurrency = (s.currency === 'USD' || s.region === 'US' || s.region === 'USA');
-          var isKnownUsdEtf = /테슬라|나스닥|팔란티어|S&P|미국|엔비디아|빅테크|다우|필라델피아/i.test(n) && !/\(H\)/i.test(n);
-
-          if (isIncludedByUser || isForeignCurrency || isKnownUsdEtf) {
-            exposedList.push({
-              name: n,
-              ticker: t,
-              krw: s.marketValueKRW || 0
-            });
-          }
-        });
-
-        if (exposedList.length > 0) {
-          exposedList.sort(function(a, b) { return b.krw - a.krw; });
-          var sumExposedKRW = exposedList.reduce(function(acc, x) { return acc + x.krw; }, 0);
-          totalKRW = sumExposedKRW;
-          totalUSD = Math.round(totalKRW / curFx);
-          exposurePct = totalPortfolioKRW > 0 ? (totalKRW / totalPortfolioKRW) * 100 : 0;
-
-          topAssets = exposedList.slice(0, 3).map(function(item) {
-            return {
-              name: item.name,
-              ticker: item.ticker.includes('.') ? item.ticker : item.ticker + '.KS',
-              krw: item.krw,
-              ratio: totalKRW > 0 ? Number(((item.krw / totalKRW) * 100).toFixed(1)) : 0
-            };
-          });
-        }
-      }
+    var totalAssetsKRW = 389000000;
+    if (window.appState && window.appState.totalEvaluation && window.appState.totalEvaluation > 0) {
+      totalAssetsKRW = window.appState.totalEvaluation;
     }
+    _totalPortfolioKRW = totalAssetsKRW;
 
-    // 수동 오버라이드 모드 적용
-    if (userCfg && userCfg.isManual) {
-      totalUSD = userCfg.manualUSD || _defaultTotalExposureUSD;
-      totalKRW = userCfg.manualKRW || Math.round(totalUSD * curFx);
-      exposurePct = totalPortfolioKRW > 0 ? (totalKRW / totalPortfolioKRW) * 100 : _defaultExposurePct;
-    }
+    var ratio = totalAssetsKRW > 0 ? (exposed.totalKRW / totalAssetsKRW) * 100 : 17.5;
 
-    // 전역 변수에 현재 환노출 계산값 보관 (시뮬레이터용)
-    window._curUsdExposureUSD = totalUSD;
-    window._curUsdExposureKRW = totalKRW;
-    window._curTotalPortfolioKRW = totalPortfolioKRW;
+    // 헤더 값 렌더링
+    var usdEl = document.getElementById('usdExposureTotalUSD');
+    if (usdEl) usdEl.textContent = '$' + Math.round(exposed.totalUSD).toLocaleString();
 
-    // 요약 표시 업데이트
-    var usdEl = document.getElementById('fxTotalExposureUSD');
-    if (usdEl) usdEl.textContent = '$' + totalUSD.toLocaleString();
+    var krwMan = Math.round(exposed.totalKRW / 10000);
+    var krwText = '약 ' + (krwMan >= 10000 ? (krwMan / 10000).toFixed(1) + '억' : krwMan.toLocaleString() + '만원');
+    var krwEl = document.getElementById('usdExposureTotalKRW');
+    if (krwEl) krwEl.textContent = '(' + krwText + ')';
 
-    var krwEl = document.getElementById('fxTotalExposureKRW');
-    if (krwEl) krwEl.textContent = '(약 ' + Math.round(totalKRW / 10000).toLocaleString() + '만원)';
+    var ratioEl = document.getElementById('usdExposureRatio');
+    if (ratioEl) ratioEl.textContent = ratio.toFixed(1) + '%';
 
-    var pctEl = document.getElementById('fxTotalExposurePct');
-    if (pctEl) pctEl.textContent = exposurePct.toFixed(1) + '%';
+    var barEl = document.getElementById('usdExposureProgressBar');
+    if (barEl) barEl.style.width = Math.min(100, Math.max(2, ratio)) + '%';
 
-    var barEl = document.getElementById('fxExposureProgressBar');
-    if (barEl) barEl.style.width = Math.min(100, Math.max(0, exposurePct)) + '%';
-
-    // Top 3 주요 환노출 자산 리스트 렌더링
-    var listEl = document.getElementById('fxTopExposedList');
+    // Top 3 렌더링
+    var listEl = document.getElementById('usdTopAssetsList');
     if (listEl) {
-      var itemsHtml = '';
-      topAssets.forEach(function(item) {
-        var badge = getBrandBadge(item.name, item.ticker);
-        var krwMan = Math.round(item.krw / 10000).toLocaleString() + '만원';
-        itemsHtml += '<div class="fx-exposed-item">' +
-          '<div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">' +
-            '<div class="fx-badge-circle" style="background: ' + badge.bg + ';">' + badge.text + '</div>' +
-            '<div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' +
-              '<span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">' + item.name + '</span> ' +
-              '<span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(' + item.ticker + ')</span>' +
+      var html = '';
+      exposed.topAssets.forEach(function(asset) {
+        var iconHtml = '';
+        if (asset.brand === 'sam') {
+          iconHtml = '<div class="asset-logo-sam">삼</div>';
+        } else if (asset.brand === 'sol') {
+          iconHtml = '<div class="asset-logo-sol"><div class="sol-bar"></div><div class="sol-bar"></div><div class="sol-bar"></div></div>';
+        } else {
+          iconHtml = '<div class="asset-logo-other">' + (asset.name ? asset.name.charAt(0) : '$') + '</div>';
+        }
+
+        var manKrw = Math.round(asset.krw / 10000);
+        var krwFormatted = manKrw.toLocaleString() + '만원';
+
+        html += '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+          '<div style="display: flex; align-items: center; gap: 10px; overflow: hidden; margin-right: 12px;">' +
+            iconHtml +
+            '<div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' +
+              '<span style="font-weight: 700; font-size: 0.88rem; color: #1e293b;">' + asset.name + '</span> ' +
+              '<span style="font-size: 0.76rem; color: #94a3b8; font-weight: 500;">(' + asset.code + ')</span>' +
             '</div>' +
           '</div>' +
-          '<div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">' +
-            '<strong style="color: #1e293b;">' + item.ratio + '%</strong> ' +
-            '<span style="color: #64748b; font-size: 0.76rem;">(' + krwMan + ')</span>' +
+          '<div style="text-align: right; flex-shrink: 0;">' +
+            '<span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">' + asset.pct.toFixed(1) + '%</span> ' +
+            '<span style="font-size: 0.78rem; color: #94a3b8; font-weight: 500;">(' + krwFormatted + ')</span>' +
           '</div>' +
         '</div>';
       });
-      listEl.innerHTML = itemsHtml;
+      listEl.innerHTML = html;
     }
 
-    // 시뮬레이터 전일대비 버튼 문구 갱신
-    var prevBtn = document.getElementById('btnSimPrevDay');
-    if (prevBtn) {
-      var dChg = (_usdKrwData && _usdKrwData.change != null) ? _usdKrwData.change : -11.6;
-      var dChgSign = dChg > 0 ? '+' : '';
-      prevBtn.textContent = '전일대비 (' + dChgSign + dChg.toFixed(1) + '원)';
-    }
-
-    // 시뮬레이터 현재 상태로 갱신
-    updateSimOutput(_simDelta);
+    // 시뮬레이터 초기화
+    recalcFxSimulator();
   }
 
-  function applySimPreset(presetKey) {
-    var btns = document.querySelectorAll('.fx-sim-btn');
-    btns.forEach(function(b) { b.classList.remove('active'); });
+  // ---- 시뮬레이터 인터랙션 ----
+  var _simDelta = -11.6;
 
-    var baseRate = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
-    var delta = 0;
-
-    if (presetKey === 'prevDay') {
-      var btn = document.getElementById('btnSimPrevDay');
-      if (btn) btn.classList.add('active');
-      delta = (_usdKrwData && _usdKrwData.change != null) ? _usdKrwData.change : -11.6;
-    } else if (presetKey === 'current') {
-      var btn = document.getElementById('btnSimCurrent');
-      if (btn) btn.classList.add('active');
-      delta = 0;
-    } else if (presetKey === 'minus20') {
-      var btn = document.getElementById('btnSimMinus20');
-      if (btn) btn.classList.add('active');
-      delta = -20;
-    } else if (presetKey === 'plus20') {
-      var btn = document.getElementById('btnSimPlus20');
-      if (btn) btn.classList.add('active');
-      delta = 20;
-    } else if (presetKey === '1300') {
-      var btn = document.getElementById('btnSim1300');
-      if (btn) btn.classList.add('active');
-      delta = 1300 - baseRate;
-    } else if (presetKey === '1400') {
-      var btn = document.getElementById('btnSim1400');
-      if (btn) btn.classList.add('active');
-      delta = 1400 - baseRate;
+  function applySimPreset(preset) {
+    var cur = (_usdKrwData && _usdKrwData.currentPrice) ? Math.round(_usdKrwData.currentPrice) : 1330;
+    if (preset === 'prevDay') {
+      var chg = (_usdKrwData && _usdKrwData.change != null) ? _usdKrwData.change : -11.6;
+      _simDelta = chg;
+    } else if (preset === 'zero') {
+      _simDelta = 0;
+    } else if (preset === 'minus20') {
+      _simDelta = -20;
+    } else if (preset === 'plus20') {
+      _simDelta = 20;
+    } else if (preset === 'target1300') {
+      _simDelta = 1300 - cur;
+    } else if (preset === 'target1400') {
+      _simDelta = 1400 - cur;
     }
 
-    _simDelta = delta;
-    var slider = document.getElementById('simSlider');
+    var slider = document.getElementById('fxDeltaSlider');
     if (slider) {
-      slider.value = Math.max(-50, Math.min(50, delta));
+      slider.value = Math.min(50, Math.max(-50, _simDelta));
     }
-    updateSimOutput(delta);
+    recalcFxSimulator();
   }
 
   function onSimSliderInput(val) {
-    var btns = document.querySelectorAll('.fx-sim-btn');
-    btns.forEach(function(b) { b.classList.remove('active'); });
-
     _simDelta = parseFloat(val);
-    updateSimOutput(_simDelta);
+    recalcFxSimulator();
   }
 
-  function updateSimOutput(delta) {
-    var baseRate = (_usdKrwData && _usdKrwData.currentPrice) ? Math.round(_usdKrwData.currentPrice) : 1330;
-    var appliedRate = Math.round(baseRate + delta);
+  function recalcFxSimulator() {
+    var cur = (_usdKrwData && _usdKrwData.currentPrice) ? Math.round(_usdKrwData.currentPrice) : 1330;
+    var appliedRate = Math.round(cur + _simDelta);
 
-    var rateEl = document.getElementById('simAppliedRate');
-    if (rateEl) rateEl.textContent = appliedRate.toLocaleString() + '원';
-
-    var diffEl = document.getElementById('simAppliedDiff');
-    if (diffEl) {
-      diffEl.textContent = '(' + (delta > 0 ? '+' : '') + delta.toFixed(1) + '원)';
-      diffEl.style.color = delta < 0 ? '#0284c7' : (delta > 0 ? '#dc2626' : '#64748b');
+    var curAppliedEl = document.getElementById('simCurrentRateApplied');
+    if (curAppliedEl) {
+      curAppliedEl.textContent = appliedRate.toLocaleString();
     }
 
-    var condEl = document.getElementById('simConditionLabel');
-    if (condEl) {
-      var condSign = delta > 0 ? '+' : '';
-      condEl.textContent = '환율 ' + condSign + delta.toFixed(1) + '원 변동 시';
+    var deltaSign = _simDelta > 0 ? '+' : (_simDelta < 0 ? '-' : '');
+    var deltaBadgeEl = document.getElementById('simDeltaBadge');
+    if (deltaBadgeEl) {
+      deltaBadgeEl.textContent = '(' + deltaSign + Math.abs(_simDelta).toFixed(1) + '원)';
+      deltaBadgeEl.style.color = _simDelta <= 0 ? '#0284c7' : '#dc2626';
     }
 
-    var totalUSD = window._curUsdExposureUSD || _defaultTotalExposureUSD;
-    var totalPortfolioKRW = window._curTotalPortfolioKRW || _defaultTotalPortfolioKRW;
+    var descDeltaEl = document.getElementById('simDescDelta');
+    if (descDeltaEl) {
+      descDeltaEl.textContent = deltaSign + Math.abs(_simDelta).toFixed(1);
+    }
 
-    var impactKRW = totalUSD * delta;
-    var impactPct = totalPortfolioKRW > 0 ? (impactKRW / totalPortfolioKRW) * 100 : 0;
+    var impactKRW = _usdExposedTotalUSD * _simDelta;
+    var impactPct = _totalPortfolioKRW > 0 ? (impactKRW / _totalPortfolioKRW) * 100 : 0;
 
-    var impactEl = document.getElementById('simImpactKRW');
+    var impactEl = document.getElementById('simImpactAmount');
     if (impactEl) {
-      if (Math.abs(impactKRW) < 1000) {
+      if (Math.abs(impactKRW) < 100) {
         impactEl.textContent = '0원';
         impactEl.style.color = '#64748b';
       } else {
@@ -11921,6 +12035,16 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
       pctEl.textContent = '현재 자산의 ' + pSign + Math.abs(impactPct).toFixed(2) + '%';
     }
   }
+
+  window.selectFxPeriod = selectFxPeriod;
+  window.applySimPreset = applySimPreset;
+  window.onSimSliderInput = onSimSliderInput;
+  window.openUsdExposureSettingsModal = openUsdExposureSettingsModal;
+  window.closeUsdExposureSettingsModal = closeUsdExposureSettingsModal;
+  window.toggleUsdManualFields = toggleUsdManualFields;
+  window.onUsdManualChange = onUsdManualChange;
+  window.saveUsdExposureSettings = saveUsdExposureSettings;
+  window.resetUsdExposureSettings = resetUsdExposureSettings;
 
   // ---- 설정 모달 로직 ----
   function openUsdExposureSettingsModal() {
