@@ -11549,7 +11549,13 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var curEl = document.getElementById('fxCurRate');
     if (curEl) curEl.textContent = cur.toLocaleString();
 
-    // 전일대비 뱃지
+    // 전일대비 뱃지 & 시뮬레이터 전일대비 버튼 텍스트
+    var btnSimPrevDay = document.getElementById('btnSimPrevDay');
+    if (btnSimPrevDay) {
+      var prevSign = chg > 0 ? '+' : '';
+      btnSimPrevDay.textContent = '전일대비 (' + prevSign + chg.toFixed(1) + '원)';
+    }
+
     var badgeEl = document.getElementById('fxDayChangeBadge');
     var arrowEl = document.getElementById('fxDayArrow');
     var textEl = document.getElementById('fxDayChangeText');
@@ -11965,22 +11971,41 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
 
   function applySimPreset(preset) {
     var cur = (_usdKrwData && _usdKrwData.currentPrice) ? Math.round(_usdKrwData.currentPrice) : 1330;
+    
+    // 버튼 active 상태 갱신
+    var btnMap = {
+      'prevDay': 'btnSimPrevDay',
+      'current': 'btnSimCurrent',
+      'zero': 'btnSimCurrent',
+      'minus20': 'btnSimMinus20',
+      'plus20': 'btnSimPlus20',
+      '1300': 'btnSim1300',
+      '1400': 'btnSim1400'
+    };
+    document.querySelectorAll('.fx-sim-btn').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+    if (btnMap[preset]) {
+      var activeBtn = document.getElementById(btnMap[preset]);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
     if (preset === 'prevDay') {
       var chg = (_usdKrwData && _usdKrwData.change != null) ? _usdKrwData.change : -11.6;
       _simDelta = chg;
-    } else if (preset === 'zero') {
+    } else if (preset === 'current' || preset === 'zero') {
       _simDelta = 0;
     } else if (preset === 'minus20') {
       _simDelta = -20;
     } else if (preset === 'plus20') {
       _simDelta = 20;
-    } else if (preset === 'target1300') {
+    } else if (preset === '1300' || preset === 'target1300') {
       _simDelta = 1300 - cur;
-    } else if (preset === 'target1400') {
+    } else if (preset === '1400' || preset === 'target1400') {
       _simDelta = 1400 - cur;
     }
 
-    var slider = document.getElementById('fxDeltaSlider');
+    var slider = document.getElementById('simSlider') || document.getElementById('fxDeltaSlider');
     if (slider) {
       slider.value = Math.min(50, Math.max(-50, _simDelta));
     }
@@ -11989,6 +12014,22 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
 
   function onSimSliderInput(val) {
     _simDelta = parseFloat(val);
+
+    // 슬라이더를 수동 조작할 때는 일치하는 프리셋이 있는 경우에만 활성화
+    document.querySelectorAll('.fx-sim-btn').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+    if (_simDelta === 0) {
+      var b = document.getElementById('btnSimCurrent');
+      if (b) b.classList.add('active');
+    } else if (_simDelta === -20) {
+      var b = document.getElementById('btnSimMinus20');
+      if (b) b.classList.add('active');
+    } else if (_simDelta === 20) {
+      var b = document.getElementById('btnSimPlus20');
+      if (b) b.classList.add('active');
+    }
+
     recalcFxSimulator();
   }
 
@@ -11996,29 +12037,36 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var cur = (_usdKrwData && _usdKrwData.currentPrice) ? Math.round(_usdKrwData.currentPrice) : 1330;
     var appliedRate = Math.round(cur + _simDelta);
 
-    var curAppliedEl = document.getElementById('simCurrentRateApplied');
+    var curAppliedEl = document.getElementById('simAppliedRate') || document.getElementById('simCurrentRateApplied');
     if (curAppliedEl) {
-      curAppliedEl.textContent = appliedRate.toLocaleString();
+      curAppliedEl.textContent = appliedRate.toLocaleString() + '원';
     }
 
     var deltaSign = _simDelta > 0 ? '+' : (_simDelta < 0 ? '-' : '');
-    var deltaBadgeEl = document.getElementById('simDeltaBadge');
+    var deltaBadgeEl = document.getElementById('simAppliedDiff') || document.getElementById('simDeltaBadge');
     if (deltaBadgeEl) {
-      deltaBadgeEl.textContent = '(' + deltaSign + Math.abs(_simDelta).toFixed(1) + '원)';
-      deltaBadgeEl.style.color = _simDelta <= 0 ? '#0284c7' : '#dc2626';
+      deltaBadgeEl.textContent = '(' + (_simDelta === 0 ? '0.0원' : deltaSign + Math.abs(_simDelta).toFixed(1) + '원') + ')';
+      deltaBadgeEl.style.color = _simDelta < 0 ? '#0284c7' : (_simDelta > 0 ? '#dc2626' : '#64748b');
     }
 
-    var descDeltaEl = document.getElementById('simDescDelta');
-    if (descDeltaEl) {
-      descDeltaEl.textContent = deltaSign + Math.abs(_simDelta).toFixed(1);
+    var condLabelEl = document.getElementById('simConditionLabel') || document.getElementById('simDescDelta');
+    if (condLabelEl) {
+      if (_simDelta === 0) {
+        condLabelEl.textContent = '현재 환율 유지 시';
+      } else {
+        condLabelEl.textContent = '환율 ' + deltaSign + Math.abs(_simDelta).toFixed(1) + '원 변동 시';
+      }
     }
 
-    var impactKRW = _usdExposedTotalUSD * _simDelta;
-    var impactPct = _totalPortfolioKRW > 0 ? (impactKRW / _totalPortfolioKRW) * 100 : 0;
+    var exposedUSD = (typeof _usdExposedTotalUSD !== 'undefined' && _usdExposedTotalUSD > 0) ? _usdExposedTotalUSD : 51225;
+    var totalPortKRW = (typeof _totalPortfolioKRW !== 'undefined' && _totalPortfolioKRW > 0) ? _totalPortfolioKRW : 389000000;
 
-    var impactEl = document.getElementById('simImpactAmount');
+    var impactKRW = exposedUSD * _simDelta;
+    var impactPct = totalPortKRW > 0 ? (impactKRW / totalPortKRW) * 100 : 0;
+
+    var impactEl = document.getElementById('simImpactKRW') || document.getElementById('simImpactAmount');
     if (impactEl) {
-      if (Math.abs(impactKRW) < 100) {
+      if (Math.abs(impactKRW) < 1000) {
         impactEl.textContent = '0원';
         impactEl.style.color = '#64748b';
       } else {
@@ -12032,13 +12080,15 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var pctEl = document.getElementById('simImpactPct');
     if (pctEl) {
       var pSign = impactPct > 0 ? '+' : (impactPct < 0 ? '-' : '');
-      pctEl.textContent = '현재 자산의 ' + pSign + Math.abs(impactPct).toFixed(2) + '%';
+      pctEl.textContent = '현재 자산의 ' + (_simDelta === 0 ? '0.00%' : pSign + Math.abs(impactPct).toFixed(2) + '%');
+      pctEl.style.color = impactPct < 0 ? '#0284c7' : (impactPct > 0 ? '#dc2626' : '#64748b');
     }
   }
 
   window.selectFxPeriod = selectFxPeriod;
   window.applySimPreset = applySimPreset;
   window.onSimSliderInput = onSimSliderInput;
+  window.recalcFxSimulator = recalcFxSimulator;
   window.openUsdExposureSettingsModal = openUsdExposureSettingsModal;
   window.closeUsdExposureSettingsModal = closeUsdExposureSettingsModal;
   window.toggleUsdManualFields = toggleUsdManualFields;
@@ -12177,7 +12227,8 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
   window.renderUsdExposureCard = renderUsdExposureCard;
   window.applySimPreset = applySimPreset;
   window.onSimSliderInput = onSimSliderInput;
-  window.updateSimOutput = updateSimOutput;
+  window.recalcFxSimulator = recalcFxSimulator;
+  window.updateSimOutput = recalcFxSimulator;
   window.openUsdExposureSettingsModal = openUsdExposureSettingsModal;
   window.closeUsdExposureSettingsModal = closeUsdExposureSettingsModal;
   window.toggleUsdManualFields = toggleUsdManualFields;
