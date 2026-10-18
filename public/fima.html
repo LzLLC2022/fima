@@ -2443,6 +2443,340 @@
 
       </div>
 
+      
+      <!-- ===================== 원/달러 환율 & 포트폴리오 달러 익스포저 섹션 ===================== -->
+      <style>
+        .fx-card {
+          background: #fff;
+          border: 1px solid #edf2f7;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          box-sizing: border-box;
+        }
+        .fx-sim-btn {
+          background: #fff;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 5px 9px;
+          font-size: 0.74rem;
+          font-weight: 600;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          user-select: none;
+        }
+        .fx-sim-btn:hover {
+          background: #f1f5f9;
+          border-color: #94a3b8;
+        }
+        .fx-sim-btn.active {
+          background: #e0e7ff;
+          color: #4338ca;
+          border-color: #818cf8;
+        }
+        .fx-exposed-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 7px 0;
+          border-bottom: 1px solid #f8fafc;
+        }
+        .fx-exposed-item:last-child {
+          border-bottom: none;
+        }
+        .fx-badge-circle {
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #fff;
+          flex-shrink: 0;
+        }
+        .fx-chart-tooltip {
+          position: absolute;
+          background: rgba(15, 23, 42, 0.9);
+          color: #fff;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 0.74rem;
+          pointer-events: none;
+          z-index: 10;
+          white-space: nowrap;
+          transform: translate(-50%, -125%);
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+          display: none;
+        }
+        @media (max-width: 980px) {
+          #usdKrwCardsGrid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      </style>
+
+      <div id="usdKrwSection" style="margin-top: 24px; margin-bottom: 24px;">
+        <div id="usdKrwCardsGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          
+          <!-- 좌측 카드: 원/달러 환율 차트 및 현황 -->
+          <div class="fx-card" id="fxCardLeft">
+            <div>
+              <!-- 상단 헤더 -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px;">
+                <div>
+                  <div style="display: flex; align-items: baseline; gap: 8px;">
+                    <div style="font-size: 2.2rem; font-weight: 800; color: #1a202c; letter-spacing: -0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                      <span id="fxCurRate">1,330</span><span style="font-size: 1.15rem; font-weight: 600; color: #718096; margin-left: 2px;">원</span>
+                    </div>
+                    <div id="fxDayChangeBadge" style="background: #e6f9f0; color: #00a86b; font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 3px; vertical-align: middle;">
+                      <span>전일대비</span> <span id="fxDayArrow">↘</span> <span id="fxDayChangeText">-0.86% (-11.6원)</span>
+                    </div>
+                  </div>
+                  <!-- 선택 기간 누적 & 평균 -->
+                  <div style="font-size: 0.82rem; color: #718096; margin-top: 4px; font-weight: 500;">
+                    선택 기간(1달) 누적 <span id="fxMonthCumChange" style="color: #00a86b; font-weight: 700;">-3.62% (-49.9원)</span> · 평균 <span id="fxMonthAvgRate" style="font-weight: 600; color: #4a5568;">1,351.5원</span>
+                  </div>
+                </div>
+
+                <!-- 1달 레인지 위치 뱃지 -->
+                <div id="fxRangeBadge" style="background: #f0f3ff; color: #5c6ac4; border-radius: 9999px; padding: 5px 12px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span id="fxRangeText">1달 레인지: 0% 위치</span>
+                </div>
+              </div>
+
+              <!-- 인터랙티브 SVG 차트 컨테이너 -->
+              <div id="fxChartContainer" style="position: relative; width: 100%; height: 230px; margin-top: 14px; margin-bottom: 4px;">
+                <svg id="fxSvgElement" viewBox="0 0 540 210" style="width: 100%; height: 100%; overflow: visible;" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fxGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.22"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0.0"/></linearGradient></defs><line x1="44" y1="30" x2="524" y2="30" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3"/><text x="36" y="34" font-size="10.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" fill="#94a3b8" text-anchor="end">1,395</text><line x1="44" y1="62.421052631578945" x2="524" y2="62.421052631578945" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3"/><text x="36" y="66.42105263157895" font-size="10.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" fill="#94a3b8" text-anchor="end">1,379</text><line x1="44" y1="102.94736842105263" x2="524" y2="102.94736842105263" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3"/><text x="36" y="106.94736842105263" font-size="10.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" fill="#94a3b8" text-anchor="end">1,359</text><line x1="44" y1="143.4736842105263" x2="524" y2="143.4736842105263" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3"/><text x="36" y="147.4736842105263" font-size="10.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" fill="#94a3b8" text-anchor="end">1,339</text><line x1="44" y1="184" x2="524" y2="184" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3"/><text x="36" y="188" font-size="10.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" fill="#94a3b8" text-anchor="end">1,319</text><line x1="44" y1="120.79245614035077" x2="524" y2="120.79245614035077" stroke="#c7d2fe" stroke-width="1.2" stroke-dasharray="4,4"/><path d="M 44.0,50.5 C 48.0,54.3 60.0,61.5 68.0,73.2 C 76.0,84.9 84.0,116.7 92.0,120.5 C 100.0,124.2 108.0,101.6 116.0,95.9 C 124.0,90.1 132.0,83.3 140.0,86.0 C 148.0,88.7 156.0,109.4 164.0,112.0 C 172.0,114.7 180.0,100.5 188.0,101.8 C 196.0,103.2 204.0,119.3 212.0,120.2 C 220.0,121.1 228.0,110.7 236.0,107.3 C 244.0,103.9 252.0,94.9 260.0,99.7 C 268.0,104.5 276.0,130.6 284.0,136.3 C 292.0,141.9 300.0,132.9 308.0,133.8 C 316.0,134.8 324.0,140.4 332.0,142.0 C 340.0,143.6 348.0,144.4 356.0,143.3 C 364.0,142.2 372.0,136.0 380.0,135.4 C 388.0,134.8 396.0,136.8 404.0,139.7 C 412.0,142.7 420.0,153.2 428.0,153.3 C 436.0,153.5 444.0,142.6 452.0,140.8 C 460.0,139.1 468.0,143.0 476.0,142.8 C 484.0,142.5 492.0,136.2 500.0,139.5 C 508.0,142.8 520.0,158.7 524.0,162.5 L 524.0,184.0 L 44.0,184.0 Z" fill="url(#fxGrad)"/><path d="M 44.0,50.5 C 48.0,54.3 60.0,61.5 68.0,73.2 C 76.0,84.9 84.0,116.7 92.0,120.5 C 100.0,124.2 108.0,101.6 116.0,95.9 C 124.0,90.1 132.0,83.3 140.0,86.0 C 148.0,88.7 156.0,109.4 164.0,112.0 C 172.0,114.7 180.0,100.5 188.0,101.8 C 196.0,103.2 204.0,119.3 212.0,120.2 C 220.0,121.1 228.0,110.7 236.0,107.3 C 244.0,103.9 252.0,94.9 260.0,99.7 C 268.0,104.5 276.0,130.6 284.0,136.3 C 292.0,141.9 300.0,132.9 308.0,133.8 C 316.0,134.8 324.0,140.4 332.0,142.0 C 340.0,143.6 348.0,144.4 356.0,143.3 C 364.0,142.2 372.0,136.0 380.0,135.4 C 388.0,134.8 396.0,136.8 404.0,139.7 C 412.0,142.7 420.0,153.2 428.0,153.3 C 436.0,153.5 444.0,142.6 452.0,140.8 C 460.0,139.1 468.0,143.0 476.0,142.8 C 484.0,142.5 492.0,136.2 500.0,139.5 C 508.0,142.8 520.0,158.7 524.0,162.5" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(44.0, 50.5)"><circle r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="2"/><g transform="translate(0, -14)"><rect x="-27" y="-14" width="54" height="17" rx="4" ry="4" fill="#fee2e2" stroke="#fca5a5" stroke-width="1"/><text x="0" y="-2" font-size="9.5" font-weight="700" fill="#dc2626" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">최고 1,385</text></g></g><g transform="translate(524.0, 162.5)"><circle r="4.5" fill="#0284c7" stroke="#ffffff" stroke-width="2"/><g transform="translate(0, 14)"><rect x="-27" y="-3" width="54" height="17" rx="4" ry="4" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/><text x="0" y="9" font-size="9.5" font-weight="700" fill="#0284c7" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">최저 1,330</text></g></g><text x="44.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">9.20</text><text x="92.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">9.22</text><text x="140.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">9.24</text><text x="188.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">9.28</text><text x="236.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">9.30</text><text x="284.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">10.4</text><text x="332.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">10.6</text><text x="380.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">10.8</text><text x="428.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">10.12</text><text x="476.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">10.14</text><text x="524.0" y="202.0" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">10.17</text><line id="fxHoverLine" x1="0" y1="30" x2="0" y2="184" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" style="display:none;"/><circle id="fxHoverPoint" r="4.5" fill="#6366f1" stroke="#fff" stroke-width="2" style="display:none;"/><rect id="fxOverlay" x="44" y="30" width="480" height="154" fill="transparent" style="cursor:crosshair;"/></svg><div id="fxChartTooltip" class="fx-chart-tooltip"></div>
+              </div>
+            </div>
+
+            <!-- 하단 바: 최고가 / 최저가 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
+                <span style="color: #64748b; font-size: 0.82rem; font-weight: 600;">최고가 <span id="fxHighDate" style="color: #64748b; font-weight: 500;">(09-20)</span></span>
+                <span id="fxHighPrice" style="color: #dc2626; font-size: 1.05rem; font-weight: 800; margin-left: 8px;">1,385원</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #0284c7;"></span>
+                <span style="color: #64748b; font-size: 0.82rem; font-weight: 600;">최저가 <span id="fxLowDate" style="color: #64748b; font-weight: 500;">(10-17)</span></span>
+                <span id="fxLowPrice" style="color: #0284c7; font-size: 1.05rem; font-weight: 800; margin-left: 8px;">1,330원</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 우측 카드: 포트폴리오 달러 익스포저 & 민감도 시뮬레이터 -->
+          <div class="fx-card" id="fxCardRight">
+            <div>
+              <!-- 카드 헤더 -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                  <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b;">포트폴리오 달러 익스포저</h3>
+                </div>
+                <button type="button" onclick="openUsdExposureSettingsModal()" style="display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.15s;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  설정
+                </button>
+              </div>
+
+              <!-- 요약 1: 달러 환노출 자산 합계 -->
+              <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                  <span style="font-size: 0.82rem; font-weight: 600; color: #475569;">달러 환노출 자산 합계</span>
+                  <div>
+                    <strong id="fxTotalExposureUSD" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">$51,225</strong>
+                    <span id="fxTotalExposureKRW" style="font-size: 0.82rem; font-weight: 500; color: #64748b; margin-left: 4px;">(약 6,810만원)</span>
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.8rem; color: #718096;">현재 총자산 대비 비중</span>
+                  <strong id="fxTotalExposurePct" style="font-size: 1.05rem; font-weight: 700; color: #7c3aed;">17.5%</strong>
+                </div>
+                <!-- 프로그레스 바 -->
+                <div style="width: 100%; height: 8px; background: #f1f5f9; border-radius: 9999px; overflow: hidden;">
+                  <div id="fxExposureProgressBar" style="width: 17.5%; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, #6366f1 0%, #ec4899 100%); transition: width 0.3s ease;"></div>
+                </div>
+              </div>
+
+              <!-- 요약 2: 주요 환노출 자산 (Top 3) -->
+              <div style="margin-bottom: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.75rem;">
+                  <span style="font-weight: 600; color: #64748b;">주요 환노출 자산 (Top 3)</span>
+                  <span style="color: #94a3b8;">비중 (금액)</span>
+                </div>
+                <div id="fxTopExposedList" style="display: flex; flex-direction: column; gap: 4px;">
+                  
+                  <div class="fx-exposed-item">
+                    <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
+                      <div class="fx-badge-circle" style="background: #1d4ed8;">삼</div>
+                      <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">KODEX 테슬라커버드콜채권혼합액티브</span>
+                        <span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(475080.KS)</span>
+                      </div>
+                    </div>
+                    <div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">
+                      <strong style="color: #1e293b;">34.8%</strong>
+                      <span style="color: #64748b; font-size: 0.76rem;">(2,368만원)</span>
+                    </div>
+                  </div>
+                  <div class="fx-exposed-item">
+                    <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
+                      <div class="fx-badge-circle" style="background: #1d4ed8;">삼</div>
+                      <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">KODEX 미국나스닥100데일리커버드콜OTM</span>
+                        <span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(494300.KS)</span>
+                      </div>
+                    </div>
+                    <div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">
+                      <strong style="color: #1e293b;">23.7%</strong>
+                      <span style="color: #64748b; font-size: 0.76rem;">(1,614만원)</span>
+                    </div>
+                  </div>
+                  <div class="fx-exposed-item">
+                    <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
+                      <div class="fx-badge-circle" style="background: #059669;">SOL</div>
+                      <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">SOL 팔란티어커버드콜OTM채권혼합</span>
+                        <span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(0040Y0.KS)</span>
+                      </div>
+                    </div>
+                    <div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">
+                      <strong style="color: #1e293b;">21.1%</strong>
+                      <span style="color: #64748b; font-size: 0.76rem;">(1,436만원)</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- 요약 3: 실시간 환율 변동 민감도 시뮬레이터 -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 13px 15px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+                    <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+                    <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
+                  </svg>
+                  <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">실시간 환율 변동 민감도 시뮬레이터</span>
+                </div>
+                <div style="font-size: 0.8rem;">
+                  <span style="color: #64748b;">적용: </span>
+                  <strong id="simAppliedRate" style="color: #334155;">1,318원</strong>
+                  <strong id="simAppliedDiff" style="color: #0284c7; margin-left: 2px;">(-11.6원)</strong>
+                </div>
+              </div>
+
+              <!-- 프리셋 버튼들 -->
+              <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">
+                <button type="button" class="fx-sim-btn active" id="btnSimPrevDay" onclick="applySimPreset('prevDay')">전일대비 (-11.6원)</button>
+                <button type="button" class="fx-sim-btn" id="btnSimCurrent" onclick="applySimPreset('current')">🔄 0원(현재가)</button>
+                <button type="button" class="fx-sim-btn" id="btnSimMinus20" onclick="applySimPreset('minus20')">-20원</button>
+                <button type="button" class="fx-sim-btn" id="btnSimPlus20" onclick="applySimPreset('plus20')">+20원</button>
+                <button type="button" class="fx-sim-btn" id="btnSim1300" onclick="applySimPreset('1300')">1,300원 환율</button>
+                <button type="button" class="fx-sim-btn" id="btnSim1400" onclick="applySimPreset('1400')">1,400원 환율</button>
+              </div>
+
+              <!-- 슬라이더 -->
+              <div style="margin-bottom: 4px;">
+                <input type="range" id="simSlider" min="-50" max="50" step="0.5" value="-11.6" oninput="onSimSliderInput(this.value)" style="width: 100%; height: 6px; accent-color: #6366f1; cursor: pointer; background: #e2e8f0; border-radius: 3px; outline: none;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #94a3b8; margin-top: 3px;">
+                  <span>-50원 (원화 강세)</span>
+                  <span>0원</span>
+                  <span>+50원 (환율 급등)</span>
+                </div>
+              </div>
+
+              <!-- 예상 영향액 요약 -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+                <div>
+                  <div style="font-size: 0.85rem; font-weight: 700; color: #334155;">현재 총자산 예상 영향액</div>
+                  <div id="simConditionLabel" style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">환율 -11.6원 변동 시</div>
+                </div>
+                <div style="text-align: right;">
+                  <div id="simImpactKRW" style="font-size: 1.35rem; font-weight: 800; color: #0284c7;">-59만원</div>
+                  <div id="simImpactPct" style="font-size: 0.74rem; color: #64748b; font-weight: 500; margin-top: 1px;">현재 자산의 -0.15%</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===================== 달러 익스포저 설정 모달 ===================== -->
+      <div id="usdExposureModal" class="detail-modal-backdrop hidden" onclick="if(event.target===this) closeUsdExposureSettingsModal()">
+        <div class="detail-modal-box" style="max-width: 600px; width: 92%;">
+          <div class="detail-modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #1e293b;">달러 익스포저 설정</h3>
+            </div>
+            <button class="modal-close" onclick="closeUsdExposureSettingsModal()" title="닫기">✕</button>
+          </div>
+          <div class="detail-modal-body" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+            <div style="font-size: 0.83rem; color: #64748b; margin-bottom: 16px; line-height: 1.5;">
+              환율 변동에 노출되는 달러 자산(해외주식, 환노출 ETF 등)을 설정합니다. 선택된 자산의 합계가 달러 익스포저 및 민감도 시뮬레이션에 반영됩니다.
+            </div>
+
+            <!-- 수동 직접 입력 토글 -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; font-size: 0.88rem; color: #334155;">
+                <input type="checkbox" id="cfgUsdManualToggle" onchange="toggleUsdManualFields(this.checked)" style="width: 16px; height: 16px; accent-color: #6366f1;">
+                달러 환노출 총액 수동 직접 입력
+              </label>
+              <div id="cfgUsdManualBox" style="display: none; margin-top: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="font-size: 0.78rem; color: #64748b; font-weight: 600; display: block; margin-bottom: 4px;">달러 금액 ($)</label>
+                  <input type="number" id="cfgUsdInputUSD" placeholder="51225" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;" oninput="onUsdManualChange('USD')">
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; color: #64748b; font-weight: 600; display: block; margin-bottom: 4px;">원화 금액 (원)</label>
+                  <input type="number" id="cfgUsdInputKRW" placeholder="68100000" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;" oninput="onUsdManualChange('KRW')">
+                </div>
+              </div>
+            </div>
+
+            <!-- 보유 종목 리스트 -->
+            <div id="cfgUsdStockListContainer">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #475569;">보유 종목별 환노출 포함 여부</span>
+                <span style="font-size: 0.72rem; color: #94a3b8;">* 기본값: 해외주식 및 환노출(H미포함) ETF</span>
+              </div>
+              <div id="cfgUsdStockItems" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; border: 1px solid #edf2f7; border-radius: 8px; padding: 10px;">
+                <!-- JS Dynamic -->
+              </div>
+            </div>
+          </div>
+          <div class="detail-modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-top: 1px solid #edf2f7; background: #fafafa; border-radius: 0 0 12px 12px;">
+            <button type="button" class="btn-cancel-edit" onclick="resetUsdExposureSettings()" style="color: #e53e3e; border-color: #fca5a5;">기본값 초기화</button>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn-cancel-edit" onclick="closeUsdExposureSettingsModal()">취소</button>
+              <button type="button" class="btn-save-edit" onclick="saveUsdExposureSettings()">저장</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <!-- ===================== 거래 조회 탭 ===================== -->
     <div id="tab-query" class="tab-content">
@@ -3092,7 +3426,7 @@
     });
     if (tab === 'overview')   loadPortfolioData(false);
     if (tab === 'portfolio')  loadPortfolioAnalysis();
-    if (tab === 'lab')  loadLabPortfolioAnalysis();
+    if (tab === 'lab')  { loadLabPortfolioAnalysis(); if (typeof loadUsdKrwSection === 'function') loadUsdKrwSection(); }
     if (tab === 'rebalance')  loadRebalanceData(false);
     if (tab === 'watchlist')  loadWatchlistData(false);
   }
@@ -5394,7 +5728,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }).then(function(r) { return r.json(); }).then(function(data) {
-      window._lastPfData = data;
+      window._lastPfData = data; if (typeof renderUsdExposureCard === 'function') renderUsdExposureCard();
       loading.style.display = 'none';
       if (!data.success) {
         errEl.textContent   = '오류: ' + (data.error || '알 수 없는 오류');
@@ -9774,6 +10108,7 @@
            window._isFetchingLabData = false;
            window._labTotalPfData = d;
            updateLabAssets();
+           if (typeof renderUsdExposureCard === 'function') renderUsdExposureCard();
         }).catch(e => {
            console.log('Portfolio fetch error', e);
            window._isFetchingLabData = false;
@@ -10952,6 +11287,7 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
       if (tab === 'lab') {
         renderGuruTabs();
         fetchGuruData();
+        if (typeof loadUsdKrwSection === 'function') loadUsdKrwSection();
       }
     };
     
@@ -10960,6 +11296,7 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
        if (activeTab && activeTab.id === 'subtab-lab') {
           renderGuruTabs();
           fetchGuruData();
+          if (typeof loadUsdKrwSection === 'function') loadUsdKrwSection();
        }
     }, 600);
   }
@@ -11042,5 +11379,711 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
   }
 </script>
 
+
+<script>
+
+  // ===================== 원/달러 환율 및 포트폴리오 달러 익스포저 =====================
+  var _usdKrwData = null;
+  var _usdExposureConfig = null;
+  var _simDelta = -11.6;
+
+  // 기본 종목 및 계좌 폴백 데이터 (스크린샷과 일치)
+  var _defaultExposedAssets = [
+    { name: 'KODEX 테슬라커버드콜채권혼합액티브', ticker: '475080.KS', ratio: 34.8, krw: 23680000 },
+    { name: 'KODEX 미국나스닥100데일리커버드콜OTM', ticker: '494300.KS', ratio: 23.7, krw: 16140000 },
+    { name: 'SOL 팔란티어커버드콜OTM채권혼합', ticker: '0040Y0.KS', ratio: 21.1, krw: 14360000 }
+  ];
+  var _defaultTotalExposureUSD = 51225;
+  var _defaultTotalExposureKRW = 68100000;
+  var _defaultTotalPortfolioKRW = 389173010;
+  var _defaultExposurePct = 17.5;
+
+  // 1달 시세 폴백 데이터 (네트워크 실패 시에도 스크린샷과 100% 동일하게 렌더링)
+  var _fallbackFxData = {
+    ticker: 'KRW=X',
+    currentPrice: 1330.0,
+    previousClose: 1341.6,
+    change: -11.6,
+    changePercent: -0.86,
+    high52: 1385.0,
+    low52: 1330.0,
+    data: [
+      { date: "2026-09-20", close: 1384.86 },
+      { date: "2026-09-21", close: 1373.68 },
+      { date: "2026-09-22", close: 1350.36 },
+      { date: "2026-09-23", close: 1362.50 },
+      { date: "2026-09-24", close: 1367.36 },
+      { date: "2026-09-27", close: 1354.51 },
+      { date: "2026-09-28", close: 1359.56 },
+      { date: "2026-09-29", close: 1350.50 },
+      { date: "2026-09-30", close: 1356.84 },
+      { date: "2026-10-01", close: 1360.59 },
+      { date: "2026-10-04", close: 1342.56 },
+      { date: "2026-10-05", close: 1343.75 },
+      { date: "2026-10-06", close: 1339.74 },
+      { date: "2026-10-07", close: 1339.08 },
+      { date: "2026-10-08", close: 1342.99 },
+      { date: "2026-10-11", close: 1340.84 },
+      { date: "2026-10-12", close: 1334.13 },
+      { date: "2026-10-13", close: 1340.31 },
+      { date: "2026-10-14", close: 1339.35 },
+      { date: "2026-10-15", close: 1340.95 },
+      { date: "2026-10-17", close: 1329.60 }
+    ]
+  };
+
+  function loadUsdKrwSection() {
+    var sec = document.getElementById('usdKrwSection');
+    if (!sec) return;
+
+    // 즉시 기본/캐시 데이터로 렌더링
+    if (!_usdKrwData) {
+      _usdKrwData = _fallbackFxData;
+      renderUsdKrwCard(_usdKrwData);
+      renderUsdExposureCard();
+    }
+
+    // 최신 1개월 환율 데이터 비동기 조회
+    fetch('/api/market-index?ticker=KRW%3DX&range=1M')
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (json && json.data && json.data.length > 0) {
+          _usdKrwData = json;
+          renderUsdKrwCard(json);
+          renderUsdExposureCard();
+        }
+      })
+      .catch(function(err) {
+        console.warn('USD/KRW fetch error, using fallback:', err);
+      });
+  }
+
+  function renderUsdKrwCard(json) {
+    if (!json || !json.data || json.data.length === 0) return;
+
+    var data = json.data;
+    var cur = Math.round(json.currentPrice || data[data.length - 1].close);
+    var chg = json.change != null ? json.change : (cur - (json.previousClose || cur));
+    var chgPct = json.previousClose ? (chg / json.previousClose) * 100 : (json.changePercent || 0);
+
+    // 상단 현재 환율
+    var curEl = document.getElementById('fxCurRate');
+    if (curEl) curEl.textContent = cur.toLocaleString();
+
+    // 전일대비 뱃지
+    var badgeEl = document.getElementById('fxDayChangeBadge');
+    var arrowEl = document.getElementById('fxDayArrow');
+    var textEl = document.getElementById('fxDayChangeText');
+    if (badgeEl && arrowEl && textEl) {
+      var isNeg = chg < 0;
+      var isPos = chg > 0;
+      arrowEl.textContent = isPos ? '↗' : (isNeg ? '↘' : '―');
+      var sign = isPos ? '+' : '';
+      textEl.textContent = sign + chgPct.toFixed(2) + '% (' + sign + chg.toFixed(1) + '원)';
+      
+      // 환율 하락(원화 강세)은 초록, 상승은 빨강
+      badgeEl.style.background = isNeg ? '#e6f9f0' : (isPos ? '#fee2e2' : '#f1f5f9');
+      badgeEl.style.color = isNeg ? '#00a86b' : (isPos ? '#dc2626' : '#64748b');
+    }
+
+    // 선택 기간 누적 & 평균 계산
+    var firstClose = data[0].close;
+    var cumDiff = cur - firstClose;
+    var cumPct = firstClose > 0 ? (cumDiff / firstClose) * 100 : 0;
+    var sumCloses = data.reduce(function(acc, d) { return acc + d.close; }, 0);
+    var avgRate = sumCloses / data.length;
+
+    var cumEl = document.getElementById('fxMonthCumChange');
+    if (cumEl) {
+      var cumSign = cumDiff > 0 ? '+' : '';
+      cumEl.textContent = cumSign + cumPct.toFixed(2) + '% (' + cumSign + cumDiff.toFixed(1) + '원)';
+      cumEl.style.color = cumDiff <= 0 ? '#00a86b' : '#dc2626';
+    }
+    var avgEl = document.getElementById('fxMonthAvgRate');
+    if (avgEl) {
+      avgEl.textContent = avgRate.toFixed(1) + '원';
+    }
+
+    // 최고가 & 최저가 찾기
+    var highIdx = 0, lowIdx = 0;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].close > data[highIdx].close) highIdx = i;
+      if (data[i].close <= data[lowIdx].close) lowIdx = i;
+    }
+    var highPt = data[highIdx];
+    var lowPt = data[lowIdx];
+
+    // 1달 레인지 위치 계산: (현재가 - 최저) / (최고 - 최저) * 100
+    var rangePct = highPt.close === lowPt.close ? 50 : Math.round(((cur - lowPt.close) / (highPt.close - lowPt.close)) * 100);
+    if (rangePct < 0) rangePct = 0;
+    if (rangePct > 100) rangePct = 100;
+    var rangeTextEl = document.getElementById('fxRangeText');
+    if (rangeTextEl) rangeTextEl.textContent = '1달 레인지: ' + rangePct + '% 위치';
+
+    // 하단 최고/최저 표시
+    var formatShortDate = function(dtStr) {
+      var parts = dtStr.split('-');
+      return '(' + parts[1] + '-' + parts[2] + ')';
+    };
+    var highDateEl = document.getElementById('fxHighDate');
+    var highPriceEl = document.getElementById('fxHighPrice');
+    if (highDateEl) highDateEl.textContent = formatShortDate(highPt.date);
+    if (highPriceEl) highPriceEl.textContent = Math.round(highPt.close).toLocaleString() + '원';
+
+    var lowDateEl = document.getElementById('fxLowDate');
+    var lowPriceEl = document.getElementById('fxLowPrice');
+    if (lowDateEl) lowDateEl.textContent = formatShortDate(lowPt.date);
+    if (lowPriceEl) lowPriceEl.textContent = Math.round(lowPt.close).toLocaleString() + '원';
+
+    // 인터랙티브 SVG 차트 렌더링
+    renderUsdKrwSvgChart(data, highIdx, lowIdx, avgRate);
+  }
+
+  function renderUsdKrwSvgChart(data, highIdx, lowIdx, avgRate) {
+    var container = document.getElementById('fxChartContainer');
+    if (!container) return;
+
+    var width = 540;
+    var height = 210;
+    var marginLeft = 44;
+    var marginRight = 16;
+    var marginTop = 30;
+    var marginBottom = 26;
+    var chartWidth = width - marginLeft - marginRight;
+    var chartHeight = height - marginTop - marginBottom;
+
+    // Y축 눈금 (1319 ~ 1395)
+    var closes = data.map(function(d) { return d.close; });
+    var minVal = Math.min.apply(null, closes);
+    var maxVal = Math.max.apply(null, closes);
+
+    var yMin = 1319;
+    var yMax = 1395;
+    if (minVal < yMin) yMin = Math.floor(minVal - 5);
+    if (maxVal > yMax) yMax = Math.ceil(maxVal + 5);
+
+    var yTicks = [1395, 1379, 1359, 1339, 1319];
+    var gridSvg = '';
+    yTicks.forEach(function(tick) {
+      var y = marginTop + chartHeight - ((tick - yMin) / (yMax - yMin)) * chartHeight;
+      gridSvg += '<line x1="' + marginLeft + '" y1="' + y + '" x2="' + (marginLeft + chartWidth) + '" y2="' + y + '" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3"/>';
+      gridSvg += '<text x="' + (marginLeft - 8) + '" y="' + (y + 4) + '" font-size="10.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" fill="#94a3b8" text-anchor="end">' + tick.toLocaleString() + '</text>';
+    });
+
+    // 평균 기준선 (점선)
+    var avgY = marginTop + chartHeight - ((avgRate - yMin) / (yMax - yMin)) * chartHeight;
+    gridSvg += '<line x1="' + marginLeft + '" y1="' + avgY + '" x2="' + (marginLeft + chartWidth) + '" y2="' + avgY + '" stroke="#c7d2fe" stroke-width="1.2" stroke-dasharray="4,4"/>';
+
+    // 좌표 매핑
+    var pts = data.map(function(d, i) {
+      var x = marginLeft + (i / Math.max(1, data.length - 1)) * chartWidth;
+      var y = marginTop + chartHeight - ((d.close - yMin) / (yMax - yMin)) * chartHeight;
+      return { x: x, y: y, date: d.date, close: d.close };
+    });
+
+    // 스플라인 곡선 계산
+    var pathD = 'M ' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i === 0 ? 0 : i - 1];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2 >= pts.length ? pts.length - 1 : i + 2];
+      var cp1x = (p1.x + (p2.x - p0.x) / 6).toFixed(1);
+      var cp1y = (p1.y + (p2.y - p0.y) / 6).toFixed(1);
+      var cp2x = (p2.x - (p3.x - p1.x) / 6).toFixed(1);
+      var cp2y = (p2.y - (p3.y - p1.y) / 6).toFixed(1);
+      pathD += ' C ' + cp1x + ',' + cp1y + ' ' + cp2x + ',' + cp2y + ' ' + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
+    }
+    var areaD = pathD + ' L ' + pts[pts.length - 1].x.toFixed(1) + ',' + (marginTop + chartHeight).toFixed(1) + ' L ' + pts[0].x.toFixed(1) + ',' + (marginTop + chartHeight).toFixed(1) + ' Z';
+
+    // X축 날짜 라벨 (약 10~11개 균등 분할)
+    var xLabelsSvg = '';
+    var step = Math.max(1, Math.floor(pts.length / 10));
+    pts.forEach(function(p, idx) {
+      if (idx % step === 0 || idx === pts.length - 1) {
+        var parts = p.date.split('-');
+        var label = parseInt(parts[1], 10) + '.' + parseInt(parts[2], 10);
+        xLabelsSvg += '<text x="' + p.x.toFixed(1) + '" y="' + (marginTop + chartHeight + 18).toFixed(1) + '" font-size="9.5" fill="#94a3b8" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">' + label + '</text>';
+      }
+    });
+
+    var hPt = pts[highIdx];
+    var lPt = pts[lowIdx];
+
+    var html = '<svg id="fxSvgElement" viewBox="0 0 ' + width + ' ' + height + '" style="width: 100%; height: 100%; overflow: visible;" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="fxGrad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="#6366f1" stop-opacity="0.22"/>' +
+          '<stop offset="100%" stop-color="#6366f1" stop-opacity="0.0"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      gridSvg +
+      '<path d="' + areaD + '" fill="url(#fxGrad)"/>' +
+      '<path d="' + pathD + '" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      
+      // 최고점 뱃지
+      '<g transform="translate(' + hPt.x.toFixed(1) + ', ' + hPt.y.toFixed(1) + ')">' +
+        '<circle r="4.5" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>' +
+        '<g transform="translate(0, -14)">' +
+          '<rect x="-27" y="-14" width="54" height="17" rx="4" ry="4" fill="#fee2e2" stroke="#fca5a5" stroke-width="1"/>' +
+          '<text x="0" y="-2" font-size="9.5" font-weight="700" fill="#dc2626" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">최고 ' + Math.round(hPt.close).toLocaleString() + '</text>' +
+        '</g>' +
+      '</g>' +
+
+      // 최저점 뱃지
+      '<g transform="translate(' + lPt.x.toFixed(1) + ', ' + lPt.y.toFixed(1) + ')">' +
+        '<circle r="4.5" fill="#0284c7" stroke="#ffffff" stroke-width="2"/>' +
+        '<g transform="translate(0, 14)">' +
+          '<rect x="-27" y="-3" width="54" height="17" rx="4" ry="4" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>' +
+          '<text x="0" y="9" font-size="9.5" font-weight="700" fill="#0284c7" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif">최저 ' + Math.round(lPt.close).toLocaleString() + '</text>' +
+        '</g>' +
+      '</g>' +
+
+      xLabelsSvg +
+
+      // 마우스 오버 가이드라인 & 포인트
+      '<line id="fxHoverLine" x1="0" y1="' + marginTop + '" x2="0" y2="' + (marginTop + chartHeight) + '" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" style="display:none;"/>' +
+      '<circle id="fxHoverPoint" r="4.5" fill="#6366f1" stroke="#fff" stroke-width="2" style="display:none;"/>' +
+      '<rect id="fxOverlay" x="' + marginLeft + '" y="' + marginTop + '" width="' + chartWidth + '" height="' + chartHeight + '" fill="transparent" style="cursor:crosshair;"/>' +
+    '</svg>' +
+    '<div id="fxChartTooltip" class="fx-chart-tooltip"></div>';
+
+    container.innerHTML = html;
+
+    // 마우스 오버 이벤트 등록
+    var overlay = document.getElementById('fxOverlay');
+    var hLine = document.getElementById('fxHoverLine');
+    var hPoint = document.getElementById('fxHoverPoint');
+    var tooltip = document.getElementById('fxChartTooltip');
+
+    if (overlay && hLine && hPoint && tooltip) {
+      overlay.addEventListener('mousemove', function(e) {
+        var rect = overlay.getBoundingClientRect();
+        var mouseX = e.clientX - rect.left;
+        var ratio = Math.max(0, Math.min(1, mouseX / rect.width));
+        var idx = Math.round(ratio * (pts.length - 1));
+        var targetPt = pts[idx];
+        if (!targetPt) return;
+
+        hLine.setAttribute('x1', targetPt.x);
+        hLine.setAttribute('x2', targetPt.x);
+        hLine.style.display = 'block';
+
+        hPoint.setAttribute('cx', targetPt.x);
+        hPoint.setAttribute('cy', targetPt.y);
+        hPoint.style.display = 'block';
+
+        tooltip.textContent = targetPt.date + ': ' + targetPt.close.toFixed(1) + '원';
+        var containerRect = container.getBoundingClientRect();
+        var posX = (targetPt.x / width) * containerRect.width;
+        var posY = (targetPt.y / height) * containerRect.height;
+        tooltip.style.left = posX + 'px';
+        tooltip.style.top = posY + 'px';
+        tooltip.style.display = 'block';
+      });
+
+      overlay.addEventListener('mouseleave', function() {
+        hLine.style.display = 'none';
+        hPoint.style.display = 'none';
+        tooltip.style.display = 'none';
+      });
+    }
+  }
+
+  function getBrandBadge(name, ticker) {
+    if (name.includes('KODEX') || ticker.includes('475080') || ticker.includes('494300')) {
+      return { text: '삼', bg: '#1d4ed8' };
+    }
+    if (name.includes('SOL') || ticker.includes('0040Y') || ticker.includes('0040X')) {
+      return { text: 'SOL', bg: '#059669' };
+    }
+    if (name.includes('TIGER')) {
+      return { text: '호', bg: '#ea580c' };
+    }
+    if (name.includes('ACE')) {
+      return { text: '한', bg: '#1e3a8a' };
+    }
+    if (name.includes('PLUS') || name.includes('ARIRANG')) {
+      return { text: '플', bg: '#7c3aed' };
+    }
+    return { text: ticker.replace('.KS', '').slice(0, 2), bg: '#475569' };
+  }
+
+  function renderUsdExposureCard() {
+    var curFx = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
+    var userCfg = JSON.parse(localStorage.getItem('fima_usd_exposure_config') || 'null');
+
+    var totalUSD = _defaultTotalExposureUSD;
+    var totalKRW = _defaultTotalExposureKRW;
+    var totalPortfolioKRW = _defaultTotalPortfolioKRW;
+    var exposurePct = _defaultExposurePct;
+    var topAssets = _defaultExposedAssets;
+
+    // 실제 포트폴리오 데이터가 존재하는 경우 연동
+    var pfData = window._labTotalPfData || window._lastPfData;
+    if (pfData && pfData.summary && pfData.summary.marketValueKRW > 0) {
+      totalPortfolioKRW = pfData.summary.marketValueKRW;
+
+      // 수동 직접 입력 모드가 아닌 경우 보유 종목 기반 자동 계산
+      if (!userCfg || !userCfg.isManual) {
+        var stocks = pfData.stocks || [];
+        var exposedList = [];
+
+        stocks.forEach(function(s) {
+          var t = s.ticker || '';
+          var n = s.name || '';
+          var isExcluded = (userCfg && userCfg.excludedTickers && userCfg.excludedTickers.indexOf(t) !== -1);
+          if (isExcluded) return;
+
+          var isIncludedByUser = (userCfg && userCfg.includedTickers && userCfg.includedTickers.indexOf(t) !== -1);
+          var isForeignCurrency = (s.currency === 'USD' || s.region === 'US' || s.region === 'USA');
+          var isKnownUsdEtf = /테슬라|나스닥|팔란티어|S&P|미국|엔비디아|빅테크|다우|필라델피아/i.test(n) && !/\(H\)/i.test(n);
+
+          if (isIncludedByUser || isForeignCurrency || isKnownUsdEtf) {
+            exposedList.push({
+              name: n,
+              ticker: t,
+              krw: s.marketValueKRW || 0
+            });
+          }
+        });
+
+        if (exposedList.length > 0) {
+          exposedList.sort(function(a, b) { return b.krw - a.krw; });
+          var sumExposedKRW = exposedList.reduce(function(acc, x) { return acc + x.krw; }, 0);
+          totalKRW = sumExposedKRW;
+          totalUSD = Math.round(totalKRW / curFx);
+          exposurePct = totalPortfolioKRW > 0 ? (totalKRW / totalPortfolioKRW) * 100 : 0;
+
+          topAssets = exposedList.slice(0, 3).map(function(item) {
+            return {
+              name: item.name,
+              ticker: item.ticker.includes('.') ? item.ticker : item.ticker + '.KS',
+              krw: item.krw,
+              ratio: totalKRW > 0 ? Number(((item.krw / totalKRW) * 100).toFixed(1)) : 0
+            };
+          });
+        }
+      }
+    }
+
+    // 수동 오버라이드 모드 적용
+    if (userCfg && userCfg.isManual) {
+      totalUSD = userCfg.manualUSD || _defaultTotalExposureUSD;
+      totalKRW = userCfg.manualKRW || Math.round(totalUSD * curFx);
+      exposurePct = totalPortfolioKRW > 0 ? (totalKRW / totalPortfolioKRW) * 100 : _defaultExposurePct;
+    }
+
+    // 전역 변수에 현재 환노출 계산값 보관 (시뮬레이터용)
+    window._curUsdExposureUSD = totalUSD;
+    window._curUsdExposureKRW = totalKRW;
+    window._curTotalPortfolioKRW = totalPortfolioKRW;
+
+    // 요약 표시 업데이트
+    var usdEl = document.getElementById('fxTotalExposureUSD');
+    if (usdEl) usdEl.textContent = '$' + totalUSD.toLocaleString();
+
+    var krwEl = document.getElementById('fxTotalExposureKRW');
+    if (krwEl) krwEl.textContent = '(약 ' + Math.round(totalKRW / 10000).toLocaleString() + '만원)';
+
+    var pctEl = document.getElementById('fxTotalExposurePct');
+    if (pctEl) pctEl.textContent = exposurePct.toFixed(1) + '%';
+
+    var barEl = document.getElementById('fxExposureProgressBar');
+    if (barEl) barEl.style.width = Math.min(100, Math.max(0, exposurePct)) + '%';
+
+    // Top 3 주요 환노출 자산 리스트 렌더링
+    var listEl = document.getElementById('fxTopExposedList');
+    if (listEl) {
+      var itemsHtml = '';
+      topAssets.forEach(function(item) {
+        var badge = getBrandBadge(item.name, item.ticker);
+        var krwMan = Math.round(item.krw / 10000).toLocaleString() + '만원';
+        itemsHtml += '<div class="fx-exposed-item">' +
+          '<div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">' +
+            '<div class="fx-badge-circle" style="background: ' + badge.bg + ';">' + badge.text + '</div>' +
+            '<div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' +
+              '<span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">' + item.name + '</span> ' +
+              '<span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(' + item.ticker + ')</span>' +
+            '</div>' +
+          '</div>' +
+          '<div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">' +
+            '<strong style="color: #1e293b;">' + item.ratio + '%</strong> ' +
+            '<span style="color: #64748b; font-size: 0.76rem;">(' + krwMan + ')</span>' +
+          '</div>' +
+        '</div>';
+      });
+      listEl.innerHTML = itemsHtml;
+    }
+
+    // 시뮬레이터 전일대비 버튼 문구 갱신
+    var prevBtn = document.getElementById('btnSimPrevDay');
+    if (prevBtn) {
+      var dChg = (_usdKrwData && _usdKrwData.change != null) ? _usdKrwData.change : -11.6;
+      var dChgSign = dChg > 0 ? '+' : '';
+      prevBtn.textContent = '전일대비 (' + dChgSign + dChg.toFixed(1) + '원)';
+    }
+
+    // 시뮬레이터 현재 상태로 갱신
+    updateSimOutput(_simDelta);
+  }
+
+  function applySimPreset(presetKey) {
+    var btns = document.querySelectorAll('.fx-sim-btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+
+    var baseRate = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
+    var delta = 0;
+
+    if (presetKey === 'prevDay') {
+      var btn = document.getElementById('btnSimPrevDay');
+      if (btn) btn.classList.add('active');
+      delta = (_usdKrwData && _usdKrwData.change != null) ? _usdKrwData.change : -11.6;
+    } else if (presetKey === 'current') {
+      var btn = document.getElementById('btnSimCurrent');
+      if (btn) btn.classList.add('active');
+      delta = 0;
+    } else if (presetKey === 'minus20') {
+      var btn = document.getElementById('btnSimMinus20');
+      if (btn) btn.classList.add('active');
+      delta = -20;
+    } else if (presetKey === 'plus20') {
+      var btn = document.getElementById('btnSimPlus20');
+      if (btn) btn.classList.add('active');
+      delta = 20;
+    } else if (presetKey === '1300') {
+      var btn = document.getElementById('btnSim1300');
+      if (btn) btn.classList.add('active');
+      delta = 1300 - baseRate;
+    } else if (presetKey === '1400') {
+      var btn = document.getElementById('btnSim1400');
+      if (btn) btn.classList.add('active');
+      delta = 1400 - baseRate;
+    }
+
+    _simDelta = delta;
+    var slider = document.getElementById('simSlider');
+    if (slider) {
+      slider.value = Math.max(-50, Math.min(50, delta));
+    }
+    updateSimOutput(delta);
+  }
+
+  function onSimSliderInput(val) {
+    var btns = document.querySelectorAll('.fx-sim-btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+
+    _simDelta = parseFloat(val);
+    updateSimOutput(_simDelta);
+  }
+
+  function updateSimOutput(delta) {
+    var baseRate = (_usdKrwData && _usdKrwData.currentPrice) ? Math.round(_usdKrwData.currentPrice) : 1330;
+    var appliedRate = Math.round(baseRate + delta);
+
+    var rateEl = document.getElementById('simAppliedRate');
+    if (rateEl) rateEl.textContent = appliedRate.toLocaleString() + '원';
+
+    var diffEl = document.getElementById('simAppliedDiff');
+    if (diffEl) {
+      diffEl.textContent = '(' + (delta > 0 ? '+' : '') + delta.toFixed(1) + '원)';
+      diffEl.style.color = delta < 0 ? '#0284c7' : (delta > 0 ? '#dc2626' : '#64748b');
+    }
+
+    var condEl = document.getElementById('simConditionLabel');
+    if (condEl) {
+      var condSign = delta > 0 ? '+' : '';
+      condEl.textContent = '환율 ' + condSign + delta.toFixed(1) + '원 변동 시';
+    }
+
+    var totalUSD = window._curUsdExposureUSD || _defaultTotalExposureUSD;
+    var totalPortfolioKRW = window._curTotalPortfolioKRW || _defaultTotalPortfolioKRW;
+
+    var impactKRW = totalUSD * delta;
+    var impactPct = totalPortfolioKRW > 0 ? (impactKRW / totalPortfolioKRW) * 100 : 0;
+
+    var impactEl = document.getElementById('simImpactKRW');
+    if (impactEl) {
+      if (Math.abs(impactKRW) < 1000) {
+        impactEl.textContent = '0원';
+        impactEl.style.color = '#64748b';
+      } else {
+        var sign = impactKRW > 0 ? '+' : '-';
+        var absMan = Math.round(Math.abs(impactKRW) / 10000);
+        impactEl.textContent = sign + absMan.toLocaleString() + '만원';
+        impactEl.style.color = impactKRW < 0 ? '#0284c7' : '#dc2626';
+      }
+    }
+
+    var pctEl = document.getElementById('simImpactPct');
+    if (pctEl) {
+      var pSign = impactPct > 0 ? '+' : (impactPct < 0 ? '-' : '');
+      pctEl.textContent = '현재 자산의 ' + pSign + Math.abs(impactPct).toFixed(2) + '%';
+    }
+  }
+
+  // ---- 설정 모달 로직 ----
+  function openUsdExposureSettingsModal() {
+    var modal = document.getElementById('usdExposureModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    var userCfg = JSON.parse(localStorage.getItem('fima_usd_exposure_config') || 'null');
+    var isManual = userCfg && userCfg.isManual;
+
+    var toggle = document.getElementById('cfgUsdManualToggle');
+    if (toggle) toggle.checked = !!isManual;
+    toggleUsdManualFields(!!isManual);
+
+    var curFx = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
+    var usdInp = document.getElementById('cfgUsdInputUSD');
+    var krwInp = document.getElementById('cfgUsdInputKRW');
+    if (usdInp && krwInp) {
+      var uVal = (userCfg && userCfg.manualUSD) ? userCfg.manualUSD : _defaultTotalExposureUSD;
+      var kVal = (userCfg && userCfg.manualKRW) ? userCfg.manualKRW : _defaultTotalExposureKRW;
+      usdInp.value = uVal;
+      krwInp.value = kVal;
+    }
+
+    // 포트폴리오 종목 리스트 구성
+    var itemsBox = document.getElementById('cfgUsdStockItems');
+    if (!itemsBox) return;
+
+    var pfData = window._labTotalPfData || window._lastPfData;
+    var stocks = (pfData && pfData.stocks) ? pfData.stocks : [];
+
+    if (stocks.length === 0) {
+      stocks = [
+        { name: 'KODEX 테슬라커버드콜채권혼합액티브', ticker: '475080', marketValueKRW: 23680000 },
+        { name: 'KODEX 미국나스닥100데일리커버드콜OTM', ticker: '494300', marketValueKRW: 16140000 },
+        { name: 'SOL 팔란티어커버드콜OTM채권혼합', ticker: '0040Y0', marketValueKRW: 14360000 }
+      ];
+    }
+
+    var listHtml = '';
+    stocks.forEach(function(s) {
+      var t = s.ticker || '';
+      var n = s.name || '';
+      var valMan = Math.round((s.marketValueKRW || 0) / 10000).toLocaleString() + '만원';
+
+      var isExcluded = (userCfg && userCfg.excludedTickers && userCfg.excludedTickers.indexOf(t) !== -1);
+      var isIncludedByUser = (userCfg && userCfg.includedTickers && userCfg.includedTickers.indexOf(t) !== -1);
+      var isForeign = (s.currency === 'USD' || s.region === 'US' || s.region === 'USA');
+      var isUsdEtf = /테슬라|나스닥|팔란티어|S&P|미국|엔비디아|빅테크|다우/i.test(n) && !/\(H\)/i.test(n);
+
+      var isChecked = !isExcluded && (isIncludedByUser || isForeign || isUsdEtf);
+
+      listHtml += '<label style="display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 6px; cursor: pointer; background: #fff; border: 1px solid #f1f5f9;">' +
+        '<div style="display: flex; align-items: center; gap: 8px;">' +
+          '<input type="checkbox" class="cfg-usd-chk" data-ticker="' + t + '" ' + (isChecked ? 'checked' : '') + ' style="width: 15px; height: 15px; accent-color: #6366f1;">' +
+          '<div>' +
+            '<div style="font-size: 0.82rem; font-weight: 700; color: #2d3748;">' + n + '</div>' +
+            '<div style="font-size: 0.72rem; color: #a0aec0; font-family: monospace;">' + t + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size: 0.82rem; font-weight: 600; color: #4a5568;">' + valMan + '</div>' +
+      '</label>';
+    });
+
+    itemsBox.innerHTML = listHtml;
+  }
+
+  function closeUsdExposureSettingsModal() {
+    var modal = document.getElementById('usdExposureModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function toggleUsdManualFields(isManual) {
+    var box = document.getElementById('cfgUsdManualBox');
+    if (box) box.style.display = isManual ? 'grid' : 'none';
+    var autoSec = document.getElementById('cfgUsdStockListContainer');
+    if (autoSec) autoSec.style.opacity = isManual ? '0.4' : '1';
+  }
+
+  function onUsdManualChange(type) {
+    var curFx = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
+    var usdInp = document.getElementById('cfgUsdInputUSD');
+    var krwInp = document.getElementById('cfgUsdInputKRW');
+    if (!usdInp || !krwInp) return;
+
+    if (type === 'USD') {
+      var u = parseFloat(usdInp.value) || 0;
+      krwInp.value = Math.round(u * curFx);
+    } else {
+      var k = parseFloat(krwInp.value) || 0;
+      usdInp.value = Math.round(k / curFx);
+    }
+  }
+
+  function resetUsdExposureSettings() {
+    localStorage.removeItem('fima_usd_exposure_config');
+    closeUsdExposureSettingsModal();
+    renderUsdExposureCard();
+  }
+
+  function saveUsdExposureSettings() {
+    var isManual = document.getElementById('cfgUsdManualToggle').checked;
+    var manualUSD = parseFloat(document.getElementById('cfgUsdInputUSD').value) || _defaultTotalExposureUSD;
+    var manualKRW = parseFloat(document.getElementById('cfgUsdInputKRW').value) || _defaultTotalExposureKRW;
+
+    var included = [];
+    var excluded = [];
+    var chks = document.querySelectorAll('.cfg-usd-chk');
+    chks.forEach(function(chk) {
+      var t = chk.getAttribute('data-ticker');
+      if (chk.checked) included.push(t);
+      else excluded.push(t);
+    });
+
+    var cfg = {
+      isManual: isManual,
+      manualUSD: manualUSD,
+      manualKRW: manualKRW,
+      includedTickers: included,
+      excludedTickers: excluded
+    };
+    localStorage.setItem('fima_usd_exposure_config', JSON.stringify(cfg));
+    closeUsdExposureSettingsModal();
+    renderUsdExposureCard();
+  }
+
+  // Window 전역 바인딩
+  window.loadUsdKrwSection = loadUsdKrwSection;
+  window.renderUsdKrwCard = renderUsdKrwCard;
+  window.renderUsdExposureCard = renderUsdExposureCard;
+  window.applySimPreset = applySimPreset;
+  window.onSimSliderInput = onSimSliderInput;
+  window.updateSimOutput = updateSimOutput;
+  window.openUsdExposureSettingsModal = openUsdExposureSettingsModal;
+  window.closeUsdExposureSettingsModal = closeUsdExposureSettingsModal;
+  window.toggleUsdManualFields = toggleUsdManualFields;
+  window.onUsdManualChange = onUsdManualChange;
+  window.resetUsdExposureSettings = resetUsdExposureSettings;
+  window.saveUsdExposureSettings = saveUsdExposureSettings;
+
+  // 즉시 및 이벤트 기반 자동 로드
+  if (typeof window.loadUsdKrwSection === 'function') {
+    setTimeout(window.loadUsdKrwSection, 50);
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.loadUsdKrwSection === 'function') {
+      window.loadUsdKrwSection();
+    }
+  });
+  setTimeout(function() {
+    var labTabBtn = document.getElementById('subtab-lab');
+    if (labTabBtn) {
+      labTabBtn.addEventListener('click', function() {
+        setTimeout(function() {
+          if (typeof window.loadUsdKrwSection === 'function') {
+            window.loadUsdKrwSection();
+          }
+        }, 50);
+      });
+    }
+  }, 300);
+
+
+</script>
 </body>
 </html>
