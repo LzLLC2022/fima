@@ -10517,12 +10517,37 @@
     });
     bodyHtml += '</tr>';
 
-    // 4. 합계 (현황 기준: 국민연금 + 연금계좌 현황) 행
-    bodyHtml += '<tr style="border-bottom:2px solid #cbd5e0; background:#f8fafc; font-weight:700;">' +
-      '<td style="padding:12px 14px; font-weight:800; color:#4c51bf; position:sticky; left:0; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
+    // 4. 합계 - 목표 합계 (국민연금 + 연금계좌 목표) 행
+    bodyHtml += '<tr style="border-bottom:1px solid #edf2f7; background:#f8fafc; font-weight:700;">' +
+      '<td style="padding:11px 14px; font-weight:800; color:#4c51bf; position:sticky; left:0; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
         '합계' +
       '</td>' +
-      '<td style="padding:12px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
+      '<td style="padding:11px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
+        '목표 합계' +
+      '</td>';
+    
+    years.forEach(function(yr) {
+      var npsMo = 0, npsAnn = 0;
+      if (yr === cfg.npsStartYear) {
+        var months = Math.max(1, Math.min(12, 12 - cfg.npsStartMonth + 1));
+        npsMo = cfg.npsMonthlyAmt;
+        npsAnn = cfg.npsMonthlyAmt * months;
+      } else if (yr > cfg.npsStartYear) {
+        npsMo = cfg.npsMonthlyAmt;
+        npsAnn = cfg.npsMonthlyAmt * 12;
+      }
+      var targetTotMo = npsMo + (cfg.accTargetMonthlyAmt || 0);
+      var targetTotAnn = npsAnn + ((cfg.accTargetMonthlyAmt || 0) * 12);
+      bodyHtml += '<td style="padding:11px 8px; text-align:right;">' + makePensionCell(targetTotMo, targetTotAnn) + '</td>';
+    });
+    bodyHtml += '</tr>';
+
+    // 5. 합계 - 현황 합계 (국민연금 + 연금계좌 현황) 행
+    bodyHtml += '<tr style="background:#f8fafc; font-weight:700;">' +
+      '<td style="padding:11px 14px; font-weight:800; color:#4c51bf; position:sticky; left:0; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
+        '합계' +
+      '</td>' +
+      '<td style="padding:11px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
         '현황 합계' +
       '</td>';
     
@@ -10540,26 +10565,7 @@
       var totMo = npsMo + actualMonthlyDiv;
       var totAnn = npsAnn + actualAnnualDiv;
       yearTotals.push({ mo: totMo, ann: totAnn });
-      bodyHtml += '<td style="padding:12px 8px; text-align:right;">' + makePensionCell(totMo, totAnn) + '</td>';
-    });
-    bodyHtml += '</tr>';
-
-    // 5. 연금계좌 목표 달성률 행
-    bodyHtml += '<tr style="background:#ffffff;">' +
-      '<td style="padding:8px 14px; font-size:0.75rem; color:#718096; position:sticky; left:0; background:#ffffff; z-index:1; border-right:2px solid #edf2f7;">' +
-        '연금계좌 달성률' +
-      '</td>' +
-      '<td style="padding:8px 14px; font-size:0.75rem; color:#718096; position:sticky; left:100px; background:#ffffff; z-index:1; border-right:2px solid #edf2f7;">현황/목표</td>';
-    
-    years.forEach(function() {
-      var rateStr = '-';
-      var rateCol = '#a0aec0';
-      if (cfg.accTargetMonthlyAmt > 0) {
-        var pct = (actualMonthlyDiv / cfg.accTargetMonthlyAmt) * 100;
-        rateStr = pct.toFixed(1) + '%';
-        rateCol = pct >= 100 ? '#276749' : (pct >= 50 ? '#2b6cb0' : '#e53e3e');
-      }
-      bodyHtml += '<td style="padding:8px 8px; text-align:right; font-weight:700; color:' + rateCol + '; font-size:0.78rem;">' + rateStr + '</td>';
+      bodyHtml += '<td style="padding:11px 8px; text-align:right;">' + makePensionCell(totMo, totAnn) + '</td>';
     });
     bodyHtml += '</tr>';
 
