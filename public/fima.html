@@ -10450,8 +10450,8 @@
     var actualMonthlyDiv = divData ? (divData.monthlyDiv || 0) : 0;
 
     // ── 테이블 헤더 구성 ──
-    var headHtml = '<th style="padding:10px 14px; text-align:left; position:sticky; left:0; background:#f7fafc; z-index:2; border-right:2px solid #edf2f7; width:100px;">항목</th>' +
-                   '<th style="padding:10px 14px; text-align:left; position:sticky; left:100px; background:#f7fafc; z-index:2; border-right:2px solid #edf2f7; width:90px;">구분</th>';
+    var headHtml = '<th style="padding:10px 14px; text-align:left; position:sticky; left:0; background:#f7fafc; z-index:2; border-right:2px solid #edf2f7; width:100px; white-space:nowrap;">항목</th>' +
+                   '<th style="padding:10px 14px; text-align:left; position:sticky; left:100px; background:#f7fafc; z-index:2; border-right:2px solid #edf2f7; width:90px; white-space:nowrap;">구분</th>';
     years.forEach(function(yr, idx) {
       var isCur = (yr === curYear);
       headHtml += '<th style="padding:10px 8px; text-align:right; min-width:90px;' + (isCur ? ' background:#ebf8ff; color:#2b6cb0;' : '') + '">' +
@@ -10466,12 +10466,12 @@
 
     // 1. 국민연금 행
     bodyHtml += '<tr style="border-bottom:1px solid #edf2f7;">' +
-      '<td style="padding:10px 14px; font-weight:700; color:#2b6cb0; position:sticky; left:0; background:#fff; z-index:1; border-right:2px solid #edf2f7;">' +
+      '<td style="padding:10px 14px; font-weight:700; color:#2b6cb0; position:sticky; left:0; background:#fff; z-index:1; border-right:2px solid #edf2f7; white-space:nowrap;">' +
         '<div style="display:flex; align-items:center; gap:6px;">' +
           '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3182ce;"></span>국민연금' +
         '</div>' +
       '</td>' +
-      '<td style="padding:10px 14px; color:#4a5568; font-weight:600; position:sticky; left:100px; background:#fff; z-index:1; border-right:2px solid #edf2f7;">수령액</td>';
+      '<td style="padding:10px 14px; color:#4a5568; font-weight:600; position:sticky; left:100px; background:#fff; z-index:1; border-right:2px solid #edf2f7; white-space:nowrap;">수령액</td>';
     
     years.forEach(function(yr) {
       var mo = 0, ann = 0;
@@ -10489,12 +10489,12 @@
 
     // 2. 연금계좌 - 목표 행
     bodyHtml += '<tr style="border-bottom:1px solid #edf2f7; background:#fffdfa;">' +
-      '<td style="padding:10px 14px; font-weight:700; color:#b45309; position:sticky; left:0; background:#fffdfa; z-index:1; border-right:2px solid #edf2f7;">' +
+      '<td rowspan="2" style="padding:10px 14px; font-weight:700; color:#b45309; position:sticky; left:0; background:#fff; z-index:1; border-right:2px solid #edf2f7; vertical-align:middle; white-space:nowrap;">' +
         '<div style="display:flex; align-items:center; gap:6px;">' +
           '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#d97706;"></span>연금계좌' +
         '</div>' +
       '</td>' +
-      '<td style="padding:10px 14px; color:#b45309; font-weight:600; position:sticky; left:100px; background:#fffdfa; z-index:1; border-right:2px solid #edf2f7;">목표</td>';
+      '<td style="padding:10px 14px; color:#b45309; font-weight:600; position:sticky; left:100px; background:#fffdfa; z-index:1; border-right:2px solid #edf2f7; white-space:nowrap;">목표</td>';
     
     years.forEach(function() {
       var mo = cfg.accTargetMonthlyAmt;
@@ -10505,12 +10505,7 @@
 
     // 3. 연금계좌 - 현황 (배당) 행
     bodyHtml += '<tr style="border-bottom:1px solid #edf2f7; background:#f0fdfa;">' +
-      '<td style="padding:10px 14px; font-weight:700; color:#0d9488; position:sticky; left:0; background:#f0fdfa; z-index:1; border-right:2px solid #edf2f7;">' +
-        '<div style="display:flex; align-items:center; gap:6px;">' +
-          '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#0d9488;"></span>연금계좌' +
-        '</div>' +
-      '</td>' +
-      '<td style="padding:10px 14px; color:#0d9488; font-weight:600; position:sticky; left:100px; background:#f0fdfa; z-index:1; border-right:2px solid #edf2f7;">현황 (배당)</td>';
+      '<td style="padding:10px 14px; color:#0d9488; font-weight:600; position:sticky; left:100px; background:#f0fdfa; z-index:1; border-right:2px solid #edf2f7; white-space:nowrap;">현황 (배당)</td>';
     
     years.forEach(function() {
       bodyHtml += '<td style="padding:10px 8px; text-align:right;">' + makePensionCell(actualMonthlyDiv, actualAnnualDiv) + '</td>';
@@ -10519,10 +10514,10 @@
 
     // 4. 합계 - 목표 합계 (국민연금 + 연금계좌 목표) 행
     bodyHtml += '<tr style="border-bottom:1px solid #edf2f7; background:#f8fafc; font-weight:700;">' +
-      '<td rowspan="2" style="padding:11px 14px; font-weight:800; color:#4c51bf; position:sticky; left:0; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7; vertical-align:middle;">' +
+      '<td rowspan="2" style="padding:11px 14px; font-weight:800; color:#4c51bf; position:sticky; left:0; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7; vertical-align:middle; white-space:nowrap;">' +
         '합계' +
       '</td>' +
-      '<td style="padding:11px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
+      '<td style="padding:11px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7; white-space:nowrap;">' +
         '목표 합계' +
       '</td>';
     
@@ -10544,7 +10539,7 @@
 
     // 5. 합계 - 현황 합계 (국민연금 + 연금계좌 현황) 행
     bodyHtml += '<tr style="background:#f8fafc; font-weight:700;">' +
-      '<td style="padding:11px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7;">' +
+      '<td style="padding:11px 14px; color:#4c51bf; font-weight:700; position:sticky; left:100px; background:#f8fafc; z-index:1; border-right:2px solid #edf2f7; white-space:nowrap;">' +
         '현황 합계' +
       '</td>';
     
