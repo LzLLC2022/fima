@@ -1435,10 +1435,10 @@
             <!-- Sell 전용: 매입 정보 (자동 계산, readonly) -->
             <div class="field span2 hidden" id="sellPurchaseSection">
               <div class="purchase-info-box">
-                <div class="purchase-info-title">📊 매입 정보 (자동 계산)</div>
+                <div class="purchase-info-title">📊 매도분 매입원가 정보 (자동 계산)</div>
                 <div class="grid" style="margin-top:10px;">
                   <div class="field">
-                    <label>Purchase (매입금액, KRW)</label>
+                    <label>Purchase (매도분 매입원가, KRW)</label>
                     <input type="text" id="purchaseAmount" readonly placeholder="Ticker·수량 입력 후 자동 계산" />
                   </div>
                   <div class="field">
@@ -4067,7 +4067,7 @@
           : fmtN(result.purchaseFX) + ' ' + currency + ' (\u2248 ' + fmtK(result.purchase) + ' KRW)';
 
         document.getElementById('purchaseNote').textContent =
-          `\uBCF4\uC720\uC218\uB7C9: ${remaining}\uC8FC \u00B7 \uD3C9\uADE0\uB2E8\uAC00: ${avgP} \u00B7 \uB9E4\uB3C4\uC218\uB7C9: ${sellQ}\uC8FC \u2192 \uB9E4\uC785\uAE08\uC561: ${purStr}`;
+          `\uBCF4\uC720\uC218\uB7C9: ${remaining}\uC8FC \u00B7 \uD3C9\uADE0\uB9E4\uC785\uB2E8\uAC00: ${avgP} \u00B7 \uB9E4\uB3C4\uC218\uB7C9: ${sellQ}\uC8FC \u2192 \uB9E4\uB3C4\uBD84 \uB9E4\uC785\uC6D0\uAC00: ${purStr}`;
       }).catch(function(err) {
         document.getElementById('purchaseAmount').placeholder       = 'Ticker\u00B7\uC218\uB7C9 \uC785\uB825 \uD6C4 \uC790\uB3D9 \uACC4\uC0B0';
         document.getElementById('purchaseCurrencyRate').placeholder = '\uC790\uB3D9 \uACC4\uC0B0';
@@ -4217,9 +4217,9 @@
     // Sell \uC804\uC6A9: \uB9E4\uC785\uAE08\uC561
     if (isSell && _purchaseKRW > 0) {
       if (isKRW) {
-        trHtml += pvRow('\uB9E4\uC785\uAE08\uC561 (Purchase)', fmtK(_purchaseKRW) + ' KRW');
+        trHtml += pvRow('\uB9E4\uB3C4\uBD84 \uB9E4\uC785\uC6D0\uAC00 (Purchase)', fmtK(_purchaseKRW) + ' KRW');
       } else {
-        trHtml += pvRow('\uB9E4\uC785\uAE08\uC561 (Purchase)',
+        trHtml += pvRow('\uB9E4\uB3C4\uBD84 \uB9E4\uC785\uC6D0\uAC00 (Purchase)',
           fmtN(_purchaseFX, 4) + ' ' + currency + '  (\u2248 ' + fmtK(_purchaseKRW) + ' KRW)');
       }
     }
@@ -4249,8 +4249,8 @@
         <div class="pv-result-row"><span>Total Amount</span><span>${fmtK(totalKRW)} KRW</span></div>
         ${fd.tax    ? `<div class="pv-result-row"><span>- Tax</span><span>${fmtK(taxKRW)} KRW</span></div>` : ''}
         ${fd.charge ? `<div class="pv-result-row"><span>- Charge</span><span>${fmtK(chargeKRW)} KRW</span></div>` : ''}
-        ${_purchaseKRW ? `<div class="pv-result-row"><span>- \uB9E4\uC785\uAE08\uC561</span><span>${fmtK(_purchaseKRW)} KRW</span></div>` : ''}
-        <div class="pv-result-total ${pnlCls}"><span>= \uD22C\uC790\uC190\uC775</span><span>${pnl >= 0 ? '+' : ''}${fmtK(Math.abs(pnl))} KRW</span></div>
+        ${_purchaseKRW ? `<div class="pv-result-row"><span>- \uB9E4\uB3C4\uBD84 \uB9E4\uC785\uC6D0\uAC00</span><span>${fmtK(_purchaseKRW)} KRW</span></div>` : ''}
+        <div class="pv-result-total ${pnlCls}"><span>= \uD22C\uC790\uC190\uC775</span><span>${pnl >= 0 ? '+' : '-'}${fmtK(Math.abs(pnl))} KRW</span></div>
       </div>`;
     } else if (t.startsWith('dep')) {
       const amtKRW    = toKRW(fd.price || 0);
@@ -4910,7 +4910,7 @@
     var sec4 = '';
     if (purchase) {
       // Purchase는 시트상 KRW로 저장됨
-      sec4 += rowHtml('Purchase (매입금액)',
+      sec4 += rowHtml('Purchase (매도분 매입원가)',
         fmtK(purchase) + ' <span class="unit-tag">KRW</span>');
     }
     if (purchaseCurrency) {
