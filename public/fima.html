@@ -4631,7 +4631,8 @@
       sortedData.sort(function(a, b) {
         var da = String(a.row[dateIdx] || '');
         var db = String(b.row[dateIdx] || '');
-        return sortDateAsc ? da.localeCompare(db) : db.localeCompare(da);
+        var cmp = sortDateAsc ? da.localeCompare(db) : db.localeCompare(da);
+        return cmp !== 0 ? cmp : (sortDateAsc ? (a.sheetRow - b.sheetRow) : (b.sheetRow - a.sheetRow));
       });
     }
 
