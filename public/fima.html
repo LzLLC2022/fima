@@ -644,6 +644,10 @@
       cursor: pointer; user-select: none;
       text-align: left !important;
     }
+    tr.region-group-hdr td.num { text-align: right !important; white-space: nowrap; }
+    tr.region-group-hdr td.pnl-pos { color: #c53030; }
+    tr.region-group-hdr td.pnl-neg { color: #7c6ce0; }
+    tr.region-group-hdr td.pnl-zero { color: #718096; }
     tr.region-group-hdr:hover td { background: #e0d9fb; }
     tr.region-group-hdr:first-child td { border-top: none; }
     .rg-toggle { display:inline-block; width:1em; margin-right:4px; }
@@ -5159,7 +5163,29 @@
 
     const tbody = '<tbody>' + sortedRegions.flatMap(region => {
       const regionItems = grouped[region];
-      const hdrRow = `<tr class="region-group-hdr" data-region="${region}" onclick="toggleRegionGroup(this)"><td colspan="${cols.length}"><span class="rg-toggle">▼</span> 🌏 ${region}</td></tr>`;
+      const regCur = (regionItems[0] && regionItems[0].currency) || 'KRW';
+      const regIsK = regCur === 'KRW';
+      const regPurchase = regionItems.reduce((s, i) => s + (i.purchaseAmtFX || 0), 0);
+      const regMarket   = regionItems.reduce((s, i) => s + (i.marketValueFX || 0), 0);
+      const regPnl      = regMarket - regPurchase;
+      const regPnlPct   = regPurchase > 0 ? (regPnl / regPurchase * 100) : 0;
+      const regDiv      = regionItems.reduce((s, i) => s + (regIsK ? (i.divKRW || 0) : (i.divFX || 0)), 0);
+      const regPc       = pnlCls(regPnl);
+      const regPurStr   = fmtAmt(regPurchase, regIsK) + ' ' + regCur;
+      const regMktStr   = fmtAmt(regMarket, regIsK) + ' ' + regCur;
+      const regPnlStr   = (regPnl >= 0 ? '+' : '') + fmtAmt(regPnl, regIsK) + ' ' + regCur;
+      const regPctStr   = fmtPct(regPnlPct);
+      const regDivStr   = regDiv > 0 ? fmtAmt(regDiv, regIsK) + ' ' + regCur : '-';
+      const hdrRow = `<tr class="region-group-hdr" data-region="${region}" onclick="toggleRegionGroup(this)">`
+        + `<td colspan="3"><span class="rg-toggle">▼</span>\u00A0🌏\u00A0${region}</td>`
+        + `<td class="num">${regPurStr}</td>`
+        + `<td></td>`
+        + `<td class="num">${regMktStr}</td>`
+        + `<td class="num ${regPc}">${regPnlStr}</td>`
+        + `<td class="num ${regPc}">${regPctStr}</td>`
+        + (showDividend ? `<td class="num" style="color:#2f855a;">${regDivStr}</td>` : '')
+        + (hasMaturiy ? `<td colspan="4"></td>` : '')
+        + `</tr>`;
       return [hdrRow, ...regionItems.map(item => {
       const pc   = pnlCls(item.pnlFX);
       const isK  = item.currency === 'KRW';
