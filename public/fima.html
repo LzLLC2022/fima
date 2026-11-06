@@ -2643,17 +2643,17 @@
                 <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                   <span style="font-size: 0.82rem; font-weight: 600; color: #475569;">달러 환노출 자산 합계</span>
                   <div>
-                    <strong id="fxTotalExposureUSD" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">$51,225</strong>
-                    <span id="fxTotalExposureKRW" style="font-size: 0.82rem; font-weight: 500; color: #64748b; margin-left: 4px;">(약 6,810만원)</span>
+                    <strong id="fxTotalExposureUSD" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">$0</strong>
+                    <span id="fxTotalExposureKRW" style="font-size: 0.82rem; font-weight: 500; color: #64748b; margin-left: 4px;">(0원)</span>
                   </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                   <span style="font-size: 0.8rem; color: #718096;">현재 총자산 대비 비중</span>
-                  <strong id="fxTotalExposurePct" style="font-size: 1.05rem; font-weight: 700; color: #7c3aed;">17.5%</strong>
+                  <strong id="fxTotalExposurePct" style="font-size: 1.05rem; font-weight: 700; color: #7c3aed;">0.0%</strong>
                 </div>
                 <!-- 프로그레스 바 -->
                 <div style="width: 100%; height: 8px; background: #f1f5f9; border-radius: 9999px; overflow: hidden;">
-                  <div id="fxExposureProgressBar" style="width: 17.5%; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, #6366f1 0%, #ec4899 100%); transition: width 0.3s ease;"></div>
+                  <div id="fxExposureProgressBar" style="width: 0%; height: 100%; border-radius: 9999px; background: linear-gradient(90deg, #6366f1 0%, #ec4899 100%); transition: width 0.3s ease;"></div>
                 </div>
               </div>
 
@@ -2664,47 +2664,7 @@
                   <span style="color: #94a3b8;">비중 (금액)</span>
                 </div>
                 <div id="fxTopExposedList" style="display: flex; flex-direction: column; gap: 4px;">
-                  
-                  <div class="fx-exposed-item">
-                    <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
-                      <div class="fx-badge-circle" style="background: #1d4ed8;">삼</div>
-                      <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">KODEX 테슬라커버드콜채권혼합액티브</span>
-                        <span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(475080.KS)</span>
-                      </div>
-                    </div>
-                    <div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">
-                      <strong style="color: #1e293b;">34.8%</strong>
-                      <span style="color: #64748b; font-size: 0.76rem;">(2,368만원)</span>
-                    </div>
-                  </div>
-                  <div class="fx-exposed-item">
-                    <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
-                      <div class="fx-badge-circle" style="background: #1d4ed8;">삼</div>
-                      <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">KODEX 미국나스닥100데일리커버드콜OTM</span>
-                        <span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(494300.KS)</span>
-                      </div>
-                    </div>
-                    <div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">
-                      <strong style="color: #1e293b;">23.7%</strong>
-                      <span style="color: #64748b; font-size: 0.76rem;">(1,614만원)</span>
-                    </div>
-                  </div>
-                  <div class="fx-exposed-item">
-                    <div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">
-                      <div class="fx-badge-circle" style="background: #059669;">SOL</div>
-                      <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">SOL 팔란티어커버드콜OTM채권혼합</span>
-                        <span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(0040Y0.KS)</span>
-                      </div>
-                    </div>
-                    <div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">
-                      <strong style="color: #1e293b;">21.1%</strong>
-                      <span style="color: #64748b; font-size: 0.76rem;">(1,436만원)</span>
-                    </div>
-                  </div>
-
+                  <div style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:16px 0;">포트폴리오 데이터 로딩 중...</div>
                 </div>
               </div>
             </div>
@@ -3441,8 +3401,13 @@
     document.getElementById('ovCashSection').innerHTML = msg;
     document.getElementById('ovStockSection').innerHTML = msg;
     document.getElementById('ovFundSection').innerHTML = msg;
+    window._labTotalPfData = undefined;
+    window._lastPfData = null;
+    window._lastOverviewData = null;
+    window._isFetchingLabData = false;
     loadMasterData();
     if (typeof updateLabAssets === 'function') updateLabAssets();
+    if (typeof renderUsdExposureCard === 'function') renderUsdExposureCard();
     if (typeof updateLabPension === 'function') updateLabPension();
   }
 
@@ -5065,7 +5030,9 @@
           return;
         }
         portfolioLoaded = true;
+        window._lastOverviewData = data;
         renderPortfolio(data);
+        if (typeof renderUsdExposureCard === 'function') renderUsdExposureCard();
       }).catch(function(err) {
         document.getElementById('ovLoadingMsg').classList.add('hidden');
         document.getElementById('ovTotalKRW').textContent = '-';
@@ -10168,7 +10135,7 @@
         if(document.getElementById('labTotalAsset')) document.getElementById('labTotalAsset').textContent = '로딩 중...';
         if(document.getElementById('txtAssetFima')) document.getElementById('txtAssetFima').textContent = '로딩 중...';
         
-        let reqBody = { owner: owner, accountOwner: '' };
+        let reqBody = { owner: currentOwner || owner, accountOwner: currentAccountOwner || owner };
         fetch('/api/portfolio-analysis', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -11847,48 +11814,43 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
   }
 
   // ==================== 달러 익스포저 & 시뮬레이터 로직 ====================
+  function getUsdExposureStorageKey() {
+    var ownerKey = (document.getElementById('navOwnerSelect') && document.getElementById('navOwnerSelect').value) || window.currentAccountOwner || window.currentOwner || 'default';
+    return 'fima_usd_exposure_config_' + ownerKey;
+  }
+
+  function getActivePortfolioDataForUsd() {
+    return window._labTotalPfData || window._lastPfData || window._lastOverviewData || null;
+  }
+
   function getDollarAssets() {
-    var userCfg = JSON.parse(localStorage.getItem('fima_usd_exposure_config') || 'null');
+    var userCfg = JSON.parse(localStorage.getItem(getUsdExposureStorageKey()) || 'null');
     var currentRate = (_usdKrwData && _usdKrwData.currentPrice) ? _usdKrwData.currentPrice : 1330;
 
-    // 수동 직접 입력 모드
-    if (userCfg && userCfg.manualEnabled) {
-      var manualUsd = parseFloat(userCfg.manualUsd) || 51225;
-      var manualKrw = parseFloat(userCfg.manualKrw) || (manualUsd * currentRate);
-      return {
-        totalUSD: manualUsd,
-        totalKRW: manualKrw,
-        topAssets: [
-          { name: 'KODEX 테슬라커버드콜채권혼합액티브', code: '475080.KS', pct: 34.8, krw: 23680000, brand: 'sam' },
-          { name: 'KODEX 미국나스닥100데일리커버드콜OTM', code: '494300.KS', pct: 23.7, krw: 16140000, brand: 'sam' },
-          { name: 'SOL 팔란티어커버드콜OTM채권혼합', code: '0040Y0.KS', pct: 21.1, krw: 14360000, brand: 'sol' }
-        ]
-      };
+    var pfData = getActivePortfolioDataForUsd();
+    if (!pfData && typeof updateLabAssets === 'function' && !window._isFetchingLabData) {
+      updateLabAssets();
     }
 
-    // 포트폴리오 데이터 기반 동적 추출
-    var holdings = (window.appState && window.appState.holdings) || [];
+    var holdings = (pfData && pfData.stocks) ? pfData.stocks : [];
     var items = [];
     var sumUSD = 0;
     var sumKRW = 0;
 
     holdings.forEach(function(h) {
       var name = h.name || h.stockName || '';
-      var code = h.code || h.ticker || '';
-      var valKRW = parseFloat(h.evalAmount || h.valuation || h.totalPrice || 0);
+      var code = h.ticker || h.code || '';
+      var valKRW = parseFloat(h.marketValueKRW || h.marketValue || h.evalAmount || h.valuation || h.totalPrice || 0);
 
-      // 달러 노출 판단
-      var isUsdExposed = false;
-      if (userCfg && userCfg.customExclusions && userCfg.customExclusions[code] !== undefined) {
-        isUsdExposed = !userCfg.customExclusions[code];
-      } else {
-        var isCurrencyHedged = name.includes('(H)') || name.includes('환헤지');
-        var isOverseas = h.isOverseas || /미국|S&P|나스닥|테슬라|팔란티어|엔비디아|빅테크|다우|글로벌|배당다우|SCHD|QQQ|SPY/i.test(name) || /^[A-Z]{1,5}$/.test(code);
-        isUsdExposed = isOverseas && !isCurrencyHedged;
-      }
+      // 달러 노출 판단 (설정 모달과 동일한 기준)
+      var isExcluded = (userCfg && userCfg.excludedTickers && userCfg.excludedTickers.indexOf(code) !== -1);
+      var isIncludedByUser = (userCfg && userCfg.includedTickers && userCfg.includedTickers.indexOf(code) !== -1);
+      var isForeign = (h.currency === 'USD' || h.region === 'US' || h.region === 'USA');
+      var isUsdEtf = /테슬라|나스닥|팔란티어|S&P|미국|엔비디아|빅테크|다우|글로벌|배당다우|SCHD|QQQ|SPY/i.test(name) && !/\(H\)|환헤지/i.test(name);
+      var isUsdExposed = !isExcluded && (isIncludedByUser || isForeign || isUsdEtf);
 
       if (isUsdExposed && valKRW > 0) {
-        var valUSD = valKRW / currentRate;
+        var valUSD = (h.currency === 'USD' && h.marketValueFX > 0) ? parseFloat(h.marketValueFX) : (valKRW / currentRate);
         sumKRW += valKRW;
         sumUSD += valUSD;
         items.push({
@@ -11896,35 +11858,40 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
           code: code,
           krw: valKRW,
           usd: valUSD,
-          brand: name.startsWith('KODEX') ? 'sam' : (name.startsWith('SOL') ? 'sol' : (name.startsWith('TIGER') ? 'tiger' : 'other'))
+          brand: /^KODEX/i.test(name) ? 'sam' : (/^SOL/i.test(name) ? 'sol' : (/^TIGER/i.test(name) ? 'tiger' : 'other'))
         });
       }
     });
-
-    if (items.length === 0 || sumKRW === 0) {
-      return {
-        totalUSD: 51225,
-        totalKRW: 68100000,
-        topAssets: [
-          { name: 'KODEX 테슬라커버드콜채권혼합액티브', code: '475080.KS', pct: 34.8, krw: 23680000, brand: 'sam' },
-          { name: 'KODEX 미국나스닥100데일리커버드콜OTM', code: '494300.KS', pct: 23.7, krw: 16140000, brand: 'sam' },
-          { name: 'SOL 팔란티어커버드콜OTM채권혼합', code: '0040Y0.KS', pct: 21.1, krw: 14360000, brand: 'sol' }
-        ]
-      };
-    }
 
     items.sort(function(a, b) { return b.krw - a.krw; });
     var topAssets = items.slice(0, 3).map(function(item) {
       return {
         name: item.name,
         code: item.code,
-        pct: (item.krw / sumKRW) * 100,
+        pct: sumKRW > 0 ? (item.krw / sumKRW) * 100 : 0,
         krw: item.krw,
         brand: item.brand
       };
     });
 
-    return { totalUSD: sumUSD, totalKRW: sumKRW, topAssets: topAssets };
+    // 수동 직접 입력 모드
+    if (userCfg && (userCfg.isManual || userCfg.manualEnabled)) {
+      var manualUsd = parseFloat(userCfg.manualUSD || userCfg.manualUsd) || 0;
+      var manualKrw = parseFloat(userCfg.manualKRW || userCfg.manualKrw) || (manualUsd * currentRate);
+      return {
+        totalUSD: manualUsd,
+        totalKRW: manualKrw,
+        topAssets: topAssets,
+        loading: false
+      };
+    }
+
+    return {
+      totalUSD: sumUSD,
+      totalKRW: sumKRW,
+      topAssets: topAssets,
+      loading: !pfData
+    };
   }
 
   function renderUsdExposureCard() {
@@ -11932,61 +11899,73 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     _usdExposedTotalKRW = exposed.totalKRW;
     _usdExposedTotalUSD = exposed.totalUSD;
 
-    var totalAssetsKRW = 389000000;
-    if (window.appState && window.appState.totalEvaluation && window.appState.totalEvaluation > 0) {
-      totalAssetsKRW = window.appState.totalEvaluation;
+    var pfData = getActivePortfolioDataForUsd();
+    var totalAssetsKRW = 0;
+    if (pfData && pfData.summary && pfData.summary.marketValueKRW > 0) {
+      totalAssetsKRW = pfData.summary.marketValueKRW;
+    } else if (pfData && pfData.totalKRW > 0) {
+      totalAssetsKRW = pfData.totalKRW;
     }
     _totalPortfolioKRW = totalAssetsKRW;
 
-    var ratio = totalAssetsKRW > 0 ? (exposed.totalKRW / totalAssetsKRW) * 100 : 17.5;
+    var ratio = totalAssetsKRW > 0 ? (exposed.totalKRW / totalAssetsKRW) * 100 : 0;
 
     // 헤더 값 렌더링
-    var usdEl = document.getElementById('usdExposureTotalUSD');
+    var usdEl = document.getElementById('fxTotalExposureUSD') || document.getElementById('usdExposureTotalUSD');
     if (usdEl) usdEl.textContent = '$' + Math.round(exposed.totalUSD).toLocaleString();
 
     var krwMan = Math.round(exposed.totalKRW / 10000);
-    var krwText = '약 ' + (krwMan >= 10000 ? (krwMan / 10000).toFixed(1) + '억' : krwMan.toLocaleString() + '만원');
-    var krwEl = document.getElementById('usdExposureTotalKRW');
+    var krwText = exposed.totalKRW <= 0
+      ? '0원'
+      : '약 ' + (krwMan >= 10000 ? (krwMan / 10000).toFixed(1) + '억' : krwMan.toLocaleString() + '만원');
+    var krwEl = document.getElementById('fxTotalExposureKRW') || document.getElementById('usdExposureTotalKRW');
     if (krwEl) krwEl.textContent = '(' + krwText + ')';
 
-    var ratioEl = document.getElementById('usdExposureRatio');
+    var ratioEl = document.getElementById('fxTotalExposurePct') || document.getElementById('usdExposureRatio');
     if (ratioEl) ratioEl.textContent = ratio.toFixed(1) + '%';
 
-    var barEl = document.getElementById('usdExposureProgressBar');
-    if (barEl) barEl.style.width = Math.min(100, Math.max(2, ratio)) + '%';
+    var barEl = document.getElementById('fxExposureProgressBar') || document.getElementById('usdExposureProgressBar');
+    if (barEl) barEl.style.width = (exposed.totalKRW > 0 ? Math.min(100, Math.max(2, ratio)) : 0) + '%';
 
     // Top 3 렌더링
-    var listEl = document.getElementById('usdTopAssetsList');
+    var listEl = document.getElementById('fxTopExposedList') || document.getElementById('usdTopAssetsList');
     if (listEl) {
-      var html = '';
-      exposed.topAssets.forEach(function(asset) {
-        var iconHtml = '';
-        if (asset.brand === 'sam') {
-          iconHtml = '<div class="asset-logo-sam">삼</div>';
-        } else if (asset.brand === 'sol') {
-          iconHtml = '<div class="asset-logo-sol"><div class="sol-bar"></div><div class="sol-bar"></div><div class="sol-bar"></div></div>';
-        } else {
-          iconHtml = '<div class="asset-logo-other">' + (asset.name ? asset.name.charAt(0) : '$') + '</div>';
-        }
+      if (exposed.loading) {
+        listEl.innerHTML = '<div style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:16px 0;">포트폴리오 데이터 로딩 중...</div>';
+      } else if (exposed.topAssets.length === 0) {
+        listEl.innerHTML = '<div style="color:#94a3b8;font-size:0.84rem;text-align:center;padding:16px 0;">달러 노출 자산이 없습니다.</div>';
+      } else {
+        var html = '';
+        exposed.topAssets.forEach(function(asset) {
+          var badgeHtml = '';
+          if (asset.brand === 'sam') {
+            badgeHtml = '<div class="fx-badge-circle" style="background: #1d4ed8;">삼</div>';
+          } else if (asset.brand === 'sol') {
+            badgeHtml = '<div class="fx-badge-circle" style="background: #059669;">SOL</div>';
+          } else {
+            var ch = (asset.name ? asset.name.charAt(0) : '$');
+            badgeHtml = '<div class="fx-badge-circle" style="background: #6366f1;">' + ch + '</div>';
+          }
 
-        var manKrw = Math.round(asset.krw / 10000);
-        var krwFormatted = manKrw.toLocaleString() + '만원';
+          var manKrw = Math.round(asset.krw / 10000);
+          var krwFormatted = manKrw > 0 ? (manKrw.toLocaleString() + '만원') : (Math.round(asset.krw).toLocaleString() + '원');
 
-        html += '<div style="display: flex; justify-content: space-between; align-items: center;">' +
-          '<div style="display: flex; align-items: center; gap: 10px; overflow: hidden; margin-right: 12px;">' +
-            iconHtml +
-            '<div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' +
-              '<span style="font-weight: 700; font-size: 0.88rem; color: #1e293b;">' + asset.name + '</span> ' +
-              '<span style="font-size: 0.76rem; color: #94a3b8; font-weight: 500;">(' + asset.code + ')</span>' +
+          html += '<div class="fx-exposed-item">' +
+            '<div style="display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1;">' +
+              badgeHtml +
+              '<div style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' +
+                '<span style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">' + asset.name + '</span> ' +
+                '<span style="font-size: 0.74rem; color: #94a3b8; font-family: monospace;">(' + asset.code + ')</span>' +
+              '</div>' +
             '</div>' +
-          '</div>' +
-          '<div style="text-align: right; flex-shrink: 0;">' +
-            '<span style="font-weight: 800; font-size: 0.95rem; color: #0f172a;">' + asset.pct.toFixed(1) + '%</span> ' +
-            '<span style="font-size: 0.78rem; color: #94a3b8; font-weight: 500;">(' + krwFormatted + ')</span>' +
-          '</div>' +
-        '</div>';
-      });
-      listEl.innerHTML = html;
+            '<div style="font-size: 0.82rem; text-align: right; flex-shrink: 0; margin-left: 10px;">' +
+              '<strong style="color: #1e293b;">' + asset.pct.toFixed(1) + '%</strong> ' +
+              '<span style="color: #64748b; font-size: 0.76rem;">(' + krwFormatted + ')</span>' +
+            '</div>' +
+          '</div>';
+        });
+        listEl.innerHTML = html;
+      }
     }
 
     // 시뮬레이터 초기화
@@ -12085,8 +12064,8 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
       }
     }
 
-    var exposedUSD = (typeof _usdExposedTotalUSD !== 'undefined' && _usdExposedTotalUSD > 0) ? _usdExposedTotalUSD : 51225;
-    var totalPortKRW = (typeof _totalPortfolioKRW !== 'undefined' && _totalPortfolioKRW > 0) ? _totalPortfolioKRW : 389000000;
+    var exposedUSD = (typeof _usdExposedTotalUSD !== 'undefined' && _usdExposedTotalUSD >= 0) ? _usdExposedTotalUSD : 0;
+    var totalPortKRW = (typeof _totalPortfolioKRW !== 'undefined' && _totalPortfolioKRW > 0) ? _totalPortfolioKRW : 0;
 
     var impactKRW = exposedUSD * _simDelta;
     var impactPct = totalPortKRW > 0 ? (impactKRW / totalPortKRW) * 100 : 0;
@@ -12129,7 +12108,7 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     if (!modal) return;
     modal.classList.remove('hidden');
 
-    var userCfg = JSON.parse(localStorage.getItem('fima_usd_exposure_config') || 'null');
+    var userCfg = JSON.parse(localStorage.getItem(getUsdExposureStorageKey()) || 'null');
     var isManual = userCfg && userCfg.isManual;
 
     var toggle = document.getElementById('cfgUsdManualToggle');
@@ -12140,8 +12119,8 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var usdInp = document.getElementById('cfgUsdInputUSD');
     var krwInp = document.getElementById('cfgUsdInputKRW');
     if (usdInp && krwInp) {
-      var uVal = (userCfg && userCfg.manualUSD) ? userCfg.manualUSD : _defaultTotalExposureUSD;
-      var kVal = (userCfg && userCfg.manualKRW) ? userCfg.manualKRW : _defaultTotalExposureKRW;
+      var uVal = (userCfg && userCfg.manualUSD != null) ? userCfg.manualUSD : Math.round(_usdExposedTotalUSD || 0);
+      var kVal = (userCfg && userCfg.manualKRW != null) ? userCfg.manualKRW : Math.round(_usdExposedTotalKRW || 0);
       usdInp.value = uVal;
       krwInp.value = kVal;
     }
@@ -12150,27 +12129,25 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
     var itemsBox = document.getElementById('cfgUsdStockItems');
     if (!itemsBox) return;
 
-    var pfData = window._labTotalPfData || window._lastPfData;
+    var pfData = getActivePortfolioDataForUsd();
     var stocks = (pfData && pfData.stocks) ? pfData.stocks : [];
 
     if (stocks.length === 0) {
-      stocks = [
-        { name: 'KODEX 테슬라커버드콜채권혼합액티브', ticker: '475080', marketValueKRW: 23680000 },
-        { name: 'KODEX 미국나스닥100데일리커버드콜OTM', ticker: '494300', marketValueKRW: 16140000 },
-        { name: 'SOL 팔란티어커버드콜OTM채권혼합', ticker: '0040Y0', marketValueKRW: 14360000 }
-      ];
+      itemsBox.innerHTML = '<div style="color:#94a3b8;font-size:0.82rem;text-align:center;padding:12px 0;">보유 종목이 없습니다.</div>';
+      return;
     }
 
     var listHtml = '';
     stocks.forEach(function(s) {
       var t = s.ticker || '';
       var n = s.name || '';
-      var valMan = Math.round((s.marketValueKRW || 0) / 10000).toLocaleString() + '만원';
+      var valKRW = s.marketValueKRW || s.marketValue || 0;
+      var valMan = Math.round(valKRW / 10000).toLocaleString() + '만원';
 
       var isExcluded = (userCfg && userCfg.excludedTickers && userCfg.excludedTickers.indexOf(t) !== -1);
       var isIncludedByUser = (userCfg && userCfg.includedTickers && userCfg.includedTickers.indexOf(t) !== -1);
       var isForeign = (s.currency === 'USD' || s.region === 'US' || s.region === 'USA');
-      var isUsdEtf = /테슬라|나스닥|팔란티어|S&P|미국|엔비디아|빅테크|다우/i.test(n) && !/\(H\)/i.test(n);
+      var isUsdEtf = /테슬라|나스닥|팔란티어|S&P|미국|엔비디아|빅테크|다우|글로벌|배당다우|SCHD|QQQ|SPY/i.test(n) && !/\(H\)|환헤지/i.test(n);
 
       var isChecked = !isExcluded && (isIncludedByUser || isForeign || isUsdEtf);
 
@@ -12217,15 +12194,15 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
   }
 
   function resetUsdExposureSettings() {
-    localStorage.removeItem('fima_usd_exposure_config');
+    localStorage.removeItem(getUsdExposureStorageKey());
     closeUsdExposureSettingsModal();
     renderUsdExposureCard();
   }
 
   function saveUsdExposureSettings() {
     var isManual = document.getElementById('cfgUsdManualToggle').checked;
-    var manualUSD = parseFloat(document.getElementById('cfgUsdInputUSD').value) || _defaultTotalExposureUSD;
-    var manualKRW = parseFloat(document.getElementById('cfgUsdInputKRW').value) || _defaultTotalExposureKRW;
+    var manualUSD = parseFloat(document.getElementById('cfgUsdInputUSD').value) || 0;
+    var manualKRW = parseFloat(document.getElementById('cfgUsdInputKRW').value) || 0;
 
     var included = [];
     var excluded = [];
@@ -12243,7 +12220,7 @@ if (typeof window.origSwitchTabLab4 === 'undefined') {
       includedTickers: included,
       excludedTickers: excluded
     };
-    localStorage.setItem('fima_usd_exposure_config', JSON.stringify(cfg));
+    localStorage.setItem(getUsdExposureStorageKey(), JSON.stringify(cfg));
     closeUsdExposureSettingsModal();
     renderUsdExposureCard();
   }
