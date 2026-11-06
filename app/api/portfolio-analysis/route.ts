@@ -364,10 +364,11 @@ export async function POST(req: NextRequest) {
       ? `${bfy - 1}-12`
       : `${bfy}-${String(bfm - 1).padStart(2, '0')}`;
     // 직전 월이 allMonths 범위 안이면 상태 계산을 위해 포함
-    const computeMonths = allMonths.includes(baseMM) ? [baseMM, ...analyzeMonths] : analyzeMonths;
+    const baseComputeMonths = allMonths.includes(baseMM) ? [baseMM, ...analyzeMonths] : analyzeMonths;
+    const computeMonths = (!endMonth && !baseComputeMonths.includes(nowMM)) ? [...baseComputeMonths, nowMM] : baseComputeMonths;
 
     // ── 월별 누적 상태 계산 (단일 패스) ──────────────────────────────
-    type Pos = { qty: number; buyCostFX: number; buyCostKRW: number; region: string; assetType: string; name: string; lastRate: number };
+    type Pos = { qty: number; buyQty: number; splitAdj: number; sellQty: number; buyCostFX: number; buyCostKRW: number; region: string; assetType: string; name: string; lastRate: number };
 
     interface State {
       cashFX: Record<string, number>;
@@ -448,7 +449,7 @@ export async function POST(req: NextRequest) {
 
           if (!st.positions[ticker]) {
             st.positions[ticker] = {
-              qty: 0, buyCostFX: 0, buyCostKRW: 0,
+              qty: 0, buyQty: 0, splitAdj: 0, sellQty: 0, buyCostFX: 0, buyCostKRW: 0,
               region, assetType: asset,
               name: String(row[nameIdx] ?? '').trim(),
               lastRate: 0,
@@ -458,14 +459,14 @@ export async function POST(req: NextRequest) {
           if (rate > 0) p.lastRate = rate;
 
           if (t === 'buy' || (isDiv && t.includes('stock'))) {
-            p.qty += qty; p.buyCostFX += price * qty;
+            p.qty += qty; p.buyQty += qty; p.buyCostFX += price * qty;
             p.buyCostKRW += Math.floor(price * qty * effRate);  // 거래일별 환산 후 소수점 버림
           } else if (t === 'sell') {
-            p.qty -= qty;
+            p.qty -= qty; p.sellQty += qty;
           } else if (t === 'split') {
-            p.qty += qty;
+            p.qty += qty; p.splitAdj += qty;
           } else if (t === 'merge' || t === 'reversesplit') {
-            p.qty -= qty;
+            p.qty -= qty; p.splitAdj -= qty;
           }
         };
 
@@ -476,7 +477,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 현재 보유 종목 목록 ────────────────────────────────────────
-    const currentState = monthlyStates[analyzeMonths[analyzeMonths.length - 1]] || runningState;
+    const currentState = isHistorical
+      ? (monthlyStates[analyzeMonths[analyzeMonths.length - 1]] || runningState)
+      : (monthlyStates[nowMM] || runningState);
     const heldTickers  = Object.entries(currentState.positions)
       .filter(([_, p]) => p.qty > 0.0001)
       .map(([t]) => t);
@@ -656,7 +659,7 @@ export async function POST(req: NextRequest) {
         currentPrice[t] = raw;
       } else if (isKoreanBondISIN(t)) {
         const p = currentState.positions[t];
-        currentPrice[t] = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+        currentPrice[t] = (p.buyQty + p.splitAdj) > 0 ? p.buyCostFX / (p.buyQty + p.splitAdj) : 0;
       } else {
         currentPrice[t] = 0;
       }
@@ -670,7 +673,7 @@ export async function POST(req: NextRequest) {
       if (isHistorical) {
         let hp = priceMap[t]?.[targetMM] || 0;
         if (hp === 0 && isKoreanBondISIN(t)) {
-          hp = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+          hp = (p.buyQty + p.splitAdj) > 0 ? p.buyCostFX / (p.buyQty + p.splitAdj) : 0;
         }
         evalPrice[t] = hp > 0 ? hp : (currentPrice[t] || 0);
       } else {
@@ -837,13 +840,27 @@ export async function POST(req: NextRequest) {
         : (ps.mtd || pm[prevMonth] || 0);
 
       // 현지 통화 기준 값
-      const marketValueFX = ep * p.qty;   // 평가금액 (현지통화)
-      const buyCostFX     = p.buyCostFX;  // 매입금액 (현지통화)
+      // 현지 통화 기준 값 (매도분이 있는 경우 평균 매입단가 × 현재 보유수량 — 현황 탭과 동일)
+      const currency      = currencyMap[p.region] || 'KRW';
+      const isKRW         = currency === 'KRW';
+      const effectiveQty  = p.buyQty + p.splitAdj;
+      const avgPriceFX    = effectiveQty > 0 ? p.buyCostFX / effectiveQty : 0;
+      const buyCostKRW    = isKRW
+        ? Math.floor(avgPriceFX * p.qty)
+        : (effectiveQty > 0 ? Math.floor(p.buyCostKRW * p.qty / effectiveQty) : 0);
+      const marketValueFX = isKRW ? Math.floor(ep * p.qty) : ep * p.qty;   // 평가금액 (현지통화)
+      const buyCostFX     = isKRW ? buyCostKRW : avgPriceFX * p.qty;       // 매입금액 (현지통화)
 
       // 현지통화 기준 수익률 (가격 변동만 반영, 환율 효과 제외)
       // avgPriceFX = 매입평균단가(현지통화), ep = 기준평가가(현지통화)
-      const avgPriceFX = p.qty > 0 ? p.buyCostFX / p.qty : 0;
-      const pnlPct = avgPriceFX > 0 && ep > 0 ? (ep - avgPriceFX) / avgPriceFX * 100 : null;
+      const pnlFX  = marketValueFX - buyCostFX;
+      const pnlKRW = Math.floor(mktVal) - buyCostKRW;
+      const pnlPct = ep > 0
+        ? (isKRW
+            ? (buyCostKRW > 0 ? pnlKRW / buyCostKRW * 100 : null)
+            : (buyCostFX  > 0 ? pnlFX  / buyCostFX  * 100 : null))
+        : null;
+      // 매입단가(avgPriceFX) 대비 기준평가가(ep) 수익률 계산 완료
 
       return {
         ticker: t, name: p.name,
@@ -854,9 +871,9 @@ export async function POST(req: NextRequest) {
         marketValueFX:  marketValueFX,
         currentPrice:   ep,
         buyCostFX:      buyCostFX,
-        buyCostKRW:     p.buyCostKRW,  // 이미 거래일별 floor 누적된 정수
-        pnlFX:          marketValueFX - buyCostFX,
-        pnlKRW:         Math.floor(mktVal) - p.buyCostKRW,
+        buyCostKRW:     buyCostKRW,
+        pnlFX:          pnlFX,
+        pnlKRW:         pnlKRW,
         pnlPct:         pnlPct,
         cumDividendKRW: cumDivByTicker[t] || 0,  // 이미 거래일별 floor 누적된 정수
         cumDividendFX:  cumDivFXByTicker[t] || 0,
@@ -882,7 +899,7 @@ export async function POST(req: NextRequest) {
         let price = priceMap[t]?.[mm] || 0;
         // 채권 ISIN: 역사적 가격 미지원 → 매입 평균단가로 대체 (평가손익 0% 표시)
         if (price === 0 && isKoreanBondISIN(t)) {
-          price = p.qty > 0 ? p.buyCostFX / p.qty : 0;
+          price = (p.buyQty + p.splitAdj) > 0 ? p.buyCostFX / (p.buyQty + p.splitAdj) : 0;
         }
         // 당월(mm===nowMM) 또는 월 초(1~5일)에 직전월 Yahoo 미확정 → currentPrice 폴백
         const isLastMonth = mm === analyzeMonths[analyzeMonths.length - 1];
