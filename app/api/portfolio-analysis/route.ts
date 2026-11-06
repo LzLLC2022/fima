@@ -882,7 +882,7 @@ export async function POST(req: NextRequest) {
         yearStartPrice:   ysp  > 0 ? ysp  : null,
         monthStartPrice:  mpsp > 0 ? mpsp : null,
       };
-    }).filter(Boolean).sort((a, b) => (b?.marketValueKRW || 0) - (a?.marketValueKRW || 0));
+    }).filter(Boolean).sort((a, b) => ((b?.marketValueKRW || 0) - (a?.marketValueKRW || 0)) || String(a?.ticker || '').localeCompare(String(b?.ticker || '')));
 
     // ── 월별 포트폴리오 가치 계산 ────────────────────────────────
     // 각 월말 state × 해당 월 역사적 가격 및 해당 월 역사적 환율

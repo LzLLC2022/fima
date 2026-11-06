@@ -428,9 +428,9 @@ export async function POST(req: NextRequest) {
       else if (at === 'fund' || at === 'bond') funds.push(item);  // Fund/Bond 섹션
     });
 
-    // 종목 코드(ticker) 알파벳순으로 정렬
-    stocks.sort((a, b) => a.ticker.localeCompare(b.ticker));
-    funds.sort((a, b)  => a.ticker.localeCompare(b.ticker));
+    // 평가금액(KRW) 내림차순 정렬 (동일 시 종목코드 오름차순 — 리포트 탭과 동일)
+    stocks.sort((a, b) => (b.marketValue - a.marketValue) || a.ticker.localeCompare(b.ticker));
+    funds.sort((a, b)  => (b.marketValue - a.marketValue) || a.ticker.localeCompare(b.ticker));
 
     // ── 현금 요약 ──
     // 지역별 현금 잔고를 원화로 환산한 목록을 만든다.
