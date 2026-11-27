@@ -381,6 +381,10 @@
       "202610": {
         "dividend": 97,
         "taxBase": 0
+      },
+      "202611": {
+        "dividend": 97,
+        "taxBase": 0
       }
     }
   },
@@ -607,6 +611,10 @@
       "202610": {
         "dividend": 146,
         "taxBase": 0
+      },
+      "202611": {
+        "dividend": 140,
+        "taxBase": 0
       }
     }
   },
@@ -797,6 +805,10 @@
       "202610": {
         "dividend": 132,
         "taxBase": 0
+      },
+      "202611": {
+        "dividend": 125,
+        "taxBase": 22
       }
     }
   },
@@ -959,6 +971,10 @@
       "202610": {
         "dividend": 159,
         "taxBase": 0
+      },
+      "202611": {
+        "dividend": 149,
+        "taxBase": 0
       }
     }
   },
@@ -1035,6 +1051,10 @@
       },
       "202610": {
         "dividend": 139,
+        "taxBase": 0
+      },
+      "202611": {
+        "dividend": 130,
         "taxBase": 0
       }
     }
